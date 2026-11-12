@@ -1,0 +1,14 @@
+using HarmonyLib;
+
+namespace DigitalStorage.Item
+{
+    [HarmonyPatch(typeof(HopperHelper), nameof(HopperHelper.MayBypassGridRules))]
+    internal static class StorageBusPlacement
+    {
+        private static void Postfix(GameItem item, GameInventory inv, ref bool __result)
+        {
+            if (item?.identifier == StorageBus.ItemId && GeneralHelper.IsItemOwned(item))
+                __result = inv == null || !inv.IsTag(HopperHelper.NO_HOPPER_INVENTORY_TAG);
+        }
+    }
+}

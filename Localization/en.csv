@@ -1,0 +1,9 @@
+item.storage_terminal.name,Storage Terminal
+item.storage_terminal.desc,
+item.storage_terminal.flavor,
+ui.storage_terminal.search_placeholder,
+item.storage_bus.external.name,Storage Bus (External)
+item.storage_bus.internal.name,Storage Bus (Internal)
+item.storage_bus.desc,
+item.storage_bus.flavor,
+storage.slot.energy,Energy
