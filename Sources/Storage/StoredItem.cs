@@ -2,6 +2,8 @@
 {
     public interface StoredItem
     {
+        public GameItem Item { get; }
+        public bool IsAvailable { get; }
         public abstract string DisplayName { get; }
         public abstract long Price { get; }
         public abstract int? Heat { get; }

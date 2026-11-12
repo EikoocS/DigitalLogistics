@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System;
 using System.Threading;
 
 namespace DigitalStorage.Storage
@@ -8,16 +9,34 @@ namespace DigitalStorage.Storage
     {
         private readonly HashSet<StorageProvider> providers = new HashSet<StorageProvider>();
         public IReadOnlyCollection<StorageProvider> Providers => providers;
+        public event Action Changed;
+
+        private void OnChanged() => Changed?.Invoke();
 
         public void registerStorageProvider(StorageProvider provider)
         {
-            providers.Add(provider);
+            if (!providers.Add(provider)) return;
+            provider.Changed += OnChanged;
+            OnChanged();
         }
 
         public void unregisterStorageProvider(StorageProvider provider)
         {
             providers.Remove(provider);
+            provider.Changed -= OnChanged;
             provider.Dispose();
+            OnChanged();
+        }
+
+        internal StoredItem FindItem(string displayName, ISet<GameItem> excludedItems)
+        {
+            foreach (var provider in providers)
+                foreach (var item in provider.Items)
+                    if (item.IsAvailable && item.DisplayName == displayName
+                        && !excludedItems.Contains(item.Item)
+                        && item.Item.MayRemove() && item.Item.MaxNumRemove() > 0)
+                        return item;
+            return null;
         }
 
         public async IAsyncEnumerable<StoredItem> SearchAsync(StorageQuery query,

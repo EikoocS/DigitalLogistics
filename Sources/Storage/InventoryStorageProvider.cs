@@ -42,6 +42,12 @@ namespace DigitalStorage.Storage
         private readonly StorageIndex<PhysicalStoredItem> priceIndex = new(StorageQuery.PriceComparer);
         private readonly StorageIndex<PhysicalStoredItem> heatIndex = new(StorageQuery.HeatComparer);
         private readonly Dictionary<GameItem, PhysicalStoredItem> items = new();
+        private bool disposed;
+        public IEnumerable<StoredItem> Items => items.Values;
+        public event Action Changed;
+
+        internal bool Contains(GameItem item) => !disposed && ReferenceEquals(item.parentInventory, inventory)
+            && items.ContainsKey(item);
 
         internal static MachineryPanel GetPanel(GameInventory inventory) =>
             (inventory as PixelElement)?.handler?.FindParentElement<MachineryPanel>();
@@ -55,6 +61,7 @@ namespace DigitalStorage.Storage
             this.inventory.onSlotAddItemEndFunc += onSlotAddItemEndFunc;
             this.inventory.onSlotRemoveItemEndFunc += onSlotRemoveItemEndFunc;
             this.inventory.onToggleSlotItemFunc += onToggleSlotItemFunc;
+            this.inventory.onSlotChangeAmountItemFunc += OnAmountChanged;
             foreach (var item in inventory.childItems) AddItem(item);
         }
 
@@ -106,14 +113,17 @@ namespace DigitalStorage.Storage
 
         public void Dispose()
         {
+            disposed = true;
             inventory.onSlotAddItemEndFunc -= onSlotAddItemEndFunc;
             inventory.onSlotRemoveItemEndFunc -= onSlotRemoveItemEndFunc;
             inventory.onToggleSlotItemFunc -= onToggleSlotItemFunc;
+            inventory.onSlotChangeAmountItemFunc -= OnAmountChanged;
         }
 
         private void  onSlotAddItemEndFunc(GameItem item, GameInventory inventory, SlotMarker slot)
         {
             AddItem(item);
+            Changed?.Invoke();
         }
 
         private void onSlotRemoveItemEndFunc(GameItem item, GameInventory inventory, SlotMarker slot)
@@ -124,13 +134,14 @@ namespace DigitalStorage.Storage
                 priceIndex.Remove(storedItem);
                 heatIndex.Remove(storedItem);
                 items.Remove(item);
+                Changed?.Invoke();
             }
         }
 
         private void AddItem(GameItem item)
         {
             if (items.ContainsKey(item)) return;
-            var storedItem = new PhysicalStoredItem(item);
+            var storedItem = new PhysicalStoredItem(item, this);
             items.Add(item, storedItem);
             displayNameIndex.Add(storedItem, storedItem.TagMask);
             priceIndex.Add(storedItem, storedItem.TagMask);
@@ -168,6 +179,9 @@ namespace DigitalStorage.Storage
         private void onToggleSlotItemFunc(GameItem item, GameInventory inventory, SlotMarker slot)
         {
             RefreshIndexes(namesChanged: true);
+            Changed?.Invoke();
         }
+
+        private void OnAmountChanged(GameItem item, GameInventory inventory, SlotMarker slot) => Changed?.Invoke();
     }
 }

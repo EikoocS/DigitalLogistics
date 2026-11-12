@@ -22,6 +22,7 @@ namespace DigitalStorage
 
         private sealed class RowView
         {
+            internal StorageTerminalRow Element;
             internal TreeNodeRender Node;
             internal TreeNodeRender Label;
             internal TreeNodeRender Price;
@@ -48,6 +49,10 @@ namespace DigitalStorage
         private TaskCompletionSource<bool> nextFrame;
         private double searchDeadline = double.PositiveInfinity;
         private string priceUnit;
+        private StorageTerminalInteraction interaction;
+        private readonly HashSet<string> expandedGroups = new();
+        private bool inventoryChanged;
+        private Vector2? restoreScrollPosition;
 
         internal void Init(TMP_InputField input, TreeNodeRender parent)
         {
@@ -63,13 +68,24 @@ namespace DigitalStorage
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             searchInput.onValueChanged.AddListener(OnSearchChanged);
+            interaction = gameObject.AddComponent<StorageTerminalInteraction>();
+            interaction.Init(this);
         }
 
-        internal async void Refresh()
+        internal void Refresh() => Refresh(false);
+
+        private async void Refresh(bool preserveState)
         {
             StopSearch();
             if (!isActiveAndEnabled) return;
 
+            inventoryChanged = false;
+            if (preserveState) restoreScrollPosition ??= scroll.content.anchoredPosition;
+            else
+            {
+                restoreScrollPosition = null;
+                expandedGroups.Clear();
+            }
             scroll.StopMovement();
             foreach (var group in groups.Values)
             {
@@ -79,7 +95,7 @@ namespace DigitalStorage
             groups.Clear();
             pendingChildren.Clear();
             priceUnit = LocHelper.GetLocalizedMechanic("mech_credits");
-            scroll.content.anchoredPosition = Vector2.zero;
+            if (!preserveState) scroll.content.anchoredPosition = Vector2.zero;
             LayoutRebuilder.MarkLayoutForRebuild(scroll.content);
 
             var query = new StorageQuery(searchInput.text);
@@ -146,12 +162,15 @@ namespace DigitalStorage
             var root = CreateContainer(scroll.content, "StorageTerminalGroup");
             root.SetSiblingIndex(index);
             var header = view.Header;
+            header.Element.Item = null;
             header.Node.rectTransform.SetParent(root, false);
             var children = CreateContainer(root, "StorageTerminalChildren");
             children.GetComponent<VerticalLayoutGroup>().padding.left = 20;
-            children.gameObject.SetActive(false);
+            view.Expanded = expandedGroups.Contains(name);
+            children.gameObject.SetActive(view.Expanded);
 
             view.Group = new StorageTerminalGroup(name);
+            header.Element.Group = view.Group;
             view.Group.Add(view.Item);
             view.Item = null;
             view.Root = root;
@@ -164,6 +183,8 @@ namespace DigitalStorage
                 if (data.button == PointerEventData.InputButton.Left && !data.dragging)
                 {
                     view.Expanded = !view.Expanded;
+                    if (view.Expanded) expandedGroups.Add(name);
+                    else expandedGroups.Remove(name);
                     view.Children.gameObject.SetActive(view.Expanded);
                     UpdateHeader(view);
                     QueueChildren(view);
@@ -255,10 +276,13 @@ namespace DigitalStorage
 
         private RowView CreateRow(RectTransform parent, StoredItem item)
         {
-            var row = TreeNodeRender.Instantiate(rowParent.element, "StorageTerminalItem").SetParent(rowParent);
+            var element = new StorageTerminalRow(this, item);
+            var row = element.handler.SetParent(rowParent);
+            row.gameObject.name = "StorageTerminalItem";
             row.rectTransform.SetParent(parent, false);
             row.image.pixelsPerUnitMultiplier = 1 / CustomUIMachineryStyle.SCALE;
-            row.image.raycastTarget = false;
+            row.InitEventHandler();
+            row.eventHandler.mouseScrollFunc.Add(data => { scroll.OnScroll(data); return true; });
             MachineryStyle.SetSliced(row, MachineryStyle.BevelFrame, NormalRowColor);
 
             var size = row.gameObject.AddComponent<LayoutElement>();
@@ -278,6 +302,7 @@ namespace DigitalStorage
             price.text.color = MachineryStyle.PROGRESS_FILL_WARNING;
             var view = new RowView
             {
+                Element = element,
                 Node = row,
                 Label = label,
                 Price = price
@@ -333,12 +358,37 @@ namespace DigitalStorage
         private void LateUpdate()
         {
             if (Time.realtimeSinceStartupAsDouble >= searchDeadline) Refresh();
+            else if (inventoryChanged && !interaction.PointerDown) Refresh(true);
             double deadline = Time.realtimeSinceStartupAsDouble + RefreshBudgetSeconds;
             RenderChildren(deadline);
             ResumeFrame();
+            if (restoreScrollPosition.HasValue && searchCancellation == null && pendingChildren.Count == 0)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+                scroll.content.anchoredPosition = restoreScrollPosition.Value;
+                restoreScrollPosition = null;
+            }
         }
 
-        private void OnDisable() => StopSearch();
+        private void OnInventoryChanged()
+        {
+            inventoryChanged = true;
+            searchCancellation?.Cancel();
+            ResumeFrame();
+        }
+
+        private void OnEnable()
+        {
+            DigitalStorage.Manager.Changed += OnInventoryChanged;
+            if (interaction != null) interaction.enabled = true;
+        }
+
+        private void OnDisable()
+        {
+            DigitalStorage.Manager.Changed -= OnInventoryChanged;
+            StopSearch();
+            if (interaction != null) interaction.Disable();
+        }
 
         private void OnDestroy()
         {

@@ -5,13 +5,17 @@ namespace DigitalStorage.Storage
     internal class PhysicalStoredItem : StoredItem
     {
         private readonly GameItem item;
+        private readonly InventoryStorageProvider provider;
         
-        public PhysicalStoredItem(GameItem item)
+        public PhysicalStoredItem(GameItem item, InventoryStorageProvider provider)
         {
             this.item = item;
+            this.provider = provider;
             Refresh();
         }
 
+        public GameItem Item => item;
+        public bool IsAvailable => provider.Contains(item) && item.unitCount > 0;
         public string DisplayName => item.GetDisplayName(preferCustomName: true);
         public long Price { get; private set; }
         public int? Heat { get; private set; }
