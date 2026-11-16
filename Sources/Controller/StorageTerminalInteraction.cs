@@ -27,6 +27,7 @@ namespace DigitalStorage.Controller
         private bool fromList;
         private bool dragged;
         private bool quickTransfer;
+        private bool pressedGroup;
         private int inputAmount;
         private int consumeUntilFrame = -1;
 
@@ -159,6 +160,7 @@ namespace DigitalStorage.Controller
         {
             selection.Clear();
             placedItems.Clear();
+            pressedGroup = quickTransfer && row.Group != null;
             foreach (var item in row.Group?.Items ?? new List<StoredItem> { row.Item })
                 selection.Add(item.UniqueId);
         }
@@ -261,22 +263,21 @@ namespace DigitalStorage.Controller
         private async Task<bool> TryMoveOutput(StoredItemExpression expression,
             Func<GameItem, SlotMarker> findSlot, CancellationToken token)
         {
-            foreach (var provider in DigitalStorage.Manager.Providers.ToArray())
+            await foreach (var stored in DigitalStorage.Manager.SearchAsync(expression,
+                owner.Configuration.SortBy, owner.Configuration.Reverse, cancellationToken: token,
+                prioritizeOutput: pressedGroup))
             {
-                await foreach (var output in provider.PrepareOutputAsync(expression,
-                    owner.Configuration.SortBy, owner.Configuration.Reverse, token))
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (!CanOutput(output.Item)) continue;
-                    int uniqueId = output.Item.GetUniqueID();
-                    var slot = findSlot(output.Item);
-                    int moved = slot?.TryAcceptOnce(1) ?? 0;
-                    output.Complete(moved);
-                    if (moved == 0) continue;
-                    owner.RemoveItem(uniqueId);
-                    placedItems.Add((slot.targetItem ?? slot.item).GetUniqueID());
-                    return true;
-                }
+                using var output = stored.PrepareOutput();
+                token.ThrowIfCancellationRequested();
+                if (output == null || !CanOutput(output.Item)) continue;
+                int uniqueId = output.Item.GetUniqueID();
+                var slot = findSlot(output.Item);
+                int moved = slot?.TryAcceptOnce(1) ?? 0;
+                output.Complete(moved);
+                if (moved == 0) continue;
+                owner.RemoveItem(uniqueId);
+                placedItems.Add((slot.targetItem ?? slot.item).GetUniqueID());
+                return true;
             }
             return false;
         }

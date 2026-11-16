@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalStorage.Item;
 using DigitalStorage.Storage;
+using DigitalStorage.UI;
 
 namespace DigitalStorage.Controller
 {
@@ -10,13 +11,11 @@ namespace DigitalStorage.Controller
     {
         private static readonly Dictionary<GameItem, Connection> connections =
             new Dictionary<GameItem, Connection>();
-        private static readonly Dictionary<GameInventory, (StorageProvider Provider, int References)> sharedProviders =
-            new();
-
         internal static void ClearConnections()
         {
             foreach (var connection in connections.Values) connection.Dispose();
             connections.Clear();
+            StorageBusManager.Clear();
         }
 
         internal static void OnLoaded(GameItem item)
@@ -29,7 +28,9 @@ namespace DigitalStorage.Controller
         {
             if (!DigitalStorage.Instance.Enabled) return;
             OnRemoved(item, inventory, slot);
-            connections.Add(item, new Connection(item, inventory));
+            var connection = new Connection(item, inventory);
+            connections.Add(item, connection);
+            connection.Refresh();
         }
 
         internal static void OnRemoved(GameItem item, GameInventory inventory, SlotMarker slot)
@@ -43,62 +44,29 @@ namespace DigitalStorage.Controller
 
         internal static void Toggle(GameItem item, GameInventory inventory, SlotMarker slot)
         {
-            item.SetEnableDisableTag(StorageBus.InternalTag, !item.IsTag(StorageBus.InternalTag));
+            if (item.IsTag(StorageBus.DisabledTag))
+                item.DisableTag(StorageBus.DisabledTag);
+            else if (item.IsTag(StorageBus.InternalTag))
+            {
+                item.DisableTag(StorageBus.InternalTag);
+                item.EnableTag(StorageBus.DisabledTag);
+            }
+            else item.EnableTag(StorageBus.InternalTag);
             StorageBus.UpdateName(item);
             if (connections.TryGetValue(item, out var connection)) connection.Refresh();
         }
 
-        private static void AcquireInventory(GameInventory inventory, GameItem owner)
-        {
-            if (sharedProviders.TryGetValue(inventory, out var shared))
-            {
-                shared.References++;
-                sharedProviders[inventory] = shared;
-                return;
-            }
-            var provider = new InventoryStorageProvider(inventory, GetProviderName(inventory, owner));
-            sharedProviders.Add(inventory, (provider, 1));
-            DigitalStorage.Manager.registerStorageProvider(provider);
-        }
-
-        private static string GetProviderName(GameInventory inventory, GameItem owner)
-        {
-            var panel = InventoryStorageProvider.GetPanel(inventory);
-            string slotName = panel?.role == "power"
-                ? StorageTerminal.Localize("storage.slot.energy")
-                : panel?.label?.GetText();
-            var tabs = (inventory as PixelElement)?.handler?.FindParentElement<MachineryTabs>();
-            if (tabs != null && tabs.count > 1)
-            {
-                for (int i = 0; i < tabs.count; i++)
-                {
-                    if (!MachineryContainerUtils.Collect(tabs.GetPage(i)).Contains(inventory)) continue;
-                    slotName = tabs.GetCaption(i);
-                    break;
-                }
-            }
-            if (owner == null) return slotName ?? string.Empty;
-            string itemName = owner.GetDisplayName(preferCustomName: true);
-            return string.IsNullOrEmpty(slotName) ? itemName : $"{itemName}：{slotName}";
-        }
-
-        private static void ReleaseInventory(GameInventory inventory)
-        {
-            var shared = sharedProviders[inventory];
-            if (--shared.References > 0)
-            {
-                sharedProviders[inventory] = shared;
-                return;
-            }
-            sharedProviders.Remove(inventory);
-            DigitalStorage.Manager.unregisterStorageProvider(shared.Provider);
-        }
+        internal static IEnumerable<StorageBusManager.Configuration> GetConfigurations(GameItem bus) =>
+            connections.TryGetValue(bus, out var connection)
+                ? connection.Inventories.Select(StorageBusManager.GetConfiguration)
+                : Enumerable.Empty<StorageBusManager.Configuration>();
 
         private sealed class Connection : IDisposable
         {
             private readonly GameItem bus;
             private readonly GameInventory parent;
             private readonly HashSet<GameInventory> inventories = new();
+            internal IEnumerable<GameInventory> Inventories => inventories;
 
             internal Connection(GameItem bus, GameInventory parent)
             {
@@ -106,19 +74,18 @@ namespace DigitalStorage.Controller
                 this.parent = parent;
                 parent.onSlotAddItemEndFunc += OnInventoryChanged;
                 parent.onSlotRemoveItemEndFunc += OnInventoryChanged;
-                Refresh();
             }
 
             internal void Refresh()
             {
                 var desired = new Dictionary<GameInventory, GameItem>();
-                if (bus.IsTag(StorageBus.InternalTag))
+                if (!bus.IsTag(StorageBus.DisabledTag) && bus.IsTag(StorageBus.InternalTag))
                 {
                     var owner = GraphUtils.FindParentType<GameItem>(parent);
                     if (InventoryStorageProvider.GetPanel(parent)?.role != "note")
                         desired.Add(parent, owner is GameCharacterItem ? null : owner);
                 }
-                else
+                else if (!bus.IsTag(StorageBus.DisabledTag))
                 {
                     foreach (var target in FindTargets())
                         foreach (var inventory in GraphUtils.FindChildrenType<GameInventory>(target.contentWindow))
@@ -129,12 +96,20 @@ namespace DigitalStorage.Controller
                 foreach (var inventory in inventories.ToArray())
                 {
                     if (desired.ContainsKey(inventory)) continue;
-                    ReleaseInventory(inventory);
+                    StorageBusManager.Release(inventory);
                     inventories.Remove(inventory);
                 }
 
                 foreach (var entry in desired)
-                    if (inventories.Add(entry.Key)) AcquireInventory(entry.Key, entry.Value);
+                {
+                    if (inventories.Contains(entry.Key)) continue;
+                    StorageBusManager.Acquire(entry.Key, entry.Value);
+                    inventories.Add(entry.Key);
+                }
+
+                if (inventories.Count == 0) bus.contentWindow.Lock();
+                else if (bus.contentWindow.isLocked) bus.contentWindow.Unlock();
+                StorageBusUI.RefreshConnections(bus);
             }
 
             private IEnumerable<GameItem> FindTargets()
@@ -156,7 +131,7 @@ namespace DigitalStorage.Controller
 
             private void Unregister()
             {
-                foreach (var inventory in inventories) ReleaseInventory(inventory);
+                foreach (var inventory in inventories) StorageBusManager.Release(inventory);
                 inventories.Clear();
             }
 
@@ -167,6 +142,7 @@ namespace DigitalStorage.Controller
                 parent.onSlotAddItemEndFunc -= OnInventoryChanged;
                 parent.onSlotRemoveItemEndFunc -= OnInventoryChanged;
                 Unregister();
+                bus.contentWindow.Lock();
             }
         }
     }

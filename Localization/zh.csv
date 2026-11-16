@@ -4,6 +4,7 @@ item.storage_terminal.flavor,
 ui.storage_terminal.search_placeholder,
 item.storage_bus.external.name,存储总线（外接）
 item.storage_bus.internal.name,存储总线（内接）
+item.storage_bus.disabled.name,存储总线（停用）
 item.storage_bus.desc,
 item.storage_bus.flavor,
 storage.slot.energy,能量

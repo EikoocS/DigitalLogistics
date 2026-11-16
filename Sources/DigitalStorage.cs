@@ -28,6 +28,7 @@ namespace DigitalStorage
                 "DigitalStorage", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
             ModHook.OnGameLoadedInit += StorageBusController.ClearConnections;
+            ModHook.OnGameLoadedEarly += StorageBusManager.Load;
             Log.Log("Enabled.");
         }
 
@@ -38,6 +39,7 @@ namespace DigitalStorage
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
             ModHook.OnGameLoadedInit -= StorageBusController.ClearConnections;
+            ModHook.OnGameLoadedEarly -= StorageBusManager.Load;
             StorageBusController.ClearConnections();
             Log.Log("Disabled.");
         }

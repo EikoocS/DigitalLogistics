@@ -12,8 +12,9 @@ namespace DigitalStorage.Storage
     {
         // TODO CONFIG NEED
         private const double SearchBudgetMilliseconds = 2;
-        public string Name { get; protected set; } = "Unnamed";
-        public StoredItemExpression filter { get; protected set; } = StoredItemExpression.Constant(true);
+        public int Priority { get; set; } = 0;
+        public string Name { get; set; } = "Unnamed";
+        public StoredItemExpression filter { get; set; } = StoredItemExpression.Constant(true);
         protected readonly StorageIndex storageIndex = new();
         public abstract void Dispose();
         public abstract bool Contains(int uniqueId);

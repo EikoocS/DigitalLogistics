@@ -1,6 +1,7 @@
 ﻿using DigitalStorage.Filtering;
 using DigitalStorage.Collections;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -32,7 +33,7 @@ namespace DigitalStorage.Storage
             int remaining = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
             int requested = remaining;
             var items = new Dictionary<int, StoredItem>();
-            foreach (var provider in new List<StorageProvider>(providers))
+            foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
             {
                 if (remaining <= 0) break;
                 var result = provider.TryInput(item, remaining);
@@ -55,11 +56,17 @@ namespace DigitalStorage.Storage
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,
             Func<StorageProvider, bool> providerFilter = null,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            [EnumeratorCancellation] CancellationToken cancellationToken = default,
+            bool prioritizeOutput = false)
         {
             var providersCopy = new List<StorageProvider>(providers);
             var itemComparer = ComparerHelper.ComparedBy(sortBy.Getter());
             var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<StoredItem> enumerator) => enumerator.Current, itemComparer);
+            var priorities = new Dictionary<IAsyncEnumerator<StoredItem>, StorageProvider>();
+            if (prioritizeOutput)
+                comparer = Comparer<IAsyncEnumerator<StoredItem>>.Create((a, b) =>
+                    reverse ? priorities[b].Priority.CompareTo(priorities[a].Priority)
+                        : priorities[a].Priority.CompareTo(priorities[b].Priority)).LinkComparer(comparer);
             var heads = new OrderList<IAsyncEnumerator<StoredItem>>(comparer);
             IAsyncEnumerator<StoredItem> pendingEnumerator = null;
 
@@ -74,6 +81,7 @@ namespace DigitalStorage.Storage
 
                     pendingEnumerator = provider.SearchAsync(expression, sortBy, reverse, cancellationToken)
                         .GetAsyncEnumerator();
+                    priorities[pendingEnumerator] = provider;
                     if (await pendingEnumerator.MoveNextAsync())
                         heads.Add(pendingEnumerator);
                     else

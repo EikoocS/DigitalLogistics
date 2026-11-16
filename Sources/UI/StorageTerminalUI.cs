@@ -67,10 +67,10 @@ namespace DigitalStorage.UI
                 && RenderHandler.RaycastFindParentElement<EmptyPixelElement>(position, ignored)?.handler == listHandler;
         }
 
-        private static (EmptyPixelElement Host, GameObject Root) CreateControl(
-            CustomUIManager.ElementKind kind, int width, int height)
+        internal static (EmptyPixelElement Host, GameObject Root) CreateControl(
+            CustomUIManager.ElementKind kind, int width, int height, bool canResize = false)
         {
-            var host = new EmptyPixelElement(width, height);
+            var host = new EmptyPixelElement(width, height, canResize);
             host.handler.image.enabled = false;
             host.rectTransform.sizeDelta = new Vector2(width, height);
             var root = CustomUIManager.Instance.SpawnElement(kind, host.handler.transform, null, kind.ToString());
