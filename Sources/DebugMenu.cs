@@ -1,6 +1,6 @@
 using TMPro;
 using UnityEngine.UI;
-using DigitalStorage.Filtering;
+using DigitalStorage.UI;
 
 namespace DigitalStorage
 {
@@ -57,34 +57,8 @@ namespace DigitalStorage
         private static void OpenSearchQuery()
         {
             var builder = CreateWindow(SearchQueryWindowId, "Parse search query", WindowId);
-            CustomUIBuilder output = null;
-            builder.AddInput("Search query", onTyping: text => RefreshSearchQuery(output, text));
-            builder.Last.input.lineType = TMP_InputField.LineType.SingleLine;
-            builder.BeginScrollFlexible();
-            output = new CustomUIBuilder(CustomUIManager.Instance, builder.Handle, builder.CurrentContainer);
-            builder.End();
-            RefreshSearchQuery(output, "");
+            _ = new SearchQueryDebugView(builder);
             CustomUIDebugPanel.SetBackgroundAlpha(builder.Show(), 0.8f);
-        }
-
-        private static void RefreshSearchQuery(CustomUIBuilder builder, string input)
-        {
-            var expression = StorageTerminalSearchParser.Parse(input);
-            CustomUIBuilder.ClearContainer(builder.CurrentContainer);
-            builder.AddLabel(expression.Tree.ToString());
-            var label = builder.Last;
-            label.text.richText = false;
-            label.text.enableWordWrapping = true;
-            label.text.overflowMode = TextOverflowModes.Overflow;
-            label.text.alignment = TextAlignmentOptions.TopLeft;
-            var layout = label.root.GetComponent<LayoutElement>();
-            if (layout != null)
-            {
-                layout.minHeight = -1;
-                layout.preferredHeight = -1;
-                layout.flexibleHeight = 0;
-            }
-            CustomUIBuilder.RebuildLayout(builder.CurrentContainer);
         }
 
         internal static void Close()
