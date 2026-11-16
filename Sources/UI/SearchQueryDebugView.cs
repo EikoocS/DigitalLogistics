@@ -12,10 +12,11 @@ namespace DigitalStorage.UI
     internal sealed class SearchQueryDebugView
     {
         private readonly CustomUIBuilder output;
-        private StoredItemExpression expression = StorageTerminalSearchParser.Parse("");
+        private StoredItemExpression expression = StoredItemExpression.Constant(true);
+        private string parseError;
         private GameItem sample;
 
-        internal SearchQueryDebugView(CustomUIBuilder builder)
+        internal SearchQueryDebugView(CustomUIBuilder builder, Func<string, StoredItemExpression> parse, string inputLabel)
         {
             builder.BeginRow(alignment: TextAnchor.MiddleLeft);
             builder.AddButton("", Refresh);
@@ -26,9 +27,18 @@ namespace DigitalStorage.UI
                 sample = item;
                 Refresh();
             };
-            builder.AddInput("Search query", onTyping: text =>
+            builder.AddInput(inputLabel, onChanged: text =>
             {
-                expression = StorageTerminalSearchParser.Parse(text);
+                try
+                {
+                    expression = parse(text);
+                    parseError = null;
+                }
+                catch (Superpower.ParseException error)
+                {
+                    expression = null;
+                    parseError = error.Message;
+                }
                 Refresh();
             });
             builder.Last.input.lineType = TMP_InputField.LineType.SingleLine;
@@ -49,7 +59,13 @@ namespace DigitalStorage.UI
                 output.AddLabel(item.DisplayName);
                 output.Last.text.richText = false;
             }
-            AddNode(expression.Tree.Body, item, 0);
+            if (parseError != null)
+            {
+                output.AddLabel(parseError);
+                output.Last.text.richText = false;
+                output.Last.text.color = MachineryStyle.PROGRESS_FILL_DANGER;
+            }
+            else AddNode(expression.Tree.Body, item, 0);
             CustomUIBuilder.RebuildLayout(output.CurrentContainer);
         }
 
