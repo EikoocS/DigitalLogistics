@@ -184,7 +184,7 @@ namespace DigitalStorage.Storage
             finally { running = false; }
         }
 
-        private static bool CanMove(StoredItem stored)
+        private static bool CanMove(CachedItem stored)
         {
             if (!stored.VerifyValidity()) return false;
             var item = stored.GetItemInstance();

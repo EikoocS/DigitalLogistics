@@ -6,7 +6,7 @@ namespace DigitalStorage.Storage
     public class InventoryStorageProvider : StorageProvider
     {
         private readonly GameInventory inventory;
-        private Dictionary<int, StoredItem> inputItems;
+        private Dictionary<int, CachedItem> inputItems;
         public bool Disposed { get; private set; } = false;
 
         internal StorageInputResult InputFromSystem(GameItem item, int amount) => InputCore(item, amount);
@@ -52,7 +52,7 @@ namespace DigitalStorage.Storage
         {
             storageIndex.Remove(item.uniqueId);
             var stored = item.parentInventory == this.inventory && item.unitCount > 0
-                ? new PhysicalStoredItem(item, this) : null;
+                ? new StoredPhysicalItem(item, this) : null;
             if (stored != null)
             {
                 storageIndex.Add(stored);
@@ -75,7 +75,7 @@ namespace DigitalStorage.Storage
             if (item.parentInventory == inventory) return StorageInputResult.Empty;
 
             int remaining = amount;
-            inputItems = new Dictionary<int, StoredItem>();
+            inputItems = new Dictionary<int, CachedItem>();
             try
             {
                 while (remaining > 0 && !Disposed)
@@ -85,7 +85,7 @@ namespace DigitalStorage.Storage
                     if (moved == 0) break;
                     remaining -= moved;
                 }
-                return new StorageInputResult(amount - remaining, new List<StoredItem>(inputItems.Values));
+                return new StorageInputResult(amount - remaining, new List<CachedItem>(inputItems.Values));
             }
             finally
             {
@@ -127,7 +127,7 @@ namespace DigitalStorage.Storage
             storageIndex.Clear();
             foreach (var item in inventory.childItems)
             {
-                storageIndex.Add(new PhysicalStoredItem(item, this));
+                storageIndex.Add(new StoredPhysicalItem(item, this));
             }
         }
     }

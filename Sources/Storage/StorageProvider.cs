@@ -23,16 +23,16 @@ namespace DigitalStorage.Storage
         /// <summary>Returns the actual inserted count and the resulting destination entries.</summary>
         public StorageInputResult TryInput(GameItem item, int amount = -1)
         {
-            if (!filter.Evaluate(new GameItemStoredItem(item))) return StorageInputResult.Empty;
+            if (!filter.Evaluate(new PhysicalItem(item))) return StorageInputResult.Empty;
             amount = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
             return amount > 0 ? InputCore(item, amount) : StorageInputResult.Empty;
         }
 
         protected abstract StorageInputResult InputCore(GameItem item, int amount);
 
-        internal IReadOnlyList<StoredItem> Snapshot()
+        internal IReadOnlyList<CachedItem> Snapshot()
         {
-            var items = new List<StoredItem>();
+            var items = new List<CachedItem>();
             using var enumerator = storageIndex.GetEnumerator(StorageSort.SortBy.IDENTIFIER, false);
             while (enumerator.MoveNext()) items.Add(enumerator.Current);
             return items;
@@ -66,7 +66,7 @@ namespace DigitalStorage.Storage
                 .Build();
             return plan.MayMatch();
         }
-        public async IAsyncEnumerable<StoredItem> SearchAsync(
+        public async IAsyncEnumerable<CachedItem> SearchAsync(
             StoredItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,

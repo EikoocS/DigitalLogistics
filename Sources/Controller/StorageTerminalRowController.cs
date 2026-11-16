@@ -7,10 +7,10 @@ namespace DigitalStorage.Controller
     {
         internal StorageTerminalRow View { get; set; }
         internal StorageTerminalController Owner { get; }
-        internal StoredItem Item { get; set; }
+        internal CachedItem Item { get; set; }
         internal StorageTerminalGroup Group { get; set; }
 
-        internal StorageTerminalRowController(StorageTerminalController owner, StoredItem item)
+        internal StorageTerminalRowController(StorageTerminalController owner, CachedItem item)
         {
             Owner = owner;
             Item = item;

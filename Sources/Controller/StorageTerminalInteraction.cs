@@ -161,7 +161,7 @@ namespace DigitalStorage.Controller
             selection.Clear();
             placedItems.Clear();
             pressedGroup = quickTransfer && row.Group != null;
-            foreach (var item in row.Group?.Items ?? new List<StoredItem> { row.Item })
+            foreach (var item in row.Group?.Items ?? new List<CachedItem> { row.Item })
                 selection.Add(item.UniqueId);
         }
 
@@ -234,7 +234,7 @@ namespace DigitalStorage.Controller
             if (ids.Count == 0) return;
             var expression = new StoredItemExpression(Expression.Call(Expression.Constant(ids),
                 nameof(HashSet<int>.Contains), null,
-                Expression.Property(FilterExpressionBuilder.Item, nameof(StoredItem.UniqueId))))
+                Expression.Property(FilterExpressionBuilder.Item, nameof(CachedItem.UniqueId))))
                 .And(StoredItemExpression.DisplayName.EqualTo(items[0].DisplayName));
             var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
@@ -298,7 +298,7 @@ namespace DigitalStorage.Controller
             if (view.IsOverTerminal(owner, Input.mousePosition)) InputExternal();
             else
             {
-                using var output = new GameItemStoredItem(externalItem).PrepareOutput();
+                using var output = new PhysicalItem(externalItem).PrepareOutput();
                 int uniqueId = output.Item.GetUniqueID();
                 var slot = CaptureDestination(inputAmount)(output.Item);
                 int moved = slot?.TryAcceptOnce(inputAmount) ?? 0;

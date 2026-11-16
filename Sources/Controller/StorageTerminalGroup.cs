@@ -7,14 +7,14 @@ namespace DigitalStorage.Controller
     internal sealed class StorageTerminalGroup
     {
         internal string Name { get; }
-        internal List<StoredItem> Items { get; } = new List<StoredItem>();
+        internal List<CachedItem> Items { get; } = new List<CachedItem>();
         internal long TotalPrice { get; private set; }
         internal int ContrabandLevel { get; private set; }
         internal int? Heat { get; private set; }
 
         internal StorageTerminalGroup(string name) => Name = name;
 
-        internal void SetItems(IEnumerable<StoredItem> items)
+        internal void SetItems(IEnumerable<CachedItem> items)
         {
             Items.Clear();
             TotalPrice = 0;
@@ -23,9 +23,9 @@ namespace DigitalStorage.Controller
             foreach (var item in items) Add(item);
         }
 
-        internal void Add(StoredItem item) => Insert(Items.Count, item);
+        internal void Add(CachedItem item) => Insert(Items.Count, item);
 
-        internal void Insert(int index, StoredItem item)
+        internal void Insert(int index, CachedItem item)
         {
             Items.Insert(index, item);
             TotalPrice += item.Price;

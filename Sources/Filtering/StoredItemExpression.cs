@@ -6,9 +6,9 @@ namespace DigitalStorage.Filtering
 {
     public sealed class StoredItemExpression
     {
-        private readonly Lazy<Func<StoredItem, bool>> evaluate;
+        private readonly Lazy<Func<CachedItem, bool>> evaluate;
 
-        public Expression<Func<StoredItem, bool>> Tree { get; }
+        public Expression<Func<CachedItem, bool>> Tree { get; }
 
         public static StoredItemString Identifier { get; } = new(
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadIdentifier)));
@@ -27,8 +27,8 @@ namespace DigitalStorage.Filtering
 
         internal StoredItemExpression(Expression body)
         {
-            Tree = Expression.Lambda<Func<StoredItem, bool>>(body, FilterExpressionBuilder.Item);
-            evaluate = new Lazy<Func<StoredItem, bool>>(() => Tree.Compile());
+            Tree = Expression.Lambda<Func<CachedItem, bool>>(body, FilterExpressionBuilder.Item);
+            evaluate = new Lazy<Func<CachedItem, bool>>(() => Tree.Compile());
         }
 
         public static StoredItemExpression Constant(bool value) => new(Expression.Constant(value));
@@ -58,7 +58,7 @@ namespace DigitalStorage.Filtering
         public StoredItemExpression Not() => new(
             FilterExpressionBuilder.Unary(ExpressionType.Not, Tree.Body));
 
-        public bool Evaluate(StoredItem item) => evaluate.Value(item);
+        public bool Evaluate(CachedItem item) => evaluate.Value(item);
 
         private static Expression ReadTag(string getter, string key) =>
             FilterExpressionBuilder.Read(getter, Expression.Constant(key, typeof(string)));

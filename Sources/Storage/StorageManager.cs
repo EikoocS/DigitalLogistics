@@ -25,8 +25,8 @@ namespace DigitalStorage.Storage
 
         internal void DetachStorageProvider(StorageProvider provider) => providers.Remove(provider);
 
-        internal bool Owns(StoredItem item) => item is PhysicalStoredItem physical
-            ? providers.Contains(physical.Provider)
+        internal bool Owns(CachedItem item) => item is StoredItem stored
+            ? providers.Contains(stored.Provider)
             : providers.Any(provider => provider.Contains(item.UniqueId));
 
         public void Refresh()
@@ -39,7 +39,7 @@ namespace DigitalStorage.Storage
         {
             int remaining = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
             int requested = remaining;
-            var items = new Dictionary<int, StoredItem>();
+            var items = new Dictionary<int, CachedItem>();
             foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
             {
                 if (remaining <= 0) break;
@@ -48,10 +48,10 @@ namespace DigitalStorage.Storage
                 remaining -= result.Amount;
                 foreach (var stored in result.Items) items[stored.UniqueId] = stored;
             }
-            return new StorageInputResult(requested - remaining, new List<StoredItem>(items.Values));
+            return new StorageInputResult(requested - remaining, new List<CachedItem>(items.Values));
         }
 
-        internal IEnumerable<StoredItem> SearchForOutput(StoredItemExpression expression,
+        internal IEnumerable<CachedItem> SearchForOutput(StoredItemExpression expression,
             StorageProvider excluded)
         {
             foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
@@ -70,7 +70,7 @@ namespace DigitalStorage.Storage
             }
         }
 
-        public async IAsyncEnumerable<StoredItem> SearchAsync(
+        public async IAsyncEnumerable<CachedItem> SearchAsync(
             StoredItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,
@@ -80,14 +80,14 @@ namespace DigitalStorage.Storage
         {
             var providersCopy = new List<StorageProvider>(providers);
             var itemComparer = ComparerHelper.ComparedBy(sortBy.Getter());
-            var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<StoredItem> enumerator) => enumerator.Current, itemComparer);
-            var priorities = new Dictionary<IAsyncEnumerator<StoredItem>, StorageProvider>();
+            var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<CachedItem> enumerator) => enumerator.Current, itemComparer);
+            var priorities = new Dictionary<IAsyncEnumerator<CachedItem>, StorageProvider>();
             if (prioritizeOutput)
-                comparer = Comparer<IAsyncEnumerator<StoredItem>>.Create((a, b) =>
+                comparer = Comparer<IAsyncEnumerator<CachedItem>>.Create((a, b) =>
                     reverse ? priorities[b].Priority.CompareTo(priorities[a].Priority)
                         : priorities[a].Priority.CompareTo(priorities[b].Priority)).LinkComparer(comparer);
-            var heads = new OrderList<IAsyncEnumerator<StoredItem>>(comparer);
-            IAsyncEnumerator<StoredItem> pendingEnumerator = null;
+            var heads = new OrderList<IAsyncEnumerator<CachedItem>>(comparer);
+            IAsyncEnumerator<CachedItem> pendingEnumerator = null;
 
             try
             {

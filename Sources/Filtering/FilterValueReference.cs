@@ -20,9 +20,9 @@ namespace DigitalStorage.Filtering
 
         public string StringProperty => Getter switch
         {
-            nameof(StoredItemValueResolver.ReadIdentifier) => nameof(StoredItem.Identifier),
-            nameof(StoredItemValueResolver.ReadModId) => nameof(StoredItem.ModId),
-            nameof(StoredItemValueResolver.ReadDisplayName) => nameof(StoredItem.DisplayName),
+            nameof(StoredItemValueResolver.ReadIdentifier) => nameof(CachedItem.Identifier),
+            nameof(StoredItemValueResolver.ReadModId) => nameof(CachedItem.ModId),
+            nameof(StoredItemValueResolver.ReadDisplayName) => nameof(CachedItem.DisplayName),
             _ => null
         };
 
@@ -46,7 +46,7 @@ namespace DigitalStorage.Filtering
                 && call.Method.DeclaringType == typeof(StoredItemValueResolver)
                 && call.Arguments.Count >= 1
                 && call.Arguments[0] is ParameterExpression parameter
-                && parameter.Type == typeof(StoredItem)
+                && parameter.Type == typeof(CachedItem)
                 && (call.Type == typeof(string) || call.Type == typeof(bool) || IsInteger(call.Type)))
             {
                 object key = null;

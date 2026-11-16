@@ -7,7 +7,7 @@ namespace DigitalStorage.Filtering
 {
     internal static class FilterExpressionBuilder
     {
-        internal static readonly ParameterExpression Item = Expression.Parameter(typeof(StoredItem), "item");
+        internal static readonly ParameterExpression Item = Expression.Parameter(typeof(CachedItem), "item");
 
         public static Expression Read(string getter) =>
             Expression.Call(typeof(StoredItemValueResolver), getter, null, Item);

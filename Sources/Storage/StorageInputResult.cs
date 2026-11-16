@@ -5,12 +5,12 @@ namespace DigitalStorage.Storage
 {
     public sealed class StorageInputResult
     {
-        public static StorageInputResult Empty { get; } = new(0, Array.Empty<StoredItem>());
+        public static StorageInputResult Empty { get; } = new(0, Array.Empty<CachedItem>());
 
         public int Amount { get; }
-        public IReadOnlyCollection<StoredItem> Items { get; }
+        public IReadOnlyCollection<CachedItem> Items { get; }
 
-        public StorageInputResult(int amount, IReadOnlyCollection<StoredItem> items)
+        public StorageInputResult(int amount, IReadOnlyCollection<CachedItem> items)
         {
             Amount = amount;
             Items = items;

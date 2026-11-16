@@ -17,7 +17,7 @@ namespace DigitalStorage.Controller
 
         private sealed class GroupState
         {
-            internal StoredItem Item;
+            internal CachedItem Item;
             internal StorageTerminalGroup Group;
             internal StorageTerminalList.GroupView View;
             internal StorageTerminalRowController Header;
@@ -25,7 +25,7 @@ namespace DigitalStorage.Controller
             internal bool Queued;
             internal int RenderedItems;
             internal readonly Dictionary<int, StorageTerminalRowController> Rows = new();
-            internal StoredItem FirstItem => Group?.Items[0] ?? Item;
+            internal CachedItem FirstItem => Group?.Items[0] ?? Item;
         }
 
         private StorageTerminalUI view;
@@ -38,9 +38,9 @@ namespace DigitalStorage.Controller
         private double searchDeadline = double.PositiveInfinity;
         private readonly HashSet<string> expandedGroups = new();
         private StorageTerminalInteraction interaction;
-        private readonly Dictionary<int, StoredItem> currentItems = new();
+        private readonly Dictionary<int, CachedItem> currentItems = new();
         private StoredItemExpression searchExpression;
-        private IComparer<StoredItem> itemComparer;
+        private IComparer<CachedItem> itemComparer;
         private IComparer<GroupState> groupComparer;
 
         internal bool Interacting => interaction.Consuming;
@@ -88,7 +88,7 @@ namespace DigitalStorage.Controller
             searchExpression = expression;
             var comparer = ComparerHelper.ComparedBy(Configuration.SortBy.Getter());
             itemComparer = Configuration.Reverse
-                ? Comparer<StoredItem>.Create((left, right) => comparer.Compare(right, left)) : comparer;
+                ? Comparer<CachedItem>.Create((left, right) => comparer.Compare(right, left)) : comparer;
             groupComparer = Comparer<GroupState>.Create((left, right) =>
                 itemComparer.Compare(left.FirstItem, right.FirstItem));
             var cancellation = new CancellationTokenSource();
@@ -137,7 +137,7 @@ namespace DigitalStorage.Controller
             }
         }
 
-        private void UpdateSingle(GroupState state, StoredItem item)
+        private void UpdateSingle(GroupState state, CachedItem item)
         {
             if (state.Group != null)
             {
@@ -188,7 +188,7 @@ namespace DigitalStorage.Controller
             PositionGroup(state);
         }
 
-        internal void InsertItem(StoredItem item)
+        internal void InsertItem(CachedItem item)
         {
             if (searchExpression == null || !item.VerifyValidity() || !DigitalStorage.Manager.Owns(item) || !searchExpression.Evaluate(item)
                 || Configuration.SortBy.Getter()(item) == null)
@@ -233,14 +233,14 @@ namespace DigitalStorage.Controller
             PositionGroup(state);
         }
 
-        internal IEnumerable<StoredItem> GetCurrentItems(IEnumerable<int> uniqueIds)
+        internal IEnumerable<CachedItem> GetCurrentItems(IEnumerable<int> uniqueIds)
         {
             foreach (int id in uniqueIds)
                 if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()
                     && DigitalStorage.Manager.Owns(item)) yield return item;
         }
 
-        private void AddItem(StoredItem item)
+        private void AddItem(CachedItem item)
         {
             if (!DigitalStorage.Manager.Owns(item)) return;
             string name = item.DisplayName;
@@ -269,7 +269,7 @@ namespace DigitalStorage.Controller
             if (itemComparer.Compare(first, state.FirstItem) != 0) PositionGroup(state);
         }
 
-        private int FindItemIndex(List<StoredItem> items, StoredItem item)
+        private int FindItemIndex(List<CachedItem> items, CachedItem item)
         {
             if (items.Count == 0 || itemComparer.Compare(items[items.Count - 1], item) <= 0) return items.Count;
             int index = items.BinarySearch(item, itemComparer);
@@ -351,7 +351,7 @@ namespace DigitalStorage.Controller
             }
         }
 
-        private void UpdateRow(StorageTerminalRowController row, StoredItem item)
+        private void UpdateRow(StorageTerminalRowController row, CachedItem item)
         {
             row.Item = item;
             row.Group = null;

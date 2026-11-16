@@ -1,11 +1,11 @@
 namespace DigitalStorage.Storage
 {
-    internal class PhysicalStoredItem : GameItemStoredItem
+    internal class StoredPhysicalItem : PhysicalItem, StoredItem
     {
         private readonly InventoryStorageProvider provider;
-        internal InventoryStorageProvider Provider => provider;
+        public StorageProvider Provider => provider;
 
-        public PhysicalStoredItem(GameItem item, InventoryStorageProvider provider) : base(item)
+        public StoredPhysicalItem(GameItem item, InventoryStorageProvider provider) : base(item)
         {
             this.provider = provider;
         }

@@ -7,28 +7,28 @@ namespace DigitalStorage.Storage
 {
     public class StorageIndex
     {
-        public static readonly Comparer<StoredItem> IdentifierComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Identifier);
-        public static readonly Comparer<StoredItem> ModIdComparer = ComparerHelper.ComparedBy((StoredItem item) => item.ModId).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<StoredItem> DisplayNameComparer = ComparerHelper.ComparedBy((StoredItem item) => item.DisplayName).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<StoredItem> PriceComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Price).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<StoredItem> BasePriceComparer = ComparerHelper.ComparedBy((StoredItem item) => item.BasePrice).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<StoredItem> HeatComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Heat).LinkComparer(IdentifierComparer);
-        private readonly Dictionary<int, StoredItem> UniqueIdIndex = new();
-        private readonly Dictionary<SortBy, OrderList<StoredItem>> itemIndexs = new();
+        public static readonly Comparer<CachedItem> IdentifierComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Identifier);
+        public static readonly Comparer<CachedItem> ModIdComparer = ComparerHelper.ComparedBy((CachedItem item) => item.ModId).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<CachedItem> DisplayNameComparer = ComparerHelper.ComparedBy((CachedItem item) => item.DisplayName).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<CachedItem> PriceComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Price).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<CachedItem> BasePriceComparer = ComparerHelper.ComparedBy((CachedItem item) => item.BasePrice).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<CachedItem> HeatComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Heat).LinkComparer(IdentifierComparer);
+        private readonly Dictionary<int, CachedItem> UniqueIdIndex = new();
+        private readonly Dictionary<SortBy, OrderList<CachedItem>> itemIndexs = new();
         private readonly Dictionary<SortBy, BloomFilter> indexBlooms = new();
         private readonly BloomFilter typeBloom = new();
 
         public StorageIndex()
         {
             foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
-                itemIndexs[sortBy] = OrderList<StoredItem>.BuildByGetterAndFilter(sortBy.Getter());
+                itemIndexs[sortBy] = OrderList<CachedItem>.BuildByGetterAndFilter(sortBy.Getter());
             foreach (var field in (SortBy[])Enum.GetValues(typeof(SortBy)))
                 indexBlooms[field] = new ();
         }
 
         public bool Contains(int uniqueId) => UniqueIdIndex.ContainsKey(uniqueId);
 
-        public bool Add(StoredItem item)
+        public bool Add(CachedItem item)
         {
             if (UniqueIdIndex.ContainsKey(item.UniqueId))
                 return false;
@@ -50,7 +50,7 @@ namespace DigitalStorage.Storage
             return true;
         }
 
-        public bool Remove(StoredItem item)
+        public bool Remove(CachedItem item)
         {
             if (!UniqueIdIndex.ContainsKey(item.UniqueId))
                 return false;
@@ -94,7 +94,7 @@ namespace DigitalStorage.Storage
             return typeBloom;
         }
 
-        public IEnumerator<StoredItem> GetEnumerator(SortBy sortBy, bool reverse)
+        public IEnumerator<CachedItem> GetEnumerator(SortBy sortBy, bool reverse)
         {
             var index = itemIndexs[sortBy];
             return index.GetEnumerator(reverse);

@@ -53,7 +53,7 @@ namespace DigitalStorage.UI
         private void Refresh()
         {
             CustomUIBuilder.ClearContainer(output.CurrentContainer);
-            StoredItem item = sample == null ? null : new GameItemStoredItem(sample);
+            CachedItem item = sample == null ? null : new PhysicalItem(sample);
             if (item != null)
             {
                 output.AddLabel(item.DisplayName);
@@ -69,7 +69,7 @@ namespace DigitalStorage.UI
             CustomUIBuilder.RebuildLayout(output.CurrentContainer);
         }
 
-        private void AddNode(Expression node, StoredItem item, int depth)
+        private void AddNode(Expression node, CachedItem item, int depth)
         {
             string text = node switch
             {
@@ -86,7 +86,7 @@ namespace DigitalStorage.UI
             object value = null;
             if (item != null)
             {
-                value = Expression.Lambda<Func<StoredItem, object>>(
+                value = Expression.Lambda<Func<CachedItem, object>>(
                     Expression.Convert(node, typeof(object)), expression.Tree.Parameters).Compile()(item);
                 text += " = " + FormatValue(value);
             }
@@ -129,7 +129,7 @@ namespace DigitalStorage.UI
             null => "null",
             string text => "\"" + text + "\"",
             bool result => result ? "true" : "false",
-            StoredItem item => item.DisplayName,
+            CachedItem item => item.DisplayName,
             _ => Convert.ToString(value, CultureInfo.InvariantCulture)
         };
     }

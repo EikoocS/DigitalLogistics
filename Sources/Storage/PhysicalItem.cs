@@ -1,10 +1,10 @@
 namespace DigitalStorage.Storage
 {
-    internal class GameItemStoredItem : StoredItem
+    internal class PhysicalItem : CachedItem
     {
         protected readonly GameItem item;
 
-        public GameItemStoredItem(GameItem item)
+        public PhysicalItem(GameItem item)
         {
             this.item = item;
             UniqueId = item.GetUniqueID();
