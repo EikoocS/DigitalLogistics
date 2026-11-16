@@ -15,25 +15,22 @@ namespace DigitalStorage.Storage
         public string Name { get; protected set; } = "Unnamed";
         public StoredItemExpression filter { get; protected set; } = StoredItemExpression.Constant(true);
         protected readonly StorageIndex storageIndex = new();
-        public event Action Changed;
-
-        protected void NotifyChanged() => Changed?.Invoke();
         public abstract void Dispose();
         public abstract bool Contains(int uniqueId);
         public abstract void Refresh();
 
-        /// <summary>Returns the number of units actually inserted.</summary>
-        public int TryInput(GameItem item, int amount = -1)
+        /// <summary>Returns the actual inserted count and the resulting destination entries.</summary>
+        public StorageInputResult TryInput(GameItem item, int amount = -1)
         {
-            if (!filter.Evaluate(new GameItemStoredItem(item))) return 0;
+            if (!filter.Evaluate(new GameItemStoredItem(item))) return StorageInputResult.Empty;
             amount = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
-            return amount > 0 ? InputCore(item, amount) : 0;
+            return amount > 0 ? InputCore(item, amount) : StorageInputResult.Empty;
         }
 
-        protected abstract int InputCore(GameItem item, int amount);
+        protected abstract StorageInputResult InputCore(GameItem item, int amount);
 
         /// <summary>Place and complete each output before advancing the enumerator.</summary>
-        public async IAsyncEnumerable<StorageOutput> PrepareOutputAsync(
+        public async IAsyncEnumerable<StorageOutput> PrepareOutputAsync(    
             StoredItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,

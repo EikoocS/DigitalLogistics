@@ -23,9 +23,11 @@ namespace DigitalStorage.Controller
             foreach (var item in items) Add(item);
         }
 
-        internal void Add(StoredItem item)
+        internal void Add(StoredItem item) => Insert(Items.Count, item);
+
+        internal void Insert(int index, StoredItem item)
         {
-            Items.Add(item);
+            Items.Insert(index, item);
             TotalPrice += item.Price;
             ContrabandLevel = Math.Max(ContrabandLevel, item.ContrabandLevel);
             if (item.Heat.HasValue && (!Heat.HasValue || item.Heat.Value > Heat.Value)) Heat = item.Heat;

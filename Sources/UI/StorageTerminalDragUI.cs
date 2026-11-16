@@ -50,6 +50,7 @@ namespace DigitalStorage.UI
 
         internal void ShowInputShield()
         {
+            if (inputShield != null) return;
             inputShield = TreeNodeRender.Instantiate().SetParentOverlayRoot();
             inputShield.gameObject.name = "StorageTerminalInputShield";
             inputShield.InitEventHandler();
@@ -59,6 +60,9 @@ namespace DigitalStorage.UI
             inputShield.rectTransform.anchorMin = inputShield.rectTransform.anchorMax =
                 inputShield.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         }
+
+        internal bool IsOverTerminal(StorageTerminalController owner, Vector3 position) =>
+            owner.ContainsPointer(position, inputShield);
 
         internal void HideInputShield()
         {

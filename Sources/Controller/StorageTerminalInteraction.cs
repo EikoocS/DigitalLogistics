@@ -1,6 +1,10 @@
-#if false
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
+using DigitalStorage.Filtering;
 using DigitalStorage.Storage;
 using DigitalStorage.UI;
 using UnityEngine;
@@ -10,205 +14,327 @@ namespace DigitalStorage.Controller
     internal sealed class StorageTerminalInteraction : EmptyActionHandler
     {
         private StorageTerminalController owner;
-        private StoredItem held;
-        private StorageTerminalRowController quickTransferRow;
-        private StoredItem groupDragItem;
-        private GridShapeBuilder shape;
         private readonly StorageTerminalDragUI view = new();
-        private readonly HashSet<GameItem> placedItems = new();
+        private readonly HashSet<int> selection = new();
+        private readonly HashSet<int> placedItems = new();
+        private StorageTerminalRowController pressedRow;
+        private GameItem externalItem;
+        private GameItem previewItem;
+        private GridShapeBuilder shape;
+        private CancellationTokenSource movement;
         private Vector3 pressPosition;
+        private bool pointerDown;
         private bool fromList;
         private bool dragged;
+        private bool quickTransfer;
+        private int inputAmount;
         private int consumeUntilFrame = -1;
 
-        internal bool PointerDown { get; private set; }
+        internal bool Consuming => previewItem != null || quickTransfer || movement != null
+            || Time.frameCount <= consumeUntilFrame;
 
         public override List<KeyCode> keyListeners => new() { KeyCode.Mouse0, KeyCode.Escape };
 
-        internal void Init(StorageTerminalController list) => owner = list;
+        internal void Init(StorageTerminalController controller) => owner = controller;
 
         protected override bool OnEventInit()
         {
             if (InputActionManager.current == null || ItemMouseDragHandler.current == null) return false;
-            priority = InputActionManager.current.actionHandlers.Where(h => h != this)
-                .Select(h => h.priority).DefaultIfEmpty().Max() + 1;
+            priority = InputActionManager.current.actionHandlers.Where(handler => handler != this)
+                .Select(handler => handler.priority).DefaultIfEmpty().Max() + 1;
             return true;
         }
 
         protected override void OnEventPress(ISet<KeyCode> keysPressed)
         {
-            if (keysPressed.Contains(KeyCode.Escape)
-                && (held != null || quickTransferRow != null || groupDragItem != null))
+            if (keysPressed.Contains(KeyCode.Escape) && (Consuming || pointerDown))
             {
                 Cancel();
                 return;
             }
-            if (!keysPressed.Contains(KeyCode.Mouse0)) return;
-            if (held == null && Time.frameCount > consumeUntilFrame) view.HideInputShield();
+            if (!keysPressed.Contains(KeyCode.Mouse0) || movement != null) return;
+            if (!Consuming) view.HideInputShield();
 
-            fromList = held == null;
+            fromList = previewItem == null;
             if (fromList)
             {
-                var row = StorageTerminalRow.FindController(Input.mousePosition);
-                if (row?.Owner != owner
-                    || ItemMouseDragHandler.current.IsDraggingItem || UIDragHandler.isDraggingAnyUI) return;
-                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) quickTransferRow = row;
-                else if (row.Group != null)
+                if (ItemMouseDragHandler.current.IsDraggingItem || UIDragHandler.isDraggingAnyUI) return;
+                pressedRow = view.FindRow(Input.mousePosition);
+                if (pressedRow != null && pressedRow.Owner != owner) return;
+                quickTransfer = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (pressedRow != null)
                 {
-                    var first = row.Group.Items[0];
-                    if (!CanTake(first)) return;
-                    groupDragItem = first;
+                    SetSelection(pressedRow);
+                    if (!quickTransfer && pressedRow.Group == null && !HoldSelection()) return;
                 }
                 else
                 {
-                    if (!CanTake(row.Item)) return;
-                    Hold(row.Item);
+                    externalItem = view.FindItem(Input.mousePosition);
+                    if (!CanTakeExternal(externalItem))
+                    {
+                        quickTransfer = false;
+                        externalItem = null;
+                        return;
+                    }
+                    inputAmount = Input.GetKey(KeyCode.LeftAlt) ? 1 : externalItem.MaxNumRemove();
                 }
-                if (groupDragItem == null)
-                {
-                    InputActionManager.current.ResetAfter(this);
-                    view.ShowInputShield();
-                }
+                if (Consuming) CaptureInput();
             }
-            PointerDown = true;
+            pointerDown = true;
             dragged = false;
             pressPosition = Input.mousePosition;
         }
 
         protected override void OnEventMouseMove(Vector3 mousePosition, Vector3 mouseDelta)
         {
-            if (PointerDown && mousePosition != pressPosition
-                && (mousePosition - pressPosition).magnitude >= ItemMouseDragHandler.current.dragThreshold)
+            if (!pointerDown || dragged || (mousePosition - pressPosition).magnitude
+                < ItemMouseDragHandler.current.dragThreshold) return;
+            dragged = true;
+            if (quickTransfer) return;
+            if (previewItem == null)
             {
-                dragged = true;
-                if (groupDragItem != null)
+                bool held = pressedRow != null ? HoldSelection() : Hold(externalItem);
+                if (!held)
                 {
-                    if (!CanTake(groupDragItem))
-                    {
-                        Cancel();
-                        return;
-                    }
-                    Hold(groupDragItem);
-                    groupDragItem = null;
-                    InputActionManager.current.ResetAfter(this);
-                    view.ShowInputShield();
+                    Cancel();
+                    return;
                 }
+                CaptureInput();
             }
         }
 
         protected override void OnEventRelease(ISet<KeyCode> keysReleased)
         {
-            if (!keysReleased.Contains(KeyCode.Mouse0) || !PointerDown) return;
+            if (!keysReleased.Contains(KeyCode.Mouse0) || !pointerDown) return;
             OnEventMouseMove(Input.mousePosition, Vector3.zero);
-            PointerDown = false;
-            if (quickTransferRow != null)
+            pointerDown = false;
+            if (quickTransfer)
             {
-                if (!dragged && view.FindRow(Input.mousePosition) == quickTransferRow)
-                    TransferOneToCounter(quickTransferRow);
-                quickTransferRow = null;
+                quickTransfer = false;
+                if (!dragged)
+                {
+                    if (pressedRow != null && view.FindRow(Input.mousePosition) == pressedRow)
+                        TransferToCounter();
+                    else if (externalItem != null && view.FindItem(Input.mousePosition) == externalItem)
+                        InputExternal();
+                }
+                consumeUntilFrame = Time.frameCount + 1;
             }
-            else if (held != null && (!fromList || dragged)) PlaceOne(!fromList && dragged);
-            groupDragItem = null;
-            consumeUntilFrame = Time.frameCount + 1;
+            else if (previewItem != null && (!fromList || dragged))
+            {
+                if (externalItem != null) PlaceExternal();
+                else PlaceOutput(!fromList && dragged);
+                consumeUntilFrame = Time.frameCount + 1;
+            }
+            pressedRow = null;
+            if (previewItem == null) externalItem = null;
         }
 
         protected override bool OnEventUpdate()
         {
-            if (held != null && !CanTake(held)) Cancel();
-            bool consuming = held != null || PointerDown || Time.frameCount <= consumeUntilFrame;
-            if (!consuming)
+            if (previewItem != null && movement == null)
+            {
+                if (externalItem != null ? !CanTakeExternal(externalItem)
+                    : !owner.GetCurrentItems(selection).Any()) Cancel();
+            }
+            if (!Consuming)
             {
                 view.HideInputShield();
                 return false;
             }
-
             view.Update();
-            if (held != null) view.Highlight(FindSlot());
+            if (previewItem != null && movement == null)
+                view.Highlight(view.IsOverTerminal(owner, Input.mousePosition) ? null
+                    : CaptureDestination(externalItem == null ? 1 : inputAmount)(previewItem));
             return true;
         }
 
-        private static bool CanTake(StoredItem item) => item?.IsAvailable == true
-            && item.Item is GameItemElement && item.Item.MayRemove() && item.Item.MaxNumRemove() > 0;
+        private static bool CanTakeExternal(GameItem item) => item is GameItemElement
+            && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove() && item.MaxNumRemove() > 0;
 
-        private static void TransferOneToCounter(StorageTerminalRowController row)
+        private static bool CanOutput(GameItem item) => item is GameItemElement && item.unitCount > 0
+            && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;
+
+        private void SetSelection(StorageTerminalRowController row)
+        {
+            selection.Clear();
+            placedItems.Clear();
+            foreach (var item in row.Group?.Items ?? new List<StoredItem> { row.Item })
+                selection.Add(item.UniqueId);
+        }
+
+        private bool HoldSelection()
+        {
+            foreach (var stored in owner.GetCurrentItems(selection))
+            {
+                if (placedItems.Contains(stored.UniqueId)) continue;
+                if (Hold(stored.GetItemInstance())) return true;
+            }
+            return false;
+        }
+
+        private bool Hold(GameItem item)
+        {
+            if (!CanOutput(item)) return false;
+            previewItem = item;
+            shape = new GridShapeBuilder(item.modifiedShape);
+            view.ShowPreview(item);
+            return true;
+        }
+
+        private void CaptureInput()
+        {
+            InputActionManager.current.ResetAfter(this);
+            view.ShowInputShield();
+        }
+
+        private Func<GameItem, SlotMarker> CaptureDestination(int amount)
+        {
+            var position = Input.mousePosition;
+            var target = view.FindItem(position);
+            var inventory = target == null ? view.FindInventory(position) : null;
+            var placementShape = new GridShapeBuilder(shape);
+            return item =>
+            {
+                if (target != null)
+                {
+                    if (target == item || !GeneralHelper.MayPlayerInsertInto(target)) return null;
+                    if (target.MayHaveValidInventorySlot(item)) return target.TryFindOneValidInventorySlot(item);
+                    return target.MayStack(item) ? target.GetStackSlot(item) : null;
+                }
+                if (inventory == null || !GeneralHelper.MayPlayerInsertInto(inventory)) return null;
+                var itemShape = new GridShapeBuilder(item.modifiedShape)
+                    .SetOrientation(placementShape.orientation).SetFlipped(placementShape.flipped);
+                return inventory.TryInventorySlot(item, amount, position, itemShape, item.modifiedState);
+            };
+        }
+
+        private void TransferToCounter()
         {
             var entry = EmporiumEntry.Instance;
             var counter = entry.backInvinvElement;
             if (!entry.backInvWindow.IsVisible() || !GeneralHelper.MayPlayerInsertInto(counter)) return;
-            var items = row.Group?.Items ?? new List<StoredItem> { row.Item };
-            foreach (var stored in items)
-            {
-                if (!CanTake(stored) || stored.Item.parentInventory == counter) continue;
-                var slot = counter.TryFindOneValidInventorySlot(stored.Item);
-                if (slot?.numTransfer > 0 && slot.TryAcceptOnce(1) > 0) return;
-            }
+            MoveOutput(item => item.parentInventory == counter ? null
+                : counter.TryFindOneValidInventorySlot(item), false);
         }
 
-        private void Hold(StoredItem item)
+        private void PlaceOutput(bool continueHolding)
         {
-            held = item;
-            shape = new GridShapeBuilder(item.Item.modifiedShape);
-            view.ShowPreview(item.Item);
+            if (view.IsOverTerminal(owner, Input.mousePosition)) return;
+            MoveOutput(CaptureDestination(1), continueHolding);
         }
 
-        private SlotMarker FindSlot()
+        private async void MoveOutput(Func<GameItem, SlotMarker> findSlot, bool continueHolding)
         {
-            var item = held.Item;
-            var target = view.FindItem(Input.mousePosition);
-            if (target != null)
-            {
-                if (target == item || !GeneralHelper.MayPlayerInsertInto(target)) return null;
-                if (target.MayHaveValidInventorySlot(item)) return target.TryFindOneValidInventorySlot(item);
-                return target.MayStack(item) ? target.GetStackSlot(item) : null;
-            }
-            var inventory = view.FindInventory(Input.mousePosition);
-            if (inventory == null || !GeneralHelper.MayPlayerInsertInto(inventory)) return null;
-            return inventory.TryInventorySlot(item, 1, Input.mousePosition, shape, item.modifiedState);
-        }
-
-        private void PlaceOne(bool continueHolding)
-        {
-            if (!CanTake(held))
-            {
-                Cancel();
-                return;
-            }
-            var slot = FindSlot();
-            if (slot == null || slot.numTransfer < 1) return;
-            string name = held.DisplayName;
+            var items = owner.GetCurrentItems(selection)
+                .Where(item => !placedItems.Contains(item.UniqueId)).ToList();
+            var ids = new HashSet<int>(items.Select(item => item.UniqueId));
+            if (ids.Count == 0) return;
+            var expression = new StoredItemExpression(Expression.Call(Expression.Constant(ids),
+                nameof(HashSet<int>.Contains), null,
+                Expression.Property(FilterExpressionBuilder.Item, nameof(StoredItem.UniqueId))))
+                .And(StoredItemExpression.DisplayName.EqualTo(items[0].DisplayName));
+            var cancellation = new CancellationTokenSource();
+            var token = cancellation.Token;
+            movement = cancellation;
             view.ClearHighlight();
-            if (slot.TryAcceptOnce(1) < 1) return;
-            placedItems.Add(slot.targetItem ?? slot.item);
-            var next = continueHolding ? DigitalStorage.Manager.FindItem(name, placedItems) : null;
-            if (next == null) ClearHeld();
-            else Hold(next);
+            try
+            {
+                bool moved = await TryMoveOutput(expression, findSlot, token);
+                if (!moved || token.IsCancellationRequested) return;
+                if (!continueHolding || !HoldSelection()) ClearHeld();
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+            finally
+            {
+                if (ReferenceEquals(movement, cancellation)) movement = null;
+                cancellation.Dispose();
+            }
+        }
+
+        private async Task<bool> TryMoveOutput(StoredItemExpression expression,
+            Func<GameItem, SlotMarker> findSlot, CancellationToken token)
+        {
+            foreach (var provider in DigitalStorage.Manager.Providers.ToArray())
+            {
+                await foreach (var output in provider.PrepareOutputAsync(expression,
+                    owner.Configuration.SortBy, owner.Configuration.Reverse, token))
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (!CanOutput(output.Item)) continue;
+                    int uniqueId = output.Item.GetUniqueID();
+                    var slot = findSlot(output.Item);
+                    int moved = slot?.TryAcceptOnce(1) ?? 0;
+                    output.Complete(moved);
+                    if (moved == 0) continue;
+                    owner.RemoveItem(uniqueId);
+                    placedItems.Add((slot.targetItem ?? slot.item).GetUniqueID());
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void InputExternal()
+        {
+            if (!CanTakeExternal(externalItem)) return;
+            int uniqueId = externalItem.GetUniqueID();
+            var result = DigitalStorage.Manager.TryInput(externalItem, inputAmount);
+            if (result.Amount == 0) return;
+            if (!result.Items.Any(item => item.UniqueId == uniqueId)) owner.RemoveItem(uniqueId);
+            foreach (var item in result.Items) owner.InsertItem(item);
+        }
+
+        private void PlaceExternal()
+        {
+            if (!CanTakeExternal(externalItem)) return;
+            if (view.IsOverTerminal(owner, Input.mousePosition)) InputExternal();
+            else
+            {
+                using var output = new GameItemStoredItem(externalItem).PrepareOutput();
+                int uniqueId = output.Item.GetUniqueID();
+                var slot = CaptureDestination(inputAmount)(output.Item);
+                int moved = slot?.TryAcceptOnce(inputAmount) ?? 0;
+                output.Complete(moved);
+                if (moved > 0) owner.RemoveItem(uniqueId);
+            }
+            ClearHeld();
         }
 
         private void ClearHeld()
         {
             view.ClearHighlight();
             view.HidePreview();
-            held = null;
-            quickTransferRow = null;
-            groupDragItem = null;
+            previewItem = null;
+            externalItem = null;
+            pressedRow = null;
+            selection.Clear();
             placedItems.Clear();
-            PointerDown = false;
+            pointerDown = false;
+            quickTransfer = false;
         }
 
         private void Cancel()
         {
+            movement?.Cancel();
             ClearHeld();
             consumeUntilFrame = Time.frameCount + 1;
         }
 
         protected override void OnEventReset()
         {
-            if (held != null || quickTransferRow != null || groupDragItem != null) Cancel();
+            if (Consuming || pointerDown) Cancel();
         }
 
         private void OnDisable()
         {
-            enabled = false;
+            movement?.Cancel();
             ClearHeld();
             view.HideInputShield();
         }
@@ -219,4 +345,3 @@ namespace DigitalStorage.Controller
         }
     }
 }
-#endif

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DigitalStorage.Collections;
 using DigitalStorage.Filtering;
 using DigitalStorage.Storage;
 using DigitalStorage.UI;
@@ -25,49 +25,56 @@ namespace DigitalStorage.Controller
             internal bool Queued;
             internal int RenderedItems;
             internal readonly Dictionary<int, StorageTerminalRowController> Rows = new();
+            internal StoredItem FirstItem => Group?.Items[0] ?? Item;
         }
 
         private StorageTerminalUI view;
         private StorageTerminalList List => view.List;
         private readonly Dictionary<string, GroupState> groups = new();
+        private readonly List<GroupState> orderedGroups = new();
         private readonly Queue<GroupState> pendingChildren = new Queue<GroupState>();
         private CancellationTokenSource searchCancellation;
         private TaskCompletionSource<bool> nextFrame;
         private double searchDeadline = double.PositiveInfinity;
-        private bool inventoryChanged;
         private readonly HashSet<string> expandedGroups = new();
-        private List<StoredItem> pendingItems;
+        private StorageTerminalInteraction interaction;
+        private readonly Dictionary<int, StoredItem> currentItems = new();
+        private StoredItemExpression searchExpression;
+        private IComparer<StoredItem> itemComparer;
+        private IComparer<GroupState> groupComparer;
+
+        internal bool Interacting => interaction.Consuming;
+        internal StorageTerminalConfiguration Configuration => view.Configuration;
+        internal bool ContainsPointer(Vector3 position, TreeNodeRender ignored) => view.ContainsPointer(position, ignored);
 
         internal void Init(StorageTerminalUI view)
         {
             this.view = view;
             view.SearchChanged += OnSearchChanged;
             view.Configuration.Changed += OnConfigurationChanged;
-            DigitalStorage.Manager.Changed += OnInventoryChanged;
+            interaction = gameObject.AddComponent<StorageTerminalInteraction>();
+            interaction.Init(this);
         }
 
         internal void Refresh()
         {
             DigitalStorage.Manager.Refresh();
             view.Configuration.RefreshDescriptions();
-            Refresh(false);
+            Search();
         }
 
-        private async void Refresh(bool incremental)
+        private async void Search()
         {
             StopSearch();
             if (!isActiveAndEnabled) return;
 
-            inventoryChanged = false;
-            pendingItems = null;
-            if (!incremental)
-            {
-                expandedGroups.Clear();
-                foreach (var group in groups.Values) group.View.Destroy();
-                groups.Clear();
-                pendingChildren.Clear();
-                List.ResetScroll();
-            }
+            expandedGroups.Clear();
+            foreach (var group in groups.Values) group.View.Destroy();
+            groups.Clear();
+            orderedGroups.Clear();
+            currentItems.Clear();
+            pendingChildren.Clear();
+            List.ResetScroll();
             List.RefreshPriceUnit();
 
             var expression = StorageTerminalSearchParser.Parse(view.SearchText);
@@ -78,7 +85,12 @@ namespace DigitalStorage.Controller
                 expression = expression.And(view.Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.Legal
                     ? unsafeItems.Not() : unsafeItems);
             }
-            var items = incremental ? new List<StoredItem>() : null;
+            searchExpression = expression;
+            var comparer = ComparerHelper.ComparedBy(Configuration.SortBy.Getter());
+            itemComparer = Configuration.Reverse
+                ? Comparer<StoredItem>.Create((left, right) => comparer.Compare(right, left)) : comparer;
+            groupComparer = Comparer<GroupState>.Create((left, right) =>
+                itemComparer.Compare(left.FirstItem, right.FirstItem));
             var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             searchCancellation = cancellation;
@@ -101,13 +113,11 @@ namespace DigitalStorage.Controller
                             finished = true;
                             break;
                         }
-                        if (incremental) items.Add(enumerator.Current);
-                        else AddItem(enumerator.Current);
+                        AddItem(enumerator.Current);
                     }
 
                     if (finished)
                     {
-                        pendingItems = items;
                         return;
                     }
                     await WaitForNextFrame();
@@ -127,48 +137,6 @@ namespace DigitalStorage.Controller
             }
         }
 
-        private void ApplyChanges(List<StoredItem> items)
-        {
-            var results = new Dictionary<string, List<StoredItem>>();
-            var order = new List<string>();
-            foreach (var item in items)
-            {
-                if (!results.TryGetValue(item.DisplayName, out var group))
-                {
-                    results.Add(item.DisplayName, group = new List<StoredItem>());
-                    order.Add(item.DisplayName);
-                }
-                group.Add(item);
-            }
-
-            pendingChildren.Clear();
-            foreach (var entry in groups.ToArray())
-            {
-                entry.Value.Queued = false;
-                if (results.ContainsKey(entry.Key)) continue;
-                entry.Value.View.Destroy();
-                groups.Remove(entry.Key);
-                expandedGroups.Remove(entry.Key);
-            }
-
-            int index = 0;
-            foreach (string name in order)
-            {
-                var result = results[name];
-                if (!groups.TryGetValue(name, out var state))
-                {
-                    foreach (var item in result) AddItem(item);
-                    state = groups[name];
-                }
-                else if (result.Count == 1) UpdateSingle(state, result[0]);
-                else UpdateGroup(state, name, result);
-
-                state.View.SetIndex(index);
-                index++;
-                QueueChildren(state);
-            }
-        }
-
         private void UpdateSingle(GroupState state, StoredItem item)
         {
             if (state.Group != null)
@@ -183,46 +151,146 @@ namespace DigitalStorage.Controller
             UpdateRow(state.Header, item);
         }
 
-        private void UpdateGroup(GroupState state, string name, List<StoredItem> items)
+        internal void RemoveItem(int uniqueId)
         {
-            if (state.Group == null) CreateGroup(state, name);
-            bool orderChanged = !state.Group.Items.Select(item => item.UniqueId)
-                .SequenceEqual(items.Select(item => item.UniqueId));
-            var remaining = new HashSet<int>(items.Select(item => item.UniqueId));
-            foreach (var entry in state.Rows.ToArray())
+            if (!currentItems.TryGetValue(uniqueId, out var item)) return;
+            currentItems.Remove(uniqueId);
+            var state = groups[item.DisplayName];
+            if (state.Group == null)
             {
-                if (remaining.Contains(entry.Key)) continue;
-                entry.Value.View.Destroy();
-                state.Rows.Remove(entry.Key);
+                state.View.Destroy();
+                groups.Remove(item.DisplayName);
+                orderedGroups.Remove(state);
+                expandedGroups.Remove(item.DisplayName);
+                return;
             }
 
-            state.Group.SetItems(items);
-            for (int i = 0; i < items.Count; i++)
+            var items = state.Group.Items;
+            int index = items.FindIndex(stored => stored.UniqueId == uniqueId);
+            items.RemoveAt(index);
+            if (items.Count == 1)
             {
-                if (!state.Rows.TryGetValue(items[i].UniqueId, out var row)) continue;
-                UpdateRow(row, items[i]);
-                row.View.SetIndex(i);
+                UpdateSingle(state, items[0]);
+                PositionGroup(state);
+                return;
             }
-            if (orderChanged) state.RenderedItems = 0;
+
+            if (state.Rows.TryGetValue(uniqueId, out var row))
+            {
+                row.View.Destroy();
+                state.Rows.Remove(uniqueId);
+            }
+            if (index < state.RenderedItems) state.RenderedItems--;
+            ReindexChildren(state, index);
+            state.Group.SetItems(items.ToArray());
             UpdateSummary(state);
+            QueueChildren(state);
+            PositionGroup(state);
+        }
+
+        internal void InsertItem(StoredItem item)
+        {
+            if (searchExpression == null || !item.VerifyValidity() || !searchExpression.Evaluate(item)
+                || Configuration.SortBy.Getter()(item) == null)
+            {
+                RemoveItem(item.UniqueId);
+                return;
+            }
+
+            if (!currentItems.TryGetValue(item.UniqueId, out var previous))
+            {
+                AddItem(item);
+                return;
+            }
+            if (previous.DisplayName != item.DisplayName)
+            {
+                RemoveItem(item.UniqueId);
+                AddItem(item);
+                return;
+            }
+
+            currentItems[item.UniqueId] = item;
+            var state = groups[item.DisplayName];
+            if (state.Group == null) UpdateSingle(state, item);
+            else
+            {
+                var items = state.Group.Items;
+                int oldIndex = items.FindIndex(stored => stored.UniqueId == item.UniqueId);
+                items.RemoveAt(oldIndex);
+                int index = FindItemIndex(items, item);
+                items.Insert(index, item);
+                state.Group.SetItems(items.ToArray());
+                if (state.Rows.TryGetValue(item.UniqueId, out var row)) UpdateRow(row, item);
+                if (index != oldIndex)
+                {
+                    int start = Math.Min(index, oldIndex);
+                    state.RenderedItems = Math.Min(state.RenderedItems, start);
+                    ReindexChildren(state, start);
+                }
+                UpdateSummary(state);
+                QueueChildren(state);
+            }
+            PositionGroup(state);
+        }
+
+        internal IEnumerable<StoredItem> GetCurrentItems(IEnumerable<int> uniqueIds)
+        {
+            foreach (int id in uniqueIds)
+                if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()) yield return item;
         }
 
         private void AddItem(StoredItem item)
         {
             string name = item.DisplayName;
+            if (currentItems.ContainsKey(item.UniqueId)) return;
+            currentItems[item.UniqueId] = item;
             if (!groups.TryGetValue(name, out var state))
             {
                 var row = new StorageTerminalRowController(this, item);
                 var entry = List.CreateRow(row);
                 row.View = entry.Header;
                 UpdateRow(row, item);
-                groups.Add(name, new GroupState { Item = item, View = entry, Header = row });
+                state = new GroupState { Item = item, View = entry, Header = row };
+                groups.Add(name, state);
+                PositionGroup(state, false);
                 return;
             }
             if (state.Group == null) CreateGroup(state, name);
-            state.Group.Add(item);
+            var first = state.FirstItem;
+            int index = FindItemIndex(state.Group.Items, item);
+            state.Group.Insert(index, item);
+            if (index < state.RenderedItems)
+                state.RenderedItems = index;
+            ReindexChildren(state, index);
             UpdateSummary(state);
             QueueChildren(state);
+            if (itemComparer.Compare(first, state.FirstItem) != 0) PositionGroup(state);
+        }
+
+        private int FindItemIndex(List<StoredItem> items, StoredItem item)
+        {
+            if (items.Count == 0 || itemComparer.Compare(items[items.Count - 1], item) <= 0) return items.Count;
+            int index = items.BinarySearch(item, itemComparer);
+            return index < 0 ? ~index : index;
+        }
+
+        private void PositionGroup(GroupState state, bool existing = true)
+        {
+            if (existing) orderedGroups.Remove(state);
+            int index = orderedGroups.Count;
+            if (index > 0 && groupComparer.Compare(orderedGroups[index - 1], state) > 0)
+            {
+                index = orderedGroups.BinarySearch(state, groupComparer);
+                if (index < 0) index = ~index;
+            }
+            orderedGroups.Insert(index, state);
+            state.View.SetIndex(index);
+        }
+
+        private static void ReindexChildren(GroupState state, int start)
+        {
+            for (int i = start; i < state.Group.Items.Count; i++)
+                if (state.Rows.TryGetValue(state.Group.Items[i].UniqueId, out var row)) row.View.SetIndex(i);
         }
 
         private void CreateGroup(GroupState state, string name)
@@ -266,7 +334,7 @@ namespace DigitalStorage.Controller
             {
                 var state = pendingChildren.Dequeue();
                 state.Queued = false;
-                if (!state.Expanded) continue;
+                if (!state.Expanded || state.Group == null || state.RenderedItems >= state.Group.Items.Count) continue;
                 int index = state.RenderedItems++;
                 var item = state.Group.Items[index];
                 if (!state.Rows.TryGetValue(item.UniqueId, out var row))
@@ -314,29 +382,13 @@ namespace DigitalStorage.Controller
             searchDeadline = Time.realtimeSinceStartupAsDouble + SearchDelaySeconds;
         }
 
-        private void OnConfigurationChanged() => Refresh(false);
+        private void OnConfigurationChanged() => Search();
 
         private void LateUpdate()
         {
-            if (Time.realtimeSinceStartupAsDouble >= searchDeadline) Refresh(false);
-            else if (inventoryChanged && double.IsPositiveInfinity(searchDeadline))
-                Refresh(true);
-            if (pendingItems != null)
-            {
-                var items = pendingItems;
-                pendingItems = null;
-                ApplyChanges(items);
-            }
+            if (Time.realtimeSinceStartupAsDouble >= searchDeadline) Search();
             double deadline = Time.realtimeSinceStartupAsDouble + RefreshBudgetSeconds;
             RenderChildren(deadline);
-            ResumeFrame();
-        }
-
-        private void OnInventoryChanged()
-        {
-            inventoryChanged = true;
-            pendingItems = null;
-            searchCancellation?.Cancel();
             ResumeFrame();
         }
 
@@ -349,7 +401,6 @@ namespace DigitalStorage.Controller
         {
             view.SearchChanged -= OnSearchChanged;
             view.Configuration.Changed -= OnConfigurationChanged;
-            DigitalStorage.Manager.Changed -= OnInventoryChanged;
             view.Dispose();
         }
     }

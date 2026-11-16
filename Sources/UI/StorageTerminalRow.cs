@@ -61,7 +61,8 @@ namespace DigitalStorage.UI
             if (toggle != null)
                 handler.eventHandler.mouseClickFunc.Add(data =>
                 {
-                    if (data.button == PointerEventData.InputButton.Left && !data.dragging) toggle();
+                    if (data.button == PointerEventData.InputButton.Left && !data.dragging
+                        && !Controller.Owner.Interacting) toggle();
                     return true;
                 });
             handler.eventHandler.mouseScrollFunc.Add(data => { scroll.OnScroll(data); return true; });

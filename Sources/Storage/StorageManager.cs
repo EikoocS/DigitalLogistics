@@ -11,28 +11,35 @@ namespace DigitalStorage.Storage
     {
         private readonly HashSet<StorageProvider> providers = new HashSet<StorageProvider>();
         public IEnumerable<StorageProvider> Providers => providers;
-        public event Action Changed;
-
-        private void OnChanged() => Changed?.Invoke();
-
         public void registerStorageProvider(StorageProvider provider)
         {
-            if (!providers.Add(provider)) return;
-            provider.Changed += OnChanged;
-            OnChanged();
+            providers.Add(provider);
         }
 
         public void unregisterStorageProvider(StorageProvider provider)
         {
             providers.Remove(provider);
-            provider.Changed -= OnChanged;
             provider.Dispose();
-            OnChanged();
         }
 
         public void Refresh()
         {
             Refresh((_) => true);
+        }
+
+        public StorageInputResult TryInput(GameItem item, int amount = -1)
+        {
+            int remaining = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
+            int requested = remaining;
+            var items = new Dictionary<int, StoredItem>();
+            foreach (var provider in new List<StorageProvider>(providers))
+            {
+                if (remaining <= 0) break;
+                var result = provider.TryInput(item, remaining);
+                remaining -= result.Amount;
+                foreach (var stored in result.Items) items[stored.UniqueId] = stored;
+            }
+            return new StorageInputResult(requested - remaining, new List<StoredItem>(items.Values));
         }
 
         public void Refresh(Func<StorageProvider, bool> providerFilter)

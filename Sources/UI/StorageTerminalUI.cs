@@ -3,6 +3,7 @@ using DigitalStorage.Controller;
 using DigitalStorage.Item;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace DigitalStorage.UI
 {
@@ -10,6 +11,9 @@ namespace DigitalStorage.UI
     {
         private readonly PixelWindow window;
         private readonly TMP_InputField searchInput;
+        private readonly RectTransform dropArea;
+        private readonly TreeNodeRender listHandler;
+        private readonly StorageTerminalController controller;
 
         internal StorageTerminalList List { get; }
         internal StorageTerminalConfiguration Configuration { get; }
@@ -30,6 +34,12 @@ namespace DigitalStorage.UI
 
             var (listHost, listRoot) = CreateControl(CustomUIManager.ElementKind.ScrollView, 232, 170);
             List = new StorageTerminalList(listRoot, listHost.handler);
+            dropArea = listRoot.GetComponentInChildren<ScrollRect>(true).viewport;
+            listHandler = listHost.handler;
+            listHandler.InitEventHandler();
+            listHandler.image.enabled = true;
+            listHandler.image.color = Color.clear;
+            listHandler.image.alphaHitTestMinimumThreshold = 0;
 
             var content = MachineryStack.Vertical(inputHost, listHost)
                 .SetAlign(MachineryStack.Align.Start)
@@ -40,7 +50,7 @@ namespace DigitalStorage.UI
                 .SetMainAlign(MachineryStack.Align.Start);
             window = MachineHelper.CreateMachineryWindow(true, MachineHelper.Panel(null, body));
             searchInput.onValueChanged.AddListener(OnSearchChanged);
-            var controller = listRoot.AddComponent<StorageTerminalController>();
+            controller = listRoot.AddComponent<StorageTerminalController>();
             controller.Init(this);
             window.openCallback = controller.Refresh;
         }
@@ -48,6 +58,14 @@ namespace DigitalStorage.UI
         private void OnSearchChanged(string text) => SearchChanged?.Invoke(text);
 
         internal void Dispose() => searchInput.onValueChanged.RemoveListener(OnSearchChanged);
+
+        internal bool ContainsPointer(Vector3 position, TreeNodeRender ignored)
+        {
+            var hit = RenderHandler.RaycastFindParentElement<StorageTerminalRow>(position, ignored);
+            if (hit != null) return hit.Controller.Owner == controller;
+            return RectTransformUtility.RectangleContainsScreenPoint(dropArea, position)
+                && RenderHandler.RaycastFindParentElement<EmptyPixelElement>(position, ignored)?.handler == listHandler;
+        }
 
         private static (EmptyPixelElement Host, GameObject Root) CreateControl(
             CustomUIManager.ElementKind kind, int width, int height)

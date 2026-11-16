@@ -1,9 +1,12 @@
-﻿namespace DigitalStorage.Storage
+using System.Collections.Generic;
+
+namespace DigitalStorage.Storage
 {
     // StorageProvider bound to GameInventory
     public class InventoryStorageProvider : StorageProvider
     {
         private readonly GameInventory inventory;
+        private Dictionary<int, StoredItem> inputItems;
         public bool Disposed { get; private set; } = false;
 
         internal static MachineryPanel GetPanel(GameInventory inventory) =>
@@ -34,32 +37,26 @@
 
         private void  onSlotAddItemEndFunc(GameItem item, GameInventory inventory, SlotMarker slot)
         {
-            AddItem(item);
-            NotifyChanged();
+            OnItemChanged(item, inventory, slot);
         }
 
         private void onSlotRemoveItemEndFunc(GameItem item, GameInventory inventory, SlotMarker slot)
         {
-            if (storageIndex.Contains(item.uniqueId))
-            {
-                storageIndex.Remove(item.uniqueId);
-                NotifyChanged();
-            }
-        }
-
-        private void AddItem(GameItem item)
-        {
-            if (!storageIndex.Contains(item.uniqueId))
-            {
-                storageIndex.Add(new PhysicalStoredItem(item, this));
-            }
+            storageIndex.Remove(item.uniqueId);
+            inputItems?.Remove(item.uniqueId);
         }
 
         private void OnItemChanged(GameItem item, GameInventory inventory, SlotMarker slot)
         {
             storageIndex.Remove(item.uniqueId);
-            AddItem(item);
-            NotifyChanged();
+            var stored = item.parentInventory == this.inventory && item.unitCount > 0
+                ? new PhysicalStoredItem(item, this) : null;
+            if (stored != null)
+            {
+                storageIndex.Add(stored);
+                if (inputItems != null) inputItems[item.uniqueId] = stored;
+            }
+            else inputItems?.Remove(item.uniqueId);
         }
 
         public override bool Contains(int uniqueId)
@@ -71,19 +68,27 @@
             return false;
         }
 
-        protected override int InputCore(GameItem item, int amount)
+        protected override StorageInputResult InputCore(GameItem item, int amount)
         {
-            if (item.parentInventory == inventory) return 0;
+            if (item.parentInventory == inventory) return StorageInputResult.Empty;
 
             int remaining = amount;
-            while (remaining > 0 && !Disposed)
+            inputItems = new Dictionary<int, StoredItem>();
+            try
             {
-                var slot = FindInputSlot(item, remaining);
-                int moved = slot?.TryAcceptOnce(remaining) ?? 0;
-                if (moved == 0) break;
-                remaining -= moved;
+                while (remaining > 0 && !Disposed)
+                {
+                    var slot = FindInputSlot(item, remaining);
+                    int moved = slot?.TryAcceptOnce(remaining) ?? 0;
+                    if (moved == 0) break;
+                    remaining -= moved;
+                }
+                return new StorageInputResult(amount - remaining, new List<StoredItem>(inputItems.Values));
             }
-            return amount - remaining;
+            finally
+            {
+                inputItems = null;
+            }
         }
 
         private SlotMarker FindInputSlot(GameItem item, int amount)
@@ -122,7 +127,6 @@
             {
                 storageIndex.Add(new PhysicalStoredItem(item, this));
             }
-            NotifyChanged();
         }
     }
 }
