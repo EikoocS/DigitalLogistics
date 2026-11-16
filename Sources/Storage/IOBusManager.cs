@@ -122,8 +122,8 @@ namespace DigitalStorage.Storage
 
         internal static void Clear()
         {
-            if (scheduled != null && OverlayHandler.current != null)
-                OverlayHandler.current.StopCoroutine(scheduled);
+            if (scheduled != null)
+                ModHelper.StopCoroutine(DigitalStorage.Instance.Manifest.ID, scheduled);
             scheduled = null;
             pending.Clear();
             active.Clear();
@@ -134,8 +134,8 @@ namespace DigitalStorage.Storage
         {
             if (running || IsAway() || !active.ContainsKey(bus)) return;
             pending.Add(bus);
-            if (scheduled == null && OverlayHandler.current != null)
-                scheduled = OverlayHandler.current.StartCoroutine(RunPending());
+            if (scheduled == null)
+                scheduled = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, RunPending());
         }
 
         private static IEnumerator RunPending()

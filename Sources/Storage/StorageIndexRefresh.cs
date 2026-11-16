@@ -10,7 +10,6 @@ namespace DigitalStorage.Storage
     internal static class StorageIndexRefresh
     {
         private const double FrameBudgetMilliseconds = 2;
-        private static MonoBehaviour host;
         private static Coroutine coroutine;
         private static IEnumerator work;
 
@@ -24,19 +23,18 @@ namespace DigitalStorage.Storage
         internal static void Start()
         {
             if (Running) return;
-            host = OverlayHandler.current;
             Running = true;
             HasResult = false;
             Succeeded = false;
             ProcessedItems = 0;
             work = Run();
-            coroutine = host.StartCoroutine(work);
+            coroutine = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, work);
             StateChanged?.Invoke();
         }
 
         internal static void Clear()
         {
-            if (coroutine != null && host != null) host.StopCoroutine(coroutine);
+            if (coroutine != null) ModHelper.StopCoroutine(DigitalStorage.Instance.Manifest.ID, coroutine);
             (work as IDisposable)?.Dispose();
             work = null;
             coroutine = null;
