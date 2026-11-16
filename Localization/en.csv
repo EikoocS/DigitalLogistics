@@ -16,3 +16,24 @@ ui.storage_terminal.descending,
 ui.storage_terminal.all,
 ui.storage_terminal.legal,
 ui.storage_terminal.illegal,
+item.input_bus.external.name,Input Bus (External)
+item.input_bus.internal.name,Input Bus (Internal)
+item.input_bus.disabled.name,Input Bus (Disabled)
+item.input_bus.desc,
+item.input_bus.flavor,
+item.output_bus.external.name,Output Bus (External)
+item.output_bus.internal.name,Output Bus (Internal)
+item.output_bus.disabled.name,Output Bus (Disabled)
+item.output_bus.desc,
+item.output_bus.flavor,
+item.input_output_bus.external.name,Input/Output Bus (External)
+item.input_output_bus.internal.name,Input/Output Bus (Internal)
+item.input_output_bus.disabled.name,Input/Output Bus (Disabled)
+item.input_output_bus.desc,
+item.input_output_bus.flavor,
+ui.io_bus.on_add,
+ui.io_bus.on_move,
+ui.io_bus.input_order,
+ui.io_bus.output_order,
+ui.io_bus.input_priority,
+ui.io_bus.output_priority,

@@ -190,7 +190,7 @@ namespace DigitalStorage.Controller
 
         internal void InsertItem(StoredItem item)
         {
-            if (searchExpression == null || !item.VerifyValidity() || !searchExpression.Evaluate(item)
+            if (searchExpression == null || !item.VerifyValidity() || !DigitalStorage.Manager.Owns(item) || !searchExpression.Evaluate(item)
                 || Configuration.SortBy.Getter()(item) == null)
             {
                 RemoveItem(item.UniqueId);
@@ -236,11 +236,13 @@ namespace DigitalStorage.Controller
         internal IEnumerable<StoredItem> GetCurrentItems(IEnumerable<int> uniqueIds)
         {
             foreach (int id in uniqueIds)
-                if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()) yield return item;
+                if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()
+                    && DigitalStorage.Manager.Owns(item)) yield return item;
         }
 
         private void AddItem(StoredItem item)
         {
+            if (!DigitalStorage.Manager.Owns(item)) return;
             string name = item.DisplayName;
             if (currentItems.ContainsKey(item.UniqueId)) return;
             currentItems[item.UniqueId] = item;

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace DigitalStorage.Storage
 {
-    internal static class StorageBusManager
+    internal static class BusManager
     {
         private const string DataKey = "storage_bus_configuration";
 
@@ -15,11 +15,13 @@ namespace DigitalStorage.Storage
         {
             public string Key;
             public string Name = string.Empty;
+            public bool Disabled;
             [NonSerialized] internal string DefaultName;
             public int Priority;
             public string Filter = string.Empty;
             [NonSerialized] internal InventoryStorageProvider Provider;
             [NonSerialized] internal int References;
+            internal const string DefaultFilter = "True";
 
             internal void Apply()
             {
@@ -28,7 +30,19 @@ namespace DigitalStorage.Storage
                 Provider.Priority = Priority;
                 Provider.filter = string.IsNullOrWhiteSpace(Filter)
                     ? StoredItemExpression.Constant(true) : StoredItemExpressionParser.Parse(Filter);
+                if (Disabled) DigitalStorage.Manager.DetachStorageProvider(Provider);
+                else DigitalStorage.Manager.registerStorageProvider(Provider);
             }
+        }
+
+        internal sealed class Link
+        {
+            internal string Key;
+            internal string Name;
+            internal GameInventory Inventory;
+            internal InventoryStorageProvider Provider;
+            internal int References;
+            internal Configuration Configuration;
         }
 
         [Serializable]
@@ -38,9 +52,9 @@ namespace DigitalStorage.Storage
         }
 
         private static readonly Dictionary<string, Configuration> configurations = new();
-        private static readonly Dictionary<GameInventory, Configuration> inventories = new();
+        private static readonly Dictionary<GameInventory, Link> inventories = new();
 
-        internal static Configuration GetConfiguration(GameInventory inventory) => inventories[inventory];
+        internal static Configuration GetConfiguration(GameInventory inventory) => inventories[inventory].Configuration;
 
         internal static void Load()
         {
@@ -61,38 +75,58 @@ namespace DigitalStorage.Storage
 
         internal static void Clear()
         {
+            foreach (var link in inventories.Values)
+            {
+                DigitalStorage.Manager.DetachStorageProvider(link.Provider);
+                link.Provider.Dispose();
+            }
             inventories.Clear();
             configurations.Clear();
         }
 
-        internal static void Acquire(GameInventory inventory, GameItem owner)
+        internal static Link Acquire(GameInventory inventory, GameItem owner, bool storage)
         {
-            if (inventories.TryGetValue(inventory, out var configuration))
+            if (!inventories.TryGetValue(inventory, out var link))
             {
-                configuration.References++;
-                return;
+                link = new Link
+                {
+                    Key = GetKey(inventory, owner),
+                    Name = GetName(inventory, owner),
+                    Inventory = inventory,
+                    Provider = new InventoryStorageProvider(inventory)
+                };
+                inventories.Add(inventory, link);
             }
-            string key = GetKey(inventory, owner);
-            if (!configurations.TryGetValue(key, out configuration))
+            link.References++;
+            if (!storage) return link;
+            if (link.Configuration == null)
             {
-                configuration = new Configuration { Key = key };
-                configurations.Add(key, configuration);
+                if (!configurations.TryGetValue(link.Key, out var configuration))
+                {
+                    configuration = new Configuration { Key = link.Key };
+                    configurations.Add(link.Key, configuration);
+                }
+                link.Configuration = configuration;
+                configuration.DefaultName = link.Name;
+                configuration.Provider = link.Provider;
+                configuration.Apply();
             }
-            configuration.DefaultName = GetName(inventory, owner);
-            configuration.Provider = new InventoryStorageProvider(inventory);
-            configuration.References = 1;
-            configuration.Apply();
-            inventories.Add(inventory, configuration);
-            DigitalStorage.Manager.registerStorageProvider(configuration.Provider);
+            link.Configuration.References++;
+            return link;
         }
 
-        internal static void Release(GameInventory inventory)
+        internal static void Release(GameInventory inventory, bool storage)
         {
-            var configuration = inventories[inventory];
-            if (--configuration.References > 0) return;
+            var link = inventories[inventory];
+            if (storage && --link.Configuration.References == 0)
+            {
+                DigitalStorage.Manager.DetachStorageProvider(link.Provider);
+                link.Configuration.Provider = null;
+                link.Configuration = null;
+            }
+            if (--link.References > 0) return;
             inventories.Remove(inventory);
-            DigitalStorage.Manager.unregisterStorageProvider(configuration.Provider);
-            configuration.Provider = null;
+            link.Provider.Dispose();
         }
 
         private static string GetKey(GameInventory inventory, GameItem owner)

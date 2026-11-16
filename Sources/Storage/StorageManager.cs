@@ -23,12 +23,19 @@ namespace DigitalStorage.Storage
             provider.Dispose();
         }
 
+        internal void DetachStorageProvider(StorageProvider provider) => providers.Remove(provider);
+
+        internal bool Owns(StoredItem item) => item is PhysicalStoredItem physical
+            ? providers.Contains(physical.Provider)
+            : providers.Any(provider => provider.Contains(item.UniqueId));
+
         public void Refresh()
         {
             Refresh((_) => true);
         }
 
-        public StorageInputResult TryInput(GameItem item, int amount = -1)
+        public StorageInputResult TryInput(GameItem item, int amount = -1,
+            Func<StorageProvider, bool> providerFilter = null)
         {
             int remaining = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
             int requested = remaining;
@@ -36,11 +43,23 @@ namespace DigitalStorage.Storage
             foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
             {
                 if (remaining <= 0) break;
+                if (providerFilter != null && !providerFilter(provider)) continue;
                 var result = provider.TryInput(item, remaining);
                 remaining -= result.Amount;
                 foreach (var stored in result.Items) items[stored.UniqueId] = stored;
             }
             return new StorageInputResult(requested - remaining, new List<StoredItem>(items.Values));
+        }
+
+        internal IEnumerable<StoredItem> SearchForOutput(StoredItemExpression expression,
+            StorageProvider excluded)
+        {
+            foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
+            {
+                if (provider == excluded) continue;
+                foreach (var item in provider.Snapshot())
+                    if (provider.filter.Evaluate(item) && expression.Evaluate(item)) yield return item;
+            }
         }
 
         public void Refresh(Func<StorageProvider, bool> providerFilter)

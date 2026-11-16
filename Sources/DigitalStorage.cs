@@ -27,8 +27,9 @@ namespace DigitalStorage
             ModHelper.AddDebugFunction(Manifest.ID, CustomUIDebugPanel.CATEGORY_SPECIAL,
                 "DigitalStorage", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
-            ModHook.OnGameLoadedInit += StorageBusController.ClearConnections;
-            ModHook.OnGameLoadedEarly += StorageBusManager.Load;
+            ModHook.OnGameLoadedInit += BusController.ClearConnections;
+            ModHook.OnGameLoadedEarly += BusManager.Load;
+            ModHook.OnGameLoadedEarly += IOBusManager.Load;
             Log.Log("Enabled.");
         }
 
@@ -38,9 +39,10 @@ namespace DigitalStorage
             ModHelper.RemoveDebugFunctions(Manifest.ID);
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
-            ModHook.OnGameLoadedInit -= StorageBusController.ClearConnections;
-            ModHook.OnGameLoadedEarly -= StorageBusManager.Load;
-            StorageBusController.ClearConnections();
+            ModHook.OnGameLoadedInit -= BusController.ClearConnections;
+            ModHook.OnGameLoadedEarly -= BusManager.Load;
+            ModHook.OnGameLoadedEarly -= IOBusManager.Load;
+            BusController.ClearConnections();
             Log.Log("Disabled.");
         }
 
@@ -48,6 +50,9 @@ namespace DigitalStorage
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
             directory.Add(StorageBus.ItemId, StorageBus.Create);
+            directory.Add(IOBus.InputId, () => IOBus.Create(IOBus.InputId));
+            directory.Add(IOBus.OutputId, () => IOBus.Create(IOBus.OutputId));
+            directory.Add(IOBus.InputOutputId, () => IOBus.Create(IOBus.InputOutputId));
         }
     }
 }

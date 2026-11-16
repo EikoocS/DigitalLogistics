@@ -30,6 +30,14 @@ namespace DigitalStorage.Storage
 
         protected abstract StorageInputResult InputCore(GameItem item, int amount);
 
+        internal IReadOnlyList<StoredItem> Snapshot()
+        {
+            var items = new List<StoredItem>();
+            using var enumerator = storageIndex.GetEnumerator(StorageSort.SortBy.IDENTIFIER, false);
+            while (enumerator.MoveNext()) items.Add(enumerator.Current);
+            return items;
+        }
+
         /// <summary>Place and complete each output before advancing the enumerator.</summary>
         public async IAsyncEnumerable<StorageOutput> PrepareOutputAsync(    
             StoredItemExpression expression,

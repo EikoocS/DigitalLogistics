@@ -7,7 +7,7 @@ using DigitalStorage.UI;
 
 namespace DigitalStorage.Controller
 {
-    internal static class StorageBusController
+    internal static class BusController
     {
         private static readonly Dictionary<GameItem, Connection> connections =
             new Dictionary<GameItem, Connection>();
@@ -15,19 +15,27 @@ namespace DigitalStorage.Controller
         {
             foreach (var connection in connections.Values) connection.Dispose();
             connections.Clear();
-            StorageBusManager.Clear();
+            IOBusManager.Clear();
+            BusManager.Clear();
         }
 
         internal static void OnLoaded(GameItem item)
         {
-            StorageBus.UpdateName(item);
-            if (item.parentInventory != null) OnAdded(item, item.parentInventory, null);
+            UpdateName(item);
+            if (item.parentInventory != null) Connect(item, item.parentInventory);
         }
 
         internal static void OnAdded(GameItem item, GameInventory inventory, SlotMarker slot)
         {
+            Connect(item, inventory);
+            if (IOBus.IsIO(item) && !SaveManager.IsDecoding && IOBusManager.IsOnMove(item))
+                IOBusManager.Schedule(item);
+        }
+
+        private static void Connect(GameItem item, GameInventory inventory)
+        {
             if (!DigitalStorage.Instance.Enabled) return;
-            OnRemoved(item, inventory, slot);
+            OnRemoved(item, inventory, null);
             var connection = new Connection(item, inventory);
             connections.Add(item, connection);
             connection.Refresh();
@@ -52,19 +60,26 @@ namespace DigitalStorage.Controller
                 item.EnableTag(StorageBus.DisabledTag);
             }
             else item.EnableTag(StorageBus.InternalTag);
-            StorageBus.UpdateName(item);
+            UpdateName(item);
             if (connections.TryGetValue(item, out var connection)) connection.Refresh();
         }
 
-        internal static IEnumerable<StorageBusManager.Configuration> GetConfigurations(GameItem bus) =>
+        internal static IEnumerable<BusManager.Configuration> GetConfigurations(GameItem bus) =>
             connections.TryGetValue(bus, out var connection)
-                ? connection.Inventories.Select(StorageBusManager.GetConfiguration)
-                : Enumerable.Empty<StorageBusManager.Configuration>();
+                ? connection.Inventories.Select(BusManager.GetConfiguration)
+                : Enumerable.Empty<BusManager.Configuration>();
+
+        private static void UpdateName(GameItem item)
+        {
+            if (IOBus.IsIO(item)) IOBus.UpdateName(item);
+            else StorageBus.UpdateName(item);
+        }
 
         private sealed class Connection : IDisposable
         {
             private readonly GameItem bus;
             private readonly GameInventory parent;
+            private bool IsStorage => !IOBus.IsIO(bus);
             private readonly HashSet<GameInventory> inventories = new();
             internal IEnumerable<GameInventory> Inventories => inventories;
 
@@ -96,20 +111,22 @@ namespace DigitalStorage.Controller
                 foreach (var inventory in inventories.ToArray())
                 {
                     if (desired.ContainsKey(inventory)) continue;
-                    StorageBusManager.Release(inventory);
+                    if (!IsStorage) IOBusManager.Release(bus, inventory);
+                    BusManager.Release(inventory, IsStorage);
                     inventories.Remove(inventory);
                 }
 
                 foreach (var entry in desired)
                 {
                     if (inventories.Contains(entry.Key)) continue;
-                    StorageBusManager.Acquire(entry.Key, entry.Value);
+                    var link = BusManager.Acquire(entry.Key, entry.Value, IsStorage);
+                    if (!IsStorage) IOBusManager.Acquire(bus, link);
                     inventories.Add(entry.Key);
                 }
 
-                if (inventories.Count == 0) bus.contentWindow.Lock();
+                if (inventories.Count == 0 && IsStorage) bus.contentWindow.Lock();
                 else if (bus.contentWindow.isLocked) bus.contentWindow.Unlock();
-                StorageBusUI.RefreshConnections(bus);
+                BusUI.RefreshConnections(bus);
             }
 
             private IEnumerable<GameItem> FindTargets()
@@ -131,7 +148,11 @@ namespace DigitalStorage.Controller
 
             private void Unregister()
             {
-                foreach (var inventory in inventories) StorageBusManager.Release(inventory);
+                foreach (var inventory in inventories)
+                {
+                    if (!IsStorage) IOBusManager.Release(bus, inventory);
+                    BusManager.Release(inventory, IsStorage);
+                }
                 inventories.Clear();
             }
 

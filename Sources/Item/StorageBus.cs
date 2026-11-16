@@ -14,16 +14,16 @@ namespace DigitalStorage.Item
             var item = ItemDirectory.CreateEmptyItem(ItemId)
                 .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, ItemId)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
-            item.SetContentWindow(StorageBusUI.Create(item));
+            item.SetContentWindow(BusUI.Create(item));
             item.SetGameItemType("MACHINE");
             item.shortDescription = StorageTerminal.Localize("item.storage_bus.desc");
             item.flavorText = StorageTerminal.Localize("item.storage_bus.flavor");
             item.mayToggleSlotItemFunc = (_, _, _) => true;
             item.canToggleSlotItemFunc = (_, _, _) => true;
-            item.onToggleSlotItemFunc += StorageBusController.Toggle;
-            item.onSlotAddItemFunc += StorageBusController.OnAdded;
-            item.onSlotRemoveItemFunc += StorageBusController.OnRemoved;
-            item.onLoaded += StorageBusController.OnLoaded;
+            item.onToggleSlotItemFunc += BusController.Toggle;
+            item.onSlotAddItemFunc += BusController.OnAdded;
+            item.onSlotRemoveItemFunc += BusController.OnRemoved;
+            item.onLoaded += BusController.OnLoaded;
             UpdateName(item);
             return item;
         }

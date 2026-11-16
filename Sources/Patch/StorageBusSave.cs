@@ -7,7 +7,7 @@ namespace DigitalStorage.Patch
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.ResetData))]
     internal static class StorageBusSession
     {
-        private static void Prefix() => StorageBusController.ClearConnections();
+        private static void Prefix() => BusController.ClearConnections();
     }
 
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.SaveGame))]
@@ -15,7 +15,9 @@ namespace DigitalStorage.Patch
     {
         private static void Prefix()
         {
-            if (DigitalStorage.Instance.Enabled) StorageBusManager.Save();
+            if (!DigitalStorage.Instance.Enabled) return;
+            BusManager.Save();
+            IOBusManager.Save();
         }
     }
 }

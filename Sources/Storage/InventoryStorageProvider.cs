@@ -9,6 +9,8 @@ namespace DigitalStorage.Storage
         private Dictionary<int, StoredItem> inputItems;
         public bool Disposed { get; private set; } = false;
 
+        internal StorageInputResult InputFromSystem(GameItem item, int amount) => InputCore(item, amount);
+
         internal static MachineryPanel GetPanel(GameInventory inventory) =>
             (inventory as PixelElement)?.handler?.FindParentElement<MachineryPanel>();
 
