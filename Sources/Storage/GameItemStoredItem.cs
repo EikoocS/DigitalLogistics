@@ -1,0 +1,43 @@
+namespace DigitalStorage.Storage
+{
+    internal class GameItemStoredItem : StoredItem
+    {
+        protected readonly GameItem item;
+
+        public GameItemStoredItem(GameItem item)
+        {
+            this.item = item;
+            UniqueId = item.GetUniqueID();
+            Identifier = item.identifier;
+            ModId = item.GetModId();
+            DisplayName = item.GetDisplayName(preferCustomName: true);
+            TypeMask.SetBitByTags(item.GetGameItemType());
+            Price = item.GetCurrentValue();
+            BasePrice = item.GetBaseValue();
+            Heat = StolenHelper.IsStolenItem(item) ? StolenHelper.GetFoundChance(item) : null;
+            ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
+        }
+
+        public override bool IsDigitalItems() => false;
+
+        public override GameItem GetItemInstance() => item;
+
+        public override StorageOutput PrepareOutput() =>
+            VerifyValidity() ? new StorageOutput(item) : null;
+
+        public override bool VerifyValidity() => item.unitCount > 0;
+
+        public override RichText GetTooltip() =>
+            item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltip()
+                : new RichTextBuilder().Build();
+
+        public override RichText GetTooltipAdvanced() =>
+            item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltipAdvanced()
+                : new RichTextBuilder().Build();
+
+        public override TagState getTag(string key) =>
+            item.modifiedState.dict.TryGetValue(key, out var tag) ? tag?.Clone() : null;
+    }
+}

@@ -19,6 +19,8 @@
         // Get a GameItem instance; if it's a virtual item, create it.
         public abstract GameItem GetItemInstance();
 
+        public abstract StorageOutput PrepareOutput();
+
         // Verify the validity of the StoredItem, without applying the cache.
         public abstract bool VerifyValidity();
 

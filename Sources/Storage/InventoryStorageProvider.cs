@@ -71,6 +71,50 @@
             return false;
         }
 
+        protected override int InputCore(GameItem item, int amount)
+        {
+            if (item.parentInventory == inventory) return 0;
+
+            int remaining = amount;
+            while (remaining > 0 && !Disposed)
+            {
+                var slot = FindInputSlot(item, remaining);
+                int moved = slot?.TryAcceptOnce(remaining) ?? 0;
+                if (moved == 0) break;
+                remaining -= moved;
+            }
+            return amount - remaining;
+        }
+
+        private SlotMarker FindInputSlot(GameItem item, int amount)
+        {
+            if (!inventory.MayHaveValidInventorySlot(item)) return null;
+
+            foreach (var target in inventory.childItems)
+            {
+                var slot = target.GetStackSlot(item);
+                if (slot?.numTransfer > 0) return slot;
+            }
+
+            var (width, height) = inventory switch
+            {
+                GameGridInventory grid => (grid.inventoryShape.width, grid.inventoryShape.height),
+                GameGridScrollableInventory grid => (grid.width, grid.height),
+                _ => (1, 1)
+            };
+            var shape = new GridShapeBuilder(item.modifiedShape);
+            for (int flip = 0; flip < 2; flip++)
+                for (int rotation = 0; rotation < 4; rotation++)
+                    for (int y = 0; y < height; y++)
+                        for (int x = 0; x < width; x++)
+                        {
+                            shape.SetTransform(x, y, flip != 0, 4 - rotation);
+                            var slot = inventory.TryInventorySlot(item, amount, shape);
+                            if (slot.numTransfer > 0) return slot;
+                        }
+            return null;
+        }
+
         public override void Refresh()
         {
             storageIndex.Clear();

@@ -43,7 +43,7 @@ namespace DigitalStorage.UI
         private void Refresh()
         {
             CustomUIBuilder.ClearContainer(output.CurrentContainer);
-            StoredItem item = sample == null ? null : new PhysicalStoredItem(sample, null);
+            StoredItem item = sample == null ? null : new GameItemStoredItem(sample);
             if (item != null)
             {
                 output.AddLabel(item.DisplayName);

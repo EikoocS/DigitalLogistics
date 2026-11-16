@@ -21,6 +21,34 @@ namespace DigitalStorage.Storage
         public abstract void Dispose();
         public abstract bool Contains(int uniqueId);
         public abstract void Refresh();
+
+        /// <summary>Returns the number of units actually inserted.</summary>
+        public int TryInput(GameItem item, int amount = -1)
+        {
+            if (!filter.Evaluate(new GameItemStoredItem(item))) return 0;
+            amount = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
+            return amount > 0 ? InputCore(item, amount) : 0;
+        }
+
+        protected abstract int InputCore(GameItem item, int amount);
+
+        /// <summary>Place and complete each output before advancing the enumerator.</summary>
+        public async IAsyncEnumerable<StorageOutput> PrepareOutputAsync(
+            StoredItemExpression expression,
+            StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
+            bool reverse = false,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!PrepareSearch(expression)) yield break;
+
+            await foreach (var item in SearchAsync(expression, sortBy, reverse, cancellationToken))
+            {
+                using var output = item.PrepareOutput();
+                if (output != null) yield return output;
+            }
+        }
+
         // false to skip
         public bool PrepareSearch(StoredItemExpression expression)
         {
