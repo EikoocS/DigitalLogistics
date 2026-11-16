@@ -18,10 +18,11 @@ namespace DigitalStorage.Item
         internal static GameItem Create(string id)
         {
             var item = ItemDirectory.CreateEmptyItem(id)
-                .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, StorageBus.ItemId)
+                .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, id)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
             item.SetContentWindow(BusUI.Create(item));
             item.SetGameItemType("MACHINE");
+            item.EnableTag(GeneralHelper.IS_UNLOAD_DISABLED_TAG);
             item.shortDescription = StorageTerminal.Localize($"item.{id}.desc");
             item.flavorText = StorageTerminal.Localize($"item.{id}.flavor");
             item.mayToggleSlotItemFunc = (_, _, _) => true;
@@ -36,16 +37,8 @@ namespace DigitalStorage.Item
             item.onActivateSlotItemFunc = (self, _, _) => IOBusManager.Run(self);
             item.EnableTag("CONFIGURE_TAG");
             item.onConfigureSlotItemFunc = (self, _, _) => self.contentWindow.Show();
-            UpdateName(item);
+            BusController.InitAppearance(item);
             return item;
-        }
-
-        internal static void UpdateName(GameItem item)
-        {
-            string mode = item.IsTag(StorageBus.DisabledTag) ? "disabled"
-                : item.IsTag(StorageBus.InternalTag) ? "internal" : "external";
-            item.name = StorageTerminal.Localize($"item.{item.identifier}.{mode}.name");
-            item.contentWindow.SetTitle(item.GetDisplayName(preferCustomName: true));
         }
     }
 }

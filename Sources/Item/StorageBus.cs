@@ -16,6 +16,7 @@ namespace DigitalStorage.Item
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
             item.SetContentWindow(BusUI.Create(item));
             item.SetGameItemType("MACHINE");
+            item.EnableTag(GeneralHelper.IS_UNLOAD_DISABLED_TAG);
             item.shortDescription = StorageTerminal.Localize("item.storage_bus.desc");
             item.flavorText = StorageTerminal.Localize("item.storage_bus.flavor");
             item.mayToggleSlotItemFunc = (_, _, _) => true;
@@ -24,16 +25,8 @@ namespace DigitalStorage.Item
             item.onSlotAddItemFunc += BusController.OnAdded;
             item.onSlotRemoveItemFunc += BusController.OnRemoved;
             item.onLoaded += BusController.OnLoaded;
-            UpdateName(item);
+            BusController.InitAppearance(item);
             return item;
-        }
-
-        internal static void UpdateName(GameItem item)
-        {
-            item.name = StorageTerminal.Localize(item.IsTag(DisabledTag)
-                ? "item.storage_bus.disabled.name"
-                : item.IsTag(InternalTag) ? "item.storage_bus.internal.name" : "item.storage_bus.external.name");
-            item.contentWindow.SetTitle(item.GetDisplayName(preferCustomName: true));
         }
     }
 }

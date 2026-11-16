@@ -4,6 +4,7 @@ using System.Linq;
 using DigitalStorage.Item;
 using DigitalStorage.Storage;
 using DigitalStorage.UI;
+using UnityEngine;
 
 namespace DigitalStorage.Controller
 {
@@ -22,7 +23,7 @@ namespace DigitalStorage.Controller
 
         internal static void OnLoaded(GameItem item)
         {
-            UpdateName(item);
+            UpdateAppearance(item);
             if (item.parentInventory != null) Connect(item, item.parentInventory);
         }
 
@@ -61,7 +62,7 @@ namespace DigitalStorage.Controller
                 item.EnableTag(StorageBus.DisabledTag);
             }
             else item.EnableTag(StorageBus.InternalTag);
-            UpdateName(item);
+            UpdateAppearance(item);
             if (connections.TryGetValue(item, out var connection)) connection.Refresh();
         }
 
@@ -70,10 +71,24 @@ namespace DigitalStorage.Controller
                 ? connection.Inventories.Select(BusManager.GetConfiguration)
                 : Enumerable.Empty<BusManager.Configuration>();
 
-        private static void UpdateName(GameItem item)
+        internal static void InitAppearance(GameItem item)
         {
-            if (IOBus.IsIO(item)) IOBus.UpdateName(item);
-            else StorageBus.UpdateName(item);
+            item.getItemSpriteModifierForItemFunc = self => new List<ItemSpriteModifier>
+            {
+                new(((GameItemElement)self).ResolveSpriteByName($"{self.identifier}_{GetMode(self)}"), Vector2.zero)
+            };
+            UpdateAppearance(item);
+        }
+
+        private static string GetMode(GameItem item) => item.IsTag(StorageBus.DisabledTag) ? "disabled"
+            : item.IsTag(StorageBus.InternalTag) ? "internal" : "external";
+
+        private static void UpdateAppearance(GameItem item)
+        {
+            item.SetSprite(DigitalStorage.Instance.Manifest.ID, item.identifier);
+            item.name = StorageTerminal.Localize($"item.{item.identifier}.{GetMode(item)}.name");
+            item.contentWindow.SetTitle(item.GetDisplayName(preferCustomName: true));
+            item.Validate();
         }
 
         private sealed class Connection : IDisposable
