@@ -7,3 +7,11 @@ item.storage_bus.internal.name,存储总线（内接）
 item.storage_bus.desc,
 item.storage_bus.flavor,
 storage.slot.energy,能量
+ui.storage_terminal.sort_by,排列依据
+ui.storage_terminal.sort_direction,排列方向
+ui.storage_terminal.safety,安全性
+ui.storage_terminal.ascending,正序
+ui.storage_terminal.descending,倒序
+ui.storage_terminal.all,无操作
+ui.storage_terminal.legal,仅选择无违规物品
+ui.storage_terminal.illegal,仅选择违规物品

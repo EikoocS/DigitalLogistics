@@ -1,4 +1,4 @@
-﻿using DigitalStorage.Storage;
+﻿using System;
 
 namespace DigitalStorage.Storage
 {
@@ -11,24 +11,54 @@ namespace DigitalStorage.Storage
         {
             this.item = item;
             this.provider = provider;
-            Refresh();
+
+            UniqueId = item.GetUniqueID();
+            Identifier = item.identifier;
+            ModId = item.GetModId();
+            DisplayName = item.GetDisplayName(preferCustomName: true);
+            TypeMask.SetBitByTags(item.GetGameItemType());
+            Price = item.GetCurrentValue();
+            BasePrice = item.GetBaseValue();
+            Heat = StolenHelper.IsStolenItem(item) ? StolenHelper.GetFoundChance(item) : null;
+            ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
         }
 
-        public GameItem Item => item;
-        public bool IsAvailable => provider.Contains(item) && item.unitCount > 0;
-        public string DisplayName => item.GetDisplayName(preferCustomName: true);
-        public long Price { get; private set; }
-        public int? Heat { get; private set; }
-        public int ContrabandLevel { get; private set; }
-        internal ulong TagMask { get; private set; }
-
-        internal void Refresh()
+        public override bool IsDigitalItems()
         {
-            Price = item.GetCurrentValue();
-            Heat = StolenHelper.IsStolenItem(item) ? StolenHelper.GetFoundChance(item) : (int?)null;
-            ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
-            TagMask = StorageItemTypeHelper.FromTags(item.GetGameItemType());
-            if (Heat.HasValue) TagMask |= (ulong)StorageItemType.STOLEN_TAG;
+            return false;
+        }
+
+        public override GameItem GetItemInstance()
+        {
+            return item;
+        }
+        
+        public override RichText GetTooltip()
+        {
+            return item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltip()
+                : new RichTextBuilder().Build();
+        }
+
+        public override RichText GetTooltipAdvanced()
+        {
+            return item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltipAdvanced()
+                : new RichTextBuilder().Build();
+        }
+
+        
+        public override bool VerifyValidity()
+        {
+            return (!provider.Disposed) && provider.Contains(item.uniqueId);
+        }
+
+        public override TagState getTag(string key)
+        {
+            if (!item.modifiedState.dict.TryGetValue(key, out TagState tag) || tag == null)
+                return null;
+            else 
+                return tag.Clone();
         }
     }
 }

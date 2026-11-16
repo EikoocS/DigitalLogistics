@@ -1,3 +1,5 @@
+using DigitalStorage.UI;
+
 namespace DigitalStorage.Item
 {
     internal static class StorageTerminal

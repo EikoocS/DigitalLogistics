@@ -12,6 +12,7 @@
   <!-- Every DLL the game must load, relative to this folder. Nothing else in the folder is loaded. -->
   <Assemblies>
     <Assembly>DigitalStorage.dll</Assembly>
+    <Assembly>Superpower.dll</Assembly>
   </Assemblies>
   <!-- What your code does beyond the game's API: files, network, process, dynamic-code, native, reflection-external.
        Most mods need none. The game scans your DLL when a player activates the mod; an undeclared capability

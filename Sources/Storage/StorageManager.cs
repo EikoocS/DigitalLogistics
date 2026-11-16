@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using DigitalStorage.Filtering;
+using DigitalStorage.Collections;
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace DigitalStorage.Storage
@@ -8,7 +10,7 @@ namespace DigitalStorage.Storage
     public class StorageManager
     {
         private readonly HashSet<StorageProvider> providers = new HashSet<StorageProvider>();
-        public IReadOnlyCollection<StorageProvider> Providers => providers;
+        public IEnumerable<StorageProvider> Providers => providers;
         public event Action Changed;
 
         private void OnChanged() => Changed?.Invoke();
@@ -28,62 +30,70 @@ namespace DigitalStorage.Storage
             OnChanged();
         }
 
-        internal StoredItem FindItem(string displayName, ISet<GameItem> excludedItems)
+        public void Refresh()
         {
-            foreach (var provider in providers)
-                foreach (var item in provider.Items)
-                    if (item.IsAvailable && item.DisplayName == displayName
-                        && !excludedItems.Contains(item.Item)
-                        && item.Item.MayRemove() && item.Item.MaxNumRemove() > 0)
-                        return item;
-            return null;
+            Refresh((_) => true);
         }
 
-        public async IAsyncEnumerable<StoredItem> SearchAsync(StorageQuery query,
+        public void Refresh(Func<StorageProvider, bool> providerFilter)
+        {
+            foreach (var provider in providers) 
+            { 
+                if (providerFilter(provider)) provider.Refresh();
+            }
+        }
+
+        public async IAsyncEnumerable<StoredItem> SearchAsync(
+            StoredItemExpression expression,
+            StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
+            bool reverse = false,
+            Func<StorageProvider, bool> providerFilter = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var enumerators = new List<IAsyncEnumerator<StoredItem>>();
-
-            var itemComparer = query.GetComparer();
-            var comparer = Comparer<IAsyncEnumerator<StoredItem>>.Create((a, b) => itemComparer.Compare(a.Current, b.Current));
-
-            var heads = new StorageIndex<IAsyncEnumerator<StoredItem>>(comparer);
+            var providersCopy = new List<StorageProvider>(providers);
+            var itemComparer = ComparerHelper.ComparedBy(sortBy.Getter());
+            var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<StoredItem> enumerator) => enumerator.Current, itemComparer);
+            var heads = new OrderList<IAsyncEnumerator<StoredItem>>(comparer);
+            IAsyncEnumerator<StoredItem> pendingEnumerator = null;
 
             try
             {
-                foreach (var provider in new List<StorageProvider>(providers))
+                foreach (var provider in providersCopy)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var enumerator = provider.SearchAsync(query, cancellationToken).GetAsyncEnumerator();
-                    enumerators.Add(enumerator);
+                    if (providerFilter != null && !providerFilter(provider)) continue;
 
-                    if (await enumerator.MoveNextAsync())
-                    {
-                        heads.Add(enumerator);
-                    }
+                    if (!provider.PrepareSearch(expression)) continue;
+
+                    pendingEnumerator = provider.SearchAsync(expression, sortBy, reverse, cancellationToken)
+                        .GetAsyncEnumerator();
+                    if (await pendingEnumerator.MoveNextAsync())
+                        heads.Add(pendingEnumerator);
+                    else
+                        await pendingEnumerator.DisposeAsync();
+                    pendingEnumerator = null;
                 }
 
                 while (heads.Count > 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    int index = query.descending ? heads.Count - 1 : 0;
-                    var enumerator = heads[index];
-                    heads.Remove(enumerator);
+                    pendingEnumerator = heads.Pop(bottom: !reverse);
+                    yield return pendingEnumerator.Current;
 
-                    yield return enumerator.Current;
-
-                    if (await enumerator.MoveNextAsync())
-                    {
-                        heads.Add(enumerator);
-                    }
+                    if (await pendingEnumerator.MoveNextAsync())
+                        heads.Add(pendingEnumerator);
+                    else
+                        await pendingEnumerator.DisposeAsync();
+                    pendingEnumerator = null;
                 }
+
             }
             finally
             {
-                foreach (var enumerator in enumerators)
-                {
+                if (pendingEnumerator != null)
+                    await pendingEnumerator.DisposeAsync();
+                foreach (var enumerator in heads)
                     await enumerator.DisposeAsync();
-                }
             }
         }
     }

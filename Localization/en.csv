@@ -7,3 +7,11 @@ item.storage_bus.internal.name,Storage Bus (Internal)
 item.storage_bus.desc,
 item.storage_bus.flavor,
 storage.slot.energy,Energy
+ui.storage_terminal.sort_by,
+ui.storage_terminal.sort_direction,
+ui.storage_terminal.safety,
+ui.storage_terminal.ascending,
+ui.storage_terminal.descending,
+ui.storage_terminal.all,
+ui.storage_terminal.legal,
+ui.storage_terminal.illegal,

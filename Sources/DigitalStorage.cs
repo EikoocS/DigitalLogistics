@@ -1,3 +1,4 @@
+using DigitalStorage.Controller;
 using DigitalStorage.Item;
 using DigitalStorage.Storage;
 
@@ -26,7 +27,7 @@ namespace DigitalStorage
             ModHelper.AddDebugFunction(Manifest.ID, CustomUIDebugPanel.CATEGORY_SPECIAL,
                 "DigitalStorage", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
-            ModHook.OnGameLoadedInit += StorageBus.ClearConnections;
+            ModHook.OnGameLoadedInit += StorageBusController.ClearConnections;
             Log.Log("Enabled.");
         }
 
@@ -36,8 +37,8 @@ namespace DigitalStorage
             ModHelper.RemoveDebugFunctions(Manifest.ID);
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
-            ModHook.OnGameLoadedInit -= StorageBus.ClearConnections;
-            StorageBus.ClearConnections();
+            ModHook.OnGameLoadedInit -= StorageBusController.ClearConnections;
+            StorageBusController.ClearConnections();
             Log.Log("Disabled.");
         }
 

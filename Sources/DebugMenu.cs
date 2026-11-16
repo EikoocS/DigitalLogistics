@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine.UI;
-using System.Collections.Generic;
-using DigitalStorage.Storage;
+using DigitalStorage.Filtering;
 
 namespace DigitalStorage
 {
@@ -70,48 +69,22 @@ namespace DigitalStorage
 
         private static void RefreshSearchQuery(CustomUIBuilder builder, string input)
         {
-            var query = new StorageQuery(input);
-            var lines = new[]
-            {
-                $"sort: {query.sort}",
-                $"descending: {query.descending}",
-                $"priceFilters: {FormatValues(query.priceFilters.ConvertAll(filter => $"{filter.Comparison} {filter.Value}"))}",
-                $"requiredNames: {FormatValues(query.requiredNames)}",
-                $"anyNames: {FormatValues(query.anyNames)}",
-                $"excludedNames: {FormatValues(query.excludedNames)}",
-                $"requiredMask: {FormatTags(query.requiredMask)}",
-                $"anyMask: {FormatTags(query.anyMask)}",
-                $"excludedMask: {FormatTags(query.excludedMask)}"
-            };
+            var expression = StorageTerminalSearchParser.Parse(input);
             CustomUIBuilder.ClearContainer(builder.CurrentContainer);
-            foreach (var line in lines)
+            builder.AddLabel(expression.Tree.ToString());
+            var label = builder.Last;
+            label.text.richText = false;
+            label.text.enableWordWrapping = true;
+            label.text.overflowMode = TextOverflowModes.Overflow;
+            label.text.alignment = TextAlignmentOptions.TopLeft;
+            var layout = label.root.GetComponent<LayoutElement>();
+            if (layout != null)
             {
-                builder.AddLabel(line);
-                var label = builder.Last;
-                label.text.richText = false;
-                label.text.enableWordWrapping = true;
-                label.text.overflowMode = TextOverflowModes.Overflow;
-                label.text.alignment = TextAlignmentOptions.TopLeft;
-                var layout = label.root.GetComponent<LayoutElement>();
-                if (layout != null)
-                {
-                    layout.minHeight = -1;
-                    layout.preferredHeight = -1;
-                    layout.flexibleHeight = 0;
-                }
+                layout.minHeight = -1;
+                layout.preferredHeight = -1;
+                layout.flexibleHeight = 0;
             }
             CustomUIBuilder.RebuildLayout(builder.CurrentContainer);
-        }
-
-        private static string FormatTags(ulong mask) =>
-            FormatValues(StorageItemTypeHelper.ToTags(mask).ConvertAll(StorageItemTypeHelper.GetLocalizedName));
-
-        private static string FormatValues(IEnumerable<string> values)
-        {
-            var quoted = new List<string>();
-            foreach (var value in values)
-                quoted.Add("\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"");
-            return "[" + string.Join(", ", quoted) + "]";
         }
 
         internal static void Close()

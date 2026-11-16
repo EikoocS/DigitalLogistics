@@ -6,11 +6,16 @@
     <AssemblyName>DigitalStorage</AssemblyName>
     <RootNamespace>DigitalStorage</RootNamespace>
     <Nullable>disable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!-- Where the game is. The default assumes this project sits in <game>\Modding\DigitalStorage\ -->
     <GameDir>$(MSBuildProjectDirectory)\..\..</GameDir>
     <ManagedDir>$(GameDir)\Probably Stolen_Data\Managed</ManagedDir>
     <ModInstallDir>$(GameDir)\Mods\DigitalStorage</ModInstallDir>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Superpower" Version="3.1.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -53,19 +58,21 @@
 
   <!-- Files that ship with the mod besides the DLL: the manifest and the asset folders. -->
   <ItemGroup>
-    <ModFile Include="manifest.xml;preview.png;Textures\**;Sounds\**;Localization\**;LootTables\**;Books\**" />
+    <ModFile Include="manifest.xml;preview.png;THIRD-PARTY-NOTICES;LICENSE;Textures\**;Sounds\**;Localization\**;LootTables\**;Books\**" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Books\" />
     <Folder Include="LootTables\" />
     <Folder Include="Sounds\" />
-    <Folder Include="Sources\Util\" />
+    <Folder Include="Sources\Controller\" />
+    <Folder Include="Sources\Patch\" />
   </ItemGroup>
 
   <!-- After every build, install the mod into <game>\Mods\DigitalStorage\ so the game picks it up. -->
   <Target Name="InstallMod" AfterTargets="Build">
     <MakeDir Directories="$(ModInstallDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModInstallDir)" />
+    <Copy SourceFiles="@(ReferenceCopyLocalPaths)" DestinationFolder="$(ModInstallDir)" />
     <Copy SourceFiles="@(ModFile)" DestinationFiles="@(ModFile->'$(ModInstallDir)\%(Identity)')" Condition="Exists('%(ModFile.FullPath)')" />
     <Message Importance="high" Text="Installed into $(ModInstallDir)" />
   </Target>

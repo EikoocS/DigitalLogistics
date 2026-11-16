@@ -1,13 +1,20 @@
+using System;
+using DigitalStorage.Controller;
 using DigitalStorage.Item;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
-namespace DigitalStorage
+namespace DigitalStorage.UI
 {
     internal sealed class StorageTerminalUI
     {
         private readonly PixelWindow window;
+        private readonly TMP_InputField searchInput;
+
+        internal StorageTerminalList List { get; }
+        internal StorageTerminalConfiguration Configuration { get; }
+        internal string SearchText => searchInput.text;
+        internal event Action<string> SearchChanged;
 
         internal static PixelWindow Create() => new StorageTerminalUI().window;
 
@@ -16,21 +23,31 @@ namespace DigitalStorage
             var (inputHost, inputRoot) = CreateControl(CustomUIManager.ElementKind.Input, 232, 18);
             var input = CustomUIElement.Bind(inputRoot, "search");
             input.SetString(string.Empty);
-            var searchInput = input.input;
+            searchInput = input.input;
             searchInput.lineType = TMP_InputField.LineType.SingleLine;
             ((TMP_Text)searchInput.placeholder).text =
                 StorageTerminal.Localize("ui.storage_terminal.search_placeholder");
 
             var (listHost, listRoot) = CreateControl(CustomUIManager.ElementKind.ScrollView, 232, 170);
-            var list = listRoot.AddComponent<StorageTerminalList>();
-            list.Init(searchInput, listHost.handler);
+            List = new StorageTerminalList(listRoot, listHost.handler);
 
-            var body = MachineryStack.Vertical(inputHost, listHost)
+            var content = MachineryStack.Vertical(inputHost, listHost)
+                .SetAlign(MachineryStack.Align.Start)
+                .SetMainAlign(MachineryStack.Align.Start);
+            Configuration = new StorageTerminalConfiguration();
+            var body = MachineryStack.Horizontal(Configuration.Layout, content)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
             window = MachineHelper.CreateMachineryWindow(true, MachineHelper.Panel(null, body));
-            window.openCallback = list.Refresh;
+            searchInput.onValueChanged.AddListener(OnSearchChanged);
+            var controller = listRoot.AddComponent<StorageTerminalController>();
+            controller.Init(this);
+            window.openCallback = controller.Refresh;
         }
+
+        private void OnSearchChanged(string text) => SearchChanged?.Invoke(text);
+
+        internal void Dispose() => searchInput.onValueChanged.RemoveListener(OnSearchChanged);
 
         private static (EmptyPixelElement Host, GameObject Root) CreateControl(
             CustomUIManager.ElementKind kind, int width, int height)

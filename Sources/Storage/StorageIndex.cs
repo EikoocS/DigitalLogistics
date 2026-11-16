@@ -1,78 +1,96 @@
-using System.Collections;
+using DigitalStorage.Collections;
+using System;
 using System.Collections.Generic;
+using static DigitalStorage.Storage.StorageSort;
 
 namespace DigitalStorage.Storage
 {
-    internal class StorageIndex<T> : IReadOnlyList<T>
+    public class StorageIndex
     {
-        private readonly List<(T Item, ulong TagMask)> _list = new();
-        private readonly IComparer<(T Item, ulong TagMask)> comparer;
+        public static readonly Comparer<StoredItem> IdentifierComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Identifier);
+        public static readonly Comparer<StoredItem> ModIdComparer = ComparerHelper.ComparedBy((StoredItem item) => item.ModId).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<StoredItem> DisplayNameComparer = ComparerHelper.ComparedBy((StoredItem item) => item.DisplayName).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<StoredItem> PriceComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Price).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<StoredItem> BasePriceComparer = ComparerHelper.ComparedBy((StoredItem item) => item.BasePrice).LinkComparer(IdentifierComparer);
+        public static readonly Comparer<StoredItem> HeatComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Heat).LinkComparer(IdentifierComparer);
+        private readonly Dictionary<int, StoredItem> UniqueIdIndex = new();
+        private readonly Dictionary<SortBy, OrderList<StoredItem>> itemIndexs = new();
+        private readonly StorageIndexBloom indexBloom = new();
+        private readonly BloomFilter typeBloom = new();
 
-        public StorageIndex(IComparer<T> comparer)
+        public StorageIndex()
         {
-            this.comparer = Comparer<(T Item, ulong TagMask)>.Create(
-                (a, b) => comparer.Compare(a.Item, b.Item));
+            foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
+                itemIndexs[sortBy] = OrderList<StoredItem>.BuildByGetterAndFilter(sortBy.Getter());
         }
 
-        public T this[int index] => _list[index].Item;
+        public bool Contains(int uniqueId) => UniqueIdIndex.ContainsKey(uniqueId);
 
-        public ulong GetTagMask(int index) => _list[index].TagMask;
-
-        public bool SetMask(int index, ulong mask)
+        public bool Add(StoredItem item)
         {
-            var entry = _list[index];
-            if (entry.TagMask == mask) return false;
-            _list[index] = (entry.Item, mask);
+            if (UniqueIdIndex.ContainsKey(item.UniqueId))
+                return false;
+            else
+                UniqueIdIndex.Add(item.UniqueId, item);
+
+            foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
+                lock (itemIndexs[sortBy]) 
+                    itemIndexs[sortBy].Add(item);
+
+            indexBloom.Add(item);
+            typeBloom.Add(item.TypeMask.GetHashCode());
+
             return true;
         }
 
-        public bool ClearMask(int index, ulong mask) =>
-            SetMask(index, _list[index].TagMask & ~mask);
-
-        public ulong GetMask(int index) => _list[index].TagMask;
-
-        public bool MatchRequiredMask(int index, ulong requiredMask)
+        public bool Remove(StoredItem item)
         {
-            return (_list[index].TagMask & requiredMask) == requiredMask;
-        }
+            if (!UniqueIdIndex.ContainsKey(item.UniqueId))
+                return false;
+            else
+                UniqueIdIndex.Remove(item.UniqueId);
 
-        public bool MatchAnyMask(int index, ulong anyMask)
-        {
-            return (_list[index].TagMask & anyMask) != 0;
-        }
+            foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
+                lock (itemIndexs[sortBy]) 
+                    itemIndexs[sortBy].Remove(item);
 
-        public bool MatchExcludedMask(int index, ulong excludedMask)
-        {
-            return (_list[index].TagMask & excludedMask) == 0;
-        }
-
-        public int Count => _list.Count;
-
-        public void Add(T item, ulong tagMask = 0)
-        {
-            var entry = (Item: item, TagMask: tagMask);
-            int position = _list.BinarySearch(entry, comparer);
-            _list.Insert(position < 0 ? ~position : position, entry);
-        }
-
-        public bool Remove(T item)
-        {
-            int index = _list.FindIndex(entry => EqualityComparer<T>.Default.Equals(entry.Item, item));
-            if (index < 0) return false;
-            _list.RemoveAt(index);
             return true;
         }
 
-        public void Refresh() => _list.Sort(comparer);
-
-        public IEnumerator<T> GetEnumerator()
+        public bool Remove(int uniqueId)
         {
-            foreach (var entry in _list) yield return entry.Item;
+            if (!UniqueIdIndex.ContainsKey(uniqueId))
+                return false;
+            else
+                return Remove(UniqueIdIndex[uniqueId]);
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+        public void Clear()
         {
-            return GetEnumerator();
+            UniqueIdIndex.Clear();
+
+            foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
+                lock (itemIndexs[sortBy]) 
+                    itemIndexs[sortBy].Clear();
+
+            indexBloom.Clear();
+            typeBloom.Clear();
+        }
+
+        public StorageIndexBloom GetIndexBloom()
+        {
+            return indexBloom;
+        }
+
+        public BloomFilter GetTypeBloom()
+        {
+            return typeBloom;
+        }
+
+        public IEnumerator<StoredItem> GetEnumerator(SortBy sortBy, bool reverse)
+        {
+            var index = itemIndexs[sortBy];
+            return index.GetEnumerator(reverse);
         }
     }
 }

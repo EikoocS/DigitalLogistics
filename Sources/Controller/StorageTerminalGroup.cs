@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using DigitalStorage.Storage;
 using System;
 
-namespace DigitalStorage
+namespace DigitalStorage.Controller
 {
     internal sealed class StorageTerminalGroup
     {
@@ -13,6 +13,15 @@ namespace DigitalStorage
         internal int? Heat { get; private set; }
 
         internal StorageTerminalGroup(string name) => Name = name;
+
+        internal void SetItems(IEnumerable<StoredItem> items)
+        {
+            Items.Clear();
+            TotalPrice = 0;
+            ContrabandLevel = 0;
+            Heat = null;
+            foreach (var item in items) Add(item);
+        }
 
         internal void Add(StoredItem item)
         {

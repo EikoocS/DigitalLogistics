@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage
+namespace DigitalStorage.UI
 {
     internal sealed class StorageItemPreview
     {
@@ -23,7 +23,6 @@ namespace DigitalStorage
             var visual = CopyVisual(item.rotator.rectTransform, root);
             visual.anchorMin = visual.anchorMax = visual.pivot = new Vector2(0.5f, 0.5f);
             visual.anchoredPosition = Vector2.zero;
-            Move(Input.mousePosition);
         }
 
         internal void Move(Vector3 position) => root.position = position;
