@@ -1,4 +1,7 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DigitalStorage.Storage
 {
@@ -7,6 +10,7 @@ namespace DigitalStorage.Storage
     {
         private readonly GameInventory inventory;
         private Dictionary<int, CachedItem> inputItems;
+        private StorageIndex rebuildingIndex;
         public bool Disposed { get; private set; } = false;
 
         internal StorageInputResult InputFromSystem(GameItem item, int amount) => InputCore(item, amount);
@@ -46,6 +50,7 @@ namespace DigitalStorage.Storage
         {
             storageIndex.Remove(item.uniqueId);
             inputItems?.Remove(item.uniqueId);
+            rebuildingIndex?.Remove(item.uniqueId);
         }
 
         private void OnItemChanged(GameItem item, GameInventory inventory, SlotMarker slot)
@@ -59,6 +64,11 @@ namespace DigitalStorage.Storage
                 if (inputItems != null) inputItems[item.uniqueId] = stored;
             }
             else inputItems?.Remove(item.uniqueId);
+            if (rebuildingIndex != null)
+            {
+                rebuildingIndex.Remove(item.uniqueId);
+                if (stored != null) rebuildingIndex.Add(stored);
+            }
         }
 
         public override bool Contains(int uniqueId)
@@ -129,6 +139,27 @@ namespace DigitalStorage.Storage
             {
                 storageIndex.Add(new StoredPhysicalItem(item, this));
             }
+        }
+
+        public override IEnumerator RefreshCoroutine(Action onItemProcessed)
+        {
+            rebuildingIndex = new StorageIndex();
+            try
+            {
+                foreach (var item in inventory.childItems.ToArray())
+                {
+                    if (Disposed) yield break;
+                    if (item.parentInventory == inventory && item.unitCount > 0)
+                    {
+                        rebuildingIndex.Remove(item.uniqueId);
+                        rebuildingIndex.Add(new StoredPhysicalItem(item, this));
+                        onItemProcessed();
+                    }
+                    yield return null;
+                }
+                if (!Disposed) ReplaceIndex(rebuildingIndex);
+            }
+            finally { rebuildingIndex = null; }
         }
     }
 }

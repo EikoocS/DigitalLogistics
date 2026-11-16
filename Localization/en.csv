@@ -2,6 +2,9 @@ item.storage_terminal.name,Storage Terminal
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
 ui.storage_terminal.search_placeholder,
+ui.storage_terminal.refreshing,
+ui.storage_terminal.refresh_elapsed,
+ui.storage_terminal.refresh_items,
 item.storage_bus.external.name,Storage Bus (External)
 item.storage_bus.internal.name,Storage Bus (Internal)
 item.storage_bus.disabled.name,Storage Bus (Disabled)

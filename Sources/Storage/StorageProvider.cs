@@ -1,5 +1,6 @@
 ﻿using DigitalStorage.Filtering;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -15,10 +16,26 @@ namespace DigitalStorage.Storage
         public int Priority { get; set; } = 0;
         public string Name { get; set; } = "Unnamed";
         public StoredItemExpression filter { get; set; } = StoredItemExpression.Constant(true);
-        protected readonly StorageIndex storageIndex = new();
+        protected StorageIndex storageIndex = new();
+        public int Size => storageIndex.Size;
+        public event Action onChange;
+
+        protected StorageProvider() => storageIndex.onChange += NotifyChanged;
+
+        protected void NotifyChanged() => onChange?.Invoke();
+
+        protected void ReplaceIndex(StorageIndex index)
+        {
+            storageIndex.onChange -= NotifyChanged;
+            storageIndex = index;
+            storageIndex.onChange += NotifyChanged;
+            NotifyChanged();
+        }
+
         public abstract void Dispose();
         public abstract bool Contains(int uniqueId);
         public abstract void Refresh();
+        public abstract IEnumerator RefreshCoroutine(Action onItemProcessed);
 
         /// <summary>Returns the actual inserted count and the resulting destination entries.</summary>
         public StorageInputResult TryInput(GameItem item, int amount = -1)

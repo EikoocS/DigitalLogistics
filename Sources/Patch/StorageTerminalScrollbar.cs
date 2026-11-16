@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DigitalStorage.Controller;
+using DigitalStorage.UI;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,8 +21,9 @@ namespace DigitalStorage.Patch
             }, hits);
             if (hits.Count == 0) return;
             var target = hits[0].gameObject;
-            __result = target.GetComponentInParent<Scrollbar>() != null
-                && target.GetComponentInParent<StorageTerminalController>() != null;
+            __result = target.GetComponentInParent<StorageTerminalRefreshButton>() != null
+                || target.GetComponentInParent<Scrollbar>() != null
+                    && target.GetComponentInParent<StorageTerminalController>() != null;
         }
     }
 }

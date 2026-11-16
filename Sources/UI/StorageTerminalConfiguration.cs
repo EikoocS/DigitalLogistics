@@ -56,6 +56,13 @@ namespace DigitalStorage.UI
             safetyButton.SetDescription($"{Localize("safety")}: {Localize(safety)}");
         }
 
+        internal void SetEnabled(bool enabled)
+        {
+            sortButton.SetDisabled(!enabled);
+            directionButton.SetDisabled(!enabled);
+            safetyButton.SetDisabled(!enabled);
+        }
+
         private void OnChanged()
         {
             RefreshDescriptions();

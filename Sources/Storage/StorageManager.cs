@@ -12,18 +12,28 @@ namespace DigitalStorage.Storage
     {
         private readonly HashSet<StorageProvider> providers = new HashSet<StorageProvider>();
         public IEnumerable<StorageProvider> Providers => providers;
+        public event Action onChange;
+        internal void NotifyChanged() => onChange?.Invoke();
+
         public void registerStorageProvider(StorageProvider provider)
         {
-            providers.Add(provider);
+            if (!providers.Add(provider)) return;
+            provider.onChange += NotifyChanged;
+            NotifyChanged();
         }
 
         public void unregisterStorageProvider(StorageProvider provider)
         {
-            providers.Remove(provider);
+            DetachStorageProvider(provider);
             provider.Dispose();
         }
 
-        internal void DetachStorageProvider(StorageProvider provider) => providers.Remove(provider);
+        internal void DetachStorageProvider(StorageProvider provider)
+        {
+            if (!providers.Remove(provider)) return;
+            provider.onChange -= NotifyChanged;
+            NotifyChanged();
+        }
 
         internal bool Owns(CachedItem item) => item is StoredItem stored
             ? providers.Contains(stored.Provider)

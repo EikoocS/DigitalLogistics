@@ -32,6 +32,7 @@ namespace DigitalStorage.Storage
                     ? StoredItemExpression.Constant(true) : StoredItemExpressionParser.Parse(Filter);
                 if (Disabled) DigitalStorage.Manager.DetachStorageProvider(Provider);
                 else DigitalStorage.Manager.registerStorageProvider(Provider);
+                DigitalStorage.Manager.NotifyChanged();
             }
         }
 
@@ -53,6 +54,7 @@ namespace DigitalStorage.Storage
 
         private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameInventory, Link> inventories = new();
+        internal static IEnumerable<StorageProvider> Providers => inventories.Values.Select(link => link.Provider);
 
         internal static Configuration GetConfiguration(GameInventory inventory) => inventories[inventory].Configuration;
 

@@ -18,6 +18,9 @@ namespace DigitalStorage.Storage
         private readonly Dictionary<SortBy, BloomFilter> indexBlooms = new();
         private readonly BloomFilter typeBloom = new();
 
+        public int Size => UniqueIdIndex.Count;
+        public event Action onChange;
+
         public StorageIndex()
         {
             foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
@@ -47,6 +50,7 @@ namespace DigitalStorage.Storage
             for (int index = 0; index < item.TypeMask.Capacity; index++)
                 if (item.TypeMask[index]) typeBloom.Add(index.GetHashCode());
 
+            onChange?.Invoke();
             return true;
         }
 
@@ -61,6 +65,7 @@ namespace DigitalStorage.Storage
                 lock (itemIndexs[sortBy]) 
                     itemIndexs[sortBy].Remove(item);
 
+            onChange?.Invoke();
             return true;
         }
 
@@ -80,8 +85,9 @@ namespace DigitalStorage.Storage
                 lock (itemIndexs[sortBy]) 
                     itemIndexs[sortBy].Clear();
 
-            indexBlooms.Clear();
+            foreach (var bloom in indexBlooms.Values) bloom.Clear();
             typeBloom.Clear();
+            onChange?.Invoke();
         }
 
         public Dictionary<SortBy, BloomFilter> GetIndexBloom()

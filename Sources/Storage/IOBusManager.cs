@@ -86,6 +86,7 @@ namespace DigitalStorage.Storage
             link.Inventory.onSlotAddItemEndFunc += configuration.OnAdded;
             if (!active.TryGetValue(bus, out var links)) active.Add(bus, links = new());
             links.Add(configuration);
+            DigitalStorage.Manager.NotifyChanged();
         }
 
         internal static void Release(GameItem bus, GameInventory inventory)
@@ -102,6 +103,7 @@ namespace DigitalStorage.Storage
                 active.Remove(bus);
                 pending.Remove(bus);
             }
+            DigitalStorage.Manager.NotifyChanged();
         }
 
         internal static void Load()

@@ -1,6 +1,7 @@
 using System;
 using DigitalStorage.Controller;
 using DigitalStorage.Item;
+using DigitalStorage.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,9 +15,14 @@ namespace DigitalStorage.UI
         private readonly RectTransform dropArea;
         private readonly TreeNodeRender listHandler;
         private readonly StorageTerminalController controller;
+        private readonly TMP_Text refreshResult;
+        private readonly ScrollRect scroll;
+        private readonly TreeNodeRender refreshOverlay;
+        private readonly Button refreshButton;
 
         internal StorageTerminalList List { get; }
         internal StorageTerminalConfiguration Configuration { get; }
+        internal StorageTerminalRefreshButton RefreshButton { get; }
         internal string SearchText => searchInput.text;
         internal event Action<string> SearchChanged;
 
@@ -24,7 +30,7 @@ namespace DigitalStorage.UI
 
         private StorageTerminalUI()
         {
-            var (inputHost, inputRoot) = CreateControl(CustomUIManager.ElementKind.Input, 232, 18);
+            var (inputHost, inputRoot) = CreateControl(CustomUIManager.ElementKind.Input, 204, 18);
             var input = CustomUIElement.Bind(inputRoot, "search");
             input.SetString(string.Empty);
             searchInput = input.input;
@@ -32,16 +38,34 @@ namespace DigitalStorage.UI
             ((TMP_Text)searchInput.placeholder).text =
                 StorageTerminal.Localize("ui.storage_terminal.search_placeholder");
 
-            var (listHost, listRoot) = CreateControl(CustomUIManager.ElementKind.ScrollView, 232, 170);
+            var (refreshHost, refreshRoot) = CreateControl(CustomUIManager.ElementKind.Button, 24, 18);
+            var refresh = CustomUIElement.Bind(refreshRoot, "refresh");
+            refresh.SetText(string.Empty);
+            refreshButton = refresh.button;
+            RefreshButton = refreshButton.gameObject.AddComponent<StorageTerminalRefreshButton>();
+            RefreshButton.Init(refreshButton);
+            var searchRow = MachineryStack.Horizontal(inputHost, refreshHost)
+                .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
+
+            var (listHost, listRoot) = CreateControl(CustomUIManager.ElementKind.ScrollView, 232, 142);
             List = new StorageTerminalList(listRoot, listHost.handler);
-            dropArea = listRoot.GetComponentInChildren<ScrollRect>(true).viewport;
+            scroll = listRoot.GetComponentInChildren<ScrollRect>(true);
+            dropArea = scroll.viewport;
             listHandler = listHost.handler;
             listHandler.InitEventHandler();
             listHandler.image.enabled = true;
             listHandler.image.color = Color.clear;
             listHandler.image.alphaHitTestMinimumThreshold = 0;
 
-            var content = MachineryStack.Vertical(inputHost, listHost)
+            var (resultHost, resultRoot) = CreateControl(CustomUIManager.ElementKind.Label, 232, 28);
+            refreshResult = CustomUIElement.Bind(resultRoot, "refreshResult").text;
+            refreshResult.fontSize = 16;
+            refreshResult.enableAutoSizing = false;
+            refreshResult.alignment = TextAlignmentOptions.TopLeft;
+            refreshResult.richText = false;
+            refreshResult.text = string.Empty;
+
+            var content = MachineryStack.Vertical(searchRow, listHost, resultHost)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
             Configuration = new StorageTerminalConfiguration();
@@ -49,15 +73,63 @@ namespace DigitalStorage.UI
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
             window = MachineHelper.CreateMachineryWindow(true, MachineHelper.Panel(null, body));
+            refreshOverlay = TreeNodeRender.Instantiate().SetParent(body.inner);
+            refreshOverlay.InitEventHandler();
+            refreshOverlay.image.enabled = true;
+            refreshOverlay.image.color = new Color(0.08f, 0.1f, 0.12f, 0.92f);
+            Stretch(refreshOverlay.rectTransform);
+            var busyText = TreeNodeRender.InstantiateText().SetParent(refreshOverlay);
+            MachineryStyle.InitText(busyText, 8, MachineryStyle.BODY_TEXT, HorizontalAlignmentOptions.Center);
+            busyText.text.text = StorageTerminal.Localize("ui.storage_terminal.refreshing");
+            busyText.text.raycastTarget = false;
+            Stretch(busyText.rectTransform);
+            refreshOverlay.gameObject.SetActive(false);
             searchInput.onValueChanged.AddListener(OnSearchChanged);
             controller = listRoot.AddComponent<StorageTerminalController>();
             controller.Init(this);
-            window.openCallback = controller.Refresh;
+            window.openCallback = controller.Open;
         }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+        }
+
+        internal void SetRefreshing(bool value)
+        {
+            searchInput.DeactivateInputField();
+            searchInput.interactable = !value;
+            refreshButton.interactable = !value;
+            Configuration.SetEnabled(!value);
+            scroll.enabled = !value;
+            refreshOverlay.gameObject.SetActive(value);
+            refreshOverlay.rectTransform.SetAsLastSibling();
+        }
+
+        internal void ShowRefreshResult()
+        {
+            refreshResult.text = !StorageIndexRefresh.HasResult ? string.Empty
+                : $"{Localize("refresh_elapsed")}: {StorageIndexRefresh.ElapsedMilliseconds:N0} ms\n"
+                    + $"{Localize("refresh_items")}: {StorageIndexRefresh.ProcessedItems:N0}";
+            refreshResult.color = StorageIndexRefresh.Succeeded
+                ? MachineryStyle.BODY_TEXT : MachineryStyle.PROGRESS_FILL_DANGER;
+        }
+
+        private static string Localize(string key) => StorageTerminal.Localize("ui.storage_terminal." + key);
 
         private void OnSearchChanged(string text) => SearchChanged?.Invoke(text);
 
         internal void Dispose() => searchInput.onValueChanged.RemoveListener(OnSearchChanged);
+
+        internal static StorageTerminalController FindController(Vector3 position, TreeNodeRender ignored)
+        {
+            var row = RenderHandler.RaycastFindParentElement<StorageTerminalRow>(position, ignored);
+            if (row != null) return row.Controller.Owner;
+            var host = RenderHandler.RaycastFindParentElement<EmptyPixelElement>(position, ignored);
+            return host?.handler.GetComponentInChildren<StorageTerminalController>();
+        }
 
         internal bool ContainsPointer(Vector3 position, TreeNodeRender ignored)
         {

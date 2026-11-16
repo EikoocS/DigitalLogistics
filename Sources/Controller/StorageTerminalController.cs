@@ -42,10 +42,14 @@ namespace DigitalStorage.Controller
         private StoredItemExpression searchExpression;
         private IComparer<CachedItem> itemComparer;
         private IComparer<GroupState> groupComparer;
+        private float? pendingScrollPosition;
+        private bool subscribed;
 
-        internal bool Interacting => interaction.Consuming;
+        internal bool Refreshing => StorageIndexRefresh.Running;
+        internal bool Interacting => Refreshing || interaction.Consuming;
         internal StorageTerminalConfiguration Configuration => view.Configuration;
         internal bool ContainsPointer(Vector3 position, TreeNodeRender ignored) => view.ContainsPointer(position, ignored);
+        internal void Input(GameItem item, int amount) => interaction.InputExternal(item, amount);
 
         internal void Init(StorageTerminalUI view)
         {
@@ -54,26 +58,78 @@ namespace DigitalStorage.Controller
             view.Configuration.Changed += OnConfigurationChanged;
             interaction = gameObject.AddComponent<StorageTerminalInteraction>();
             interaction.Init(this);
+            view.RefreshButton.Clicked += Refresh;
+            view.RefreshButton.Held += StorageIndexRefresh.Start;
+            if (isActiveAndEnabled) Subscribe();
         }
 
-        internal void Refresh()
+        private void Subscribe()
         {
-            DigitalStorage.Manager.Refresh();
+            if (subscribed) return;
+            DigitalStorage.Manager.onChange += OnStorageChanged;
+            StorageIndexRefresh.StateChanged += OnRefreshStateChanged;
+            subscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!subscribed) return;
+            DigitalStorage.Manager.onChange -= OnStorageChanged;
+            StorageIndexRefresh.StateChanged -= OnRefreshStateChanged;
+            subscribed = false;
+        }
+
+        internal void Open()
+        {
             view.Configuration.RefreshDescriptions();
-            Search();
+            view.RefreshButton.SetPending(false);
+            view.SetRefreshing(Refreshing);
+            view.ShowRefreshResult();
+            if (Refreshing) return;
+            Search(true);
         }
 
-        private async void Search()
+        private void Refresh()
         {
-            StopSearch();
-            if (!isActiveAndEnabled) return;
+            if (!Refreshing) Search(true);
+        }
 
-            expandedGroups.Clear();
+        private void OnStorageChanged() => view.RefreshButton.SetPending(true);
+
+        private void OnRefreshStateChanged()
+        {
+            if (Refreshing)
+            {
+                StopSearch();
+                interaction.Suspend();
+            }
+            view.SetRefreshing(Refreshing);
+            view.ShowRefreshResult();
+            if (Refreshing || !isActiveAndEnabled) return;
+            Search(true);
+        }
+
+        private void ClearResults()
+        {
             foreach (var group in groups.Values) group.View.Destroy();
             groups.Clear();
             orderedGroups.Clear();
             currentItems.Clear();
             pendingChildren.Clear();
+            pendingScrollPosition = null;
+            searchExpression = null;
+        }
+
+        private async void Search(bool preservePosition = false)
+        {
+            StopSearch();
+            if (!isActiveAndEnabled || Refreshing) return;
+
+            float position = List.ScrollPosition;
+            if (!preservePosition) expandedGroups.Clear();
+            ClearResults();
+            if (preservePosition) pendingScrollPosition = position;
+            view.RefreshButton.SetPending(false);
             List.ResetScroll();
             List.RefreshPriceUnit();
 
@@ -233,8 +289,15 @@ namespace DigitalStorage.Controller
             PositionGroup(state);
         }
 
+        internal IEnumerable<CachedItem> GetGroupItems(string name)
+        {
+            var state = groups[name];
+            return state.Group != null ? state.Group.Items : new[] { state.Item };
+        }
+
         internal IEnumerable<CachedItem> GetCurrentItems(IEnumerable<int> uniqueIds)
         {
+            if (Refreshing) yield break;
             foreach (int id in uniqueIds)
                 if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()
                     && DigitalStorage.Manager.Owns(item)) yield return item;
@@ -388,21 +451,36 @@ namespace DigitalStorage.Controller
 
         private void LateUpdate()
         {
+            if (Refreshing) return;
             if (Time.realtimeSinceStartupAsDouble >= searchDeadline) Search();
             double deadline = Time.realtimeSinceStartupAsDouble + RefreshBudgetSeconds;
             RenderChildren(deadline);
+            if (searchCancellation == null && pendingChildren.Count == 0 && pendingScrollPosition.HasValue)
+            {
+                List.RestoreScroll(pendingScrollPosition.Value);
+                pendingScrollPosition = null;
+            }
             ResumeFrame();
         }
 
         private void OnDisable()
         {
+            Unsubscribe();
             StopSearch();
+        }
+
+        private void OnEnable()
+        {
+            if (view != null) Subscribe();
         }
 
         private void OnDestroy()
         {
+            Unsubscribe();
             view.SearchChanged -= OnSearchChanged;
             view.Configuration.Changed -= OnConfigurationChanged;
+            view.RefreshButton.Clicked -= Refresh;
+            view.RefreshButton.Held -= StorageIndexRefresh.Start;
             view.Dispose();
         }
     }

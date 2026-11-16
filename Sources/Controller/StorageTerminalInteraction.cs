@@ -13,12 +13,15 @@ namespace DigitalStorage.Controller
 {
     internal sealed class StorageTerminalInteraction : EmptyActionHandler
     {
+        private static int escapeConsumedFrame = -1;
         private StorageTerminalController owner;
         private readonly StorageTerminalDragUI view = new();
         private readonly HashSet<int> selection = new();
+        private readonly HashSet<int> groupSelection = new();
         private readonly HashSet<int> placedItems = new();
+        private readonly HashSet<(GameInventory, int, int)> paintedSlots = new();
         private StorageTerminalRowController pressedRow;
-        private GameItem externalItem;
+        private GameItem quickInputItem;
         private GameItem previewItem;
         private GridShapeBuilder shape;
         private CancellationTokenSource movement;
@@ -34,9 +37,23 @@ namespace DigitalStorage.Controller
         internal bool Consuming => previewItem != null || quickTransfer || movement != null
             || Time.frameCount <= consumeUntilFrame;
 
-        public override List<KeyCode> keyListeners => new() { KeyCode.Mouse0, KeyCode.Escape };
+        public override List<KeyCode> keyListeners => new() { KeyCode.Mouse0, KeyCode.Mouse1, KeyCode.Escape };
 
         internal void Init(StorageTerminalController controller) => owner = controller;
+
+        internal static bool TryCancelHeldItem()
+        {
+            if (escapeConsumedFrame == Time.frameCount) return true;
+            if (InputActionManager.current == null) return false;
+            foreach (var handler in InputActionManager.current.actionHandlers.OfType<StorageTerminalInteraction>())
+            {
+                if (!handler.isActiveAndEnabled || handler.previewItem == null && handler.movement == null) continue;
+                handler.Cancel();
+                escapeConsumedFrame = Time.frameCount;
+                return true;
+            }
+            return false;
+        }
 
         protected override bool OnEventInit()
         {
@@ -48,7 +65,9 @@ namespace DigitalStorage.Controller
 
         protected override void OnEventPress(ISet<KeyCode> keysPressed)
         {
-            if (keysPressed.Contains(KeyCode.Escape) && (Consuming || pointerDown))
+            if (!isActiveAndEnabled || owner.Refreshing) return;
+            if (keysPressed.Contains(KeyCode.Escape) && TryCancelHeldItem()) return;
+            if (keysPressed.Contains(KeyCode.Mouse1) && (previewItem != null || movement != null))
             {
                 Cancel();
                 return;
@@ -70,32 +89,41 @@ namespace DigitalStorage.Controller
                 }
                 else
                 {
-                    externalItem = view.FindItem(Input.mousePosition);
-                    if (!CanTakeExternal(externalItem))
+                    bool quickInput = quickTransfer;
+                    quickTransfer = false;
+                    if (!quickInput) return;
+                    quickInputItem = view.FindItem(Input.mousePosition);
+                    if (!CanTakeExternal(quickInputItem))
                     {
-                        quickTransfer = false;
-                        externalItem = null;
+                        quickInputItem = null;
                         return;
                     }
-                    inputAmount = Input.GetKey(KeyCode.LeftAlt) ? 1 : externalItem.MaxNumRemove();
+                    inputAmount = Input.GetKey(KeyCode.LeftAlt) ? 1 : quickInputItem.MaxNumRemove();
                 }
                 if (Consuming) CaptureInput();
             }
             pointerDown = true;
             dragged = false;
+            paintedSlots.Clear();
             pressPosition = Input.mousePosition;
         }
 
         protected override void OnEventMouseMove(Vector3 mousePosition, Vector3 mouseDelta)
         {
+            if (!isActiveAndEnabled || owner.Refreshing) return;
             if (!pointerDown || dragged || (mousePosition - pressPosition).magnitude
                 < ItemMouseDragHandler.current.dragThreshold) return;
             dragged = true;
+            if (quickInputItem != null)
+            {
+                quickInputItem = null;
+                pointerDown = false;
+                return;
+            }
             if (quickTransfer) return;
             if (previewItem == null)
             {
-                bool held = pressedRow != null ? HoldSelection() : Hold(externalItem);
-                if (!held)
+                if (!HoldSelection())
                 {
                     Cancel();
                     return;
@@ -106,9 +134,21 @@ namespace DigitalStorage.Controller
 
         protected override void OnEventRelease(ISet<KeyCode> keysReleased)
         {
+            if (!isActiveAndEnabled || owner.Refreshing) return;
             if (!keysReleased.Contains(KeyCode.Mouse0) || !pointerDown) return;
             OnEventMouseMove(Input.mousePosition, Vector3.zero);
             pointerDown = false;
+            if (quickInputItem != null)
+            {
+                if (view.FindItem(Input.mousePosition) == quickInputItem)
+                {
+                    CaptureInput();
+                    InputExternal(quickInputItem, inputAmount);
+                    consumeUntilFrame = Time.frameCount + 1;
+                }
+                quickInputItem = null;
+                return;
+            }
             if (quickTransfer)
             {
                 quickTransfer = false;
@@ -116,27 +156,23 @@ namespace DigitalStorage.Controller
                 {
                     if (pressedRow != null && view.FindRow(Input.mousePosition) == pressedRow)
                         TransferToCounter();
-                    else if (externalItem != null && view.FindItem(Input.mousePosition) == externalItem)
-                        InputExternal();
                 }
                 consumeUntilFrame = Time.frameCount + 1;
             }
             else if (previewItem != null && (!fromList || dragged))
             {
-                if (externalItem != null) PlaceExternal();
-                else PlaceOutput(!fromList && dragged);
+                PlaceOutput(!fromList && dragged, fromList && dragged, !fromList && dragged);
                 consumeUntilFrame = Time.frameCount + 1;
             }
             pressedRow = null;
-            if (previewItem == null) externalItem = null;
         }
 
         protected override bool OnEventUpdate()
         {
+            if (!isActiveAndEnabled || owner.Refreshing) return false;
             if (previewItem != null && movement == null)
             {
-                if (externalItem != null ? !CanTakeExternal(externalItem)
-                    : !owner.GetCurrentItems(selection).Any()) Cancel();
+                if (!owner.GetCurrentItems(selection).Any()) Cancel();
             }
             if (!Consuming)
             {
@@ -144,9 +180,11 @@ namespace DigitalStorage.Controller
                 return false;
             }
             view.Update();
+            if (pointerDown && !fromList && dragged && previewItem != null && movement == null)
+                PlaceOutput(true, false, true);
             if (previewItem != null && movement == null)
                 view.Highlight(view.IsOverTerminal(owner, Input.mousePosition) ? null
-                    : CaptureDestination(externalItem == null ? 1 : inputAmount)(previewItem));
+                    : CaptureDestination(1)(previewItem));
             return true;
         }
 
@@ -159,10 +197,13 @@ namespace DigitalStorage.Controller
         private void SetSelection(StorageTerminalRowController row)
         {
             selection.Clear();
+            groupSelection.Clear();
             placedItems.Clear();
             pressedGroup = quickTransfer && row.Group != null;
             foreach (var item in row.Group?.Items ?? new List<CachedItem> { row.Item })
                 selection.Add(item.UniqueId);
+            foreach (var item in owner.GetGroupItems(row.Group?.Name ?? row.Item.DisplayName))
+                groupSelection.Add(item.UniqueId);
         }
 
         private bool HoldSelection()
@@ -220,18 +261,46 @@ namespace DigitalStorage.Controller
                 : counter.TryFindOneValidInventorySlot(item), false);
         }
 
-        private void PlaceOutput(bool continueHolding)
+        private static (GameInventory, int, int) GetSlotPosition(SlotMarker slot)
         {
-            if (view.IsOverTerminal(owner, Input.mousePosition)) return;
-            MoveOutput(CaptureDestination(1), continueHolding);
+            var gridShape = slot.itemGridShape ?? slot.targetItem.modifiedShape;
+            return (slot.inventory ?? slot.targetItem.parentInventory, gridShape.minX, gridShape.minY);
         }
 
-        private async void MoveOutput(Func<GameItem, SlotMarker> findSlot, bool continueHolding)
+        private void PlaceOutput(bool continueHolding, bool releaseAfterAttempt, bool continuous = false)
+        {
+            if (movement != null) return;
+            if (view.IsOverTerminal(owner, Input.mousePosition))
+            {
+                if (releaseAfterAttempt) ClearHeld();
+                return;
+            }
+            var findSlot = CaptureDestination(1);
+            if (continuous)
+            {
+                var previewSlot = findSlot(previewItem);
+                if (previewSlot == null || previewSlot.numTransfer <= 0
+                    || paintedSlots.Contains(GetSlotPosition(previewSlot))) return;
+                MoveOutput(item =>
+                {
+                    var slot = findSlot(item);
+                    return slot?.numTransfer > 0 && paintedSlots.Add(GetSlotPosition(slot)) ? slot : null;
+                }, true, continueGroup: true);
+            }
+            else MoveOutput(findSlot, continueHolding, releaseAfterAttempt);
+        }
+
+        private async void MoveOutput(Func<GameItem, SlotMarker> findSlot, bool continueHolding,
+            bool releaseAfterAttempt = false, bool continueGroup = false)
         {
             var items = owner.GetCurrentItems(selection)
                 .Where(item => !placedItems.Contains(item.UniqueId)).ToList();
             var ids = new HashSet<int>(items.Select(item => item.UniqueId));
-            if (ids.Count == 0) return;
+            if (ids.Count == 0)
+            {
+                if (releaseAfterAttempt) ClearHeld();
+                return;
+            }
             var expression = new StoredItemExpression(Expression.Call(Expression.Constant(ids),
                 nameof(HashSet<int>.Contains), null,
                 Expression.Property(FilterExpressionBuilder.Item, nameof(CachedItem.UniqueId))))
@@ -244,7 +313,8 @@ namespace DigitalStorage.Controller
             {
                 bool moved = await TryMoveOutput(expression, findSlot, token);
                 if (!moved || token.IsCancellationRequested) return;
-                if (!continueHolding || !HoldSelection()) ClearHeld();
+                if (continueGroup) selection.UnionWith(groupSelection);
+                if (!releaseAfterAttempt && (!continueHolding || !HoldSelection())) ClearHeld();
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -255,6 +325,7 @@ namespace DigitalStorage.Controller
             }
             finally
             {
+                if (releaseAfterAttempt) ClearHeld();
                 if (ReferenceEquals(movement, cancellation)) movement = null;
                 cancellation.Dispose();
             }
@@ -282,30 +353,14 @@ namespace DigitalStorage.Controller
             return false;
         }
 
-        private void InputExternal()
+        internal void InputExternal(GameItem item, int amount)
         {
-            if (!CanTakeExternal(externalItem)) return;
-            int uniqueId = externalItem.GetUniqueID();
-            var result = DigitalStorage.Manager.TryInput(externalItem, inputAmount);
+            if (!CanTakeExternal(item)) return;
+            int uniqueId = item.GetUniqueID();
+            var result = DigitalStorage.Manager.TryInput(item, amount);
             if (result.Amount == 0) return;
-            if (!result.Items.Any(item => item.UniqueId == uniqueId)) owner.RemoveItem(uniqueId);
-            foreach (var item in result.Items) owner.InsertItem(item);
-        }
-
-        private void PlaceExternal()
-        {
-            if (!CanTakeExternal(externalItem)) return;
-            if (view.IsOverTerminal(owner, Input.mousePosition)) InputExternal();
-            else
-            {
-                using var output = new PhysicalItem(externalItem).PrepareOutput();
-                int uniqueId = output.Item.GetUniqueID();
-                var slot = CaptureDestination(inputAmount)(output.Item);
-                int moved = slot?.TryAcceptOnce(inputAmount) ?? 0;
-                output.Complete(moved);
-                if (moved > 0) owner.RemoveItem(uniqueId);
-            }
-            ClearHeld();
+            if (!result.Items.Any(stored => stored.UniqueId == uniqueId)) owner.RemoveItem(uniqueId);
+            foreach (var stored in result.Items) owner.InsertItem(stored);
         }
 
         private void ClearHeld()
@@ -313,10 +368,12 @@ namespace DigitalStorage.Controller
             view.ClearHighlight();
             view.HidePreview();
             previewItem = null;
-            externalItem = null;
+            quickInputItem = null;
             pressedRow = null;
             selection.Clear();
+            groupSelection.Clear();
             placedItems.Clear();
+            paintedSlots.Clear();
             pointerDown = false;
             quickTransfer = false;
         }
@@ -326,6 +383,12 @@ namespace DigitalStorage.Controller
             movement?.Cancel();
             ClearHeld();
             consumeUntilFrame = Time.frameCount + 1;
+        }
+
+        internal void Suspend()
+        {
+            Cancel();
+            view.HideInputShield();
         }
 
         protected override void OnEventReset()

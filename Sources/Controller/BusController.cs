@@ -13,6 +13,7 @@ namespace DigitalStorage.Controller
             new Dictionary<GameItem, Connection>();
         internal static void ClearConnections()
         {
+            StorageIndexRefresh.Clear();
             foreach (var connection in connections.Values) connection.Dispose();
             connections.Clear();
             IOBusManager.Clear();

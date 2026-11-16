@@ -11,6 +11,7 @@ namespace DigitalStorage.UI
         private readonly ScrollRect scroll;
         private readonly TreeNodeRender rowParent;
         private string priceUnit;
+        internal float ScrollPosition => scroll.content.anchoredPosition.y;
 
         internal sealed class GroupView
         {
@@ -103,6 +104,14 @@ namespace DigitalStorage.UI
         }
 
         internal void RefreshPriceUnit() => priceUnit = LocHelper.GetLocalizedMechanic("mech_credits");
+
+        internal void RestoreScroll(float position)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+            float maximum = Mathf.Max(0, scroll.content.rect.height - scroll.viewport.rect.height);
+            scroll.StopMovement();
+            scroll.content.anchoredPosition = new Vector2(0, Mathf.Clamp(position, 0, maximum));
+        }
 
         internal void ShowRow(StorageTerminalRow row, string name, int contrabandLevel, int? heat,
             long price, int? count = null) => row.Show(name, contrabandLevel, heat, price, priceUnit, count);

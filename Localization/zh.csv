@@ -2,6 +2,9 @@ item.storage_terminal.name,存储终端
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
 ui.storage_terminal.search_placeholder,
+ui.storage_terminal.refreshing,正在刷新
+ui.storage_terminal.refresh_elapsed,刷新耗时
+ui.storage_terminal.refresh_items,实际处理物品数
 item.storage_bus.external.name,存储总线（外接）
 item.storage_bus.internal.name,存储总线（内接）
 item.storage_bus.disabled.name,存储总线（停用）
