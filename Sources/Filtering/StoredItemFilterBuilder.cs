@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using DigitalStorage.Collections;
-using DigitalStorage.Storage;
 using static DigitalStorage.Storage.StorageSort;
 
 namespace DigitalStorage.Filtering
@@ -8,7 +7,7 @@ namespace DigitalStorage.Filtering
     public sealed class StoredItemFilterBuilder
     {
         private readonly List<StoredItemExpression> expressions = new();
-        private readonly Dictionary<SortBy, BloomFilter> blooms = new();
+        private readonly Dictionary<SortBy, BloomFilter> indexBlooms = new();
         private BloomFilter typeBloom;
 
         public StoredItemFilterBuilder AddExpression(string expression) =>
@@ -20,9 +19,9 @@ namespace DigitalStorage.Filtering
             return this;
         }
 
-        public StoredItemFilterBuilder WithBloom(SortBy field, BloomFilter bloom)
+        public StoredItemFilterBuilder WithIndexBloom(SortBy field, BloomFilter bloom)
         {
-            blooms[field] = bloom;
+            indexBlooms[field] = bloom;
             return this;
         }
 
@@ -32,14 +31,14 @@ namespace DigitalStorage.Filtering
             return this;
         }
 
-        public StoredItemFilterBuilder WithBlooms(StorageIndexBloom indexBloom)
+        public StoredItemFilterBuilder WithIndexBlooms(Dictionary<SortBy, BloomFilter> indexBlooms)
         {
-            foreach (var entry in indexBloom.Blooms) blooms[entry.Key] = entry.Value;
-            typeBloom = indexBloom.TypeBloom;
+            foreach (var entry in indexBlooms)
+                this.indexBlooms[entry.Key] = entry.Value; 
             return this;
         }
 
         public StoredItemFilterPlan Build() => new StoredItemFilterPlan(expressions.ToArray(),
-            new Dictionary<SortBy, BloomFilter>(blooms), typeBloom);
+            new Dictionary<SortBy, BloomFilter>(indexBlooms), typeBloom);
     }
 }

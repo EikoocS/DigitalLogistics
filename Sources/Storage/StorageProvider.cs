@@ -61,7 +61,7 @@ namespace DigitalStorage.Storage
             var plan = new StoredItemFilterBuilder()
                 .AddExpression(expression)
                 .AddExpression(filter)
-                .WithBlooms(storageIndex.GetIndexBloom())
+                .WithIndexBlooms(storageIndex.GetIndexBloom())
                 .WithTypeBloom(storageIndex.GetTypeBloom())
                 .Build();
             return plan.MayMatch();

@@ -15,13 +15,15 @@ namespace DigitalStorage.Storage
         public static readonly Comparer<StoredItem> HeatComparer = ComparerHelper.ComparedBy((StoredItem item) => item.Heat).LinkComparer(IdentifierComparer);
         private readonly Dictionary<int, StoredItem> UniqueIdIndex = new();
         private readonly Dictionary<SortBy, OrderList<StoredItem>> itemIndexs = new();
-        private readonly StorageIndexBloom indexBloom = new();
+        private readonly Dictionary<SortBy, BloomFilter> indexBlooms = new();
         private readonly BloomFilter typeBloom = new();
 
         public StorageIndex()
         {
             foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
                 itemIndexs[sortBy] = OrderList<StoredItem>.BuildByGetterAndFilter(sortBy.Getter());
+            foreach (var field in (SortBy[])Enum.GetValues(typeof(SortBy)))
+                indexBlooms[field] = new ();
         }
 
         public bool Contains(int uniqueId) => UniqueIdIndex.ContainsKey(uniqueId);
@@ -37,8 +39,13 @@ namespace DigitalStorage.Storage
                 lock (itemIndexs[sortBy]) 
                     itemIndexs[sortBy].Add(item);
 
-            indexBloom.Add(item);
-            typeBloom.Add(item.TypeMask.GetHashCode());
+            foreach (var entry in indexBlooms)
+            {
+                object value = entry.Key == SortBy.HEAT ? item.Heat ?? 0 : entry.Key.Getter()(item);
+                entry.Value.Add(value?.GetHashCode() ?? 0);
+            }
+            for (int index = 0; index < item.TypeMask.Capacity; index++)
+                if (item.TypeMask[index]) typeBloom.Add(index.GetHashCode());
 
             return true;
         }
@@ -73,13 +80,13 @@ namespace DigitalStorage.Storage
                 lock (itemIndexs[sortBy]) 
                     itemIndexs[sortBy].Clear();
 
-            indexBloom.Clear();
+            indexBlooms.Clear();
             typeBloom.Clear();
         }
 
-        public StorageIndexBloom GetIndexBloom()
+        public Dictionary<SortBy, BloomFilter> GetIndexBloom()
         {
-            return indexBloom;
+            return indexBlooms;
         }
 
         public BloomFilter GetTypeBloom()

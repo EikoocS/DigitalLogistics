@@ -9,7 +9,7 @@ namespace DigitalStorage.Storage
             this.item = item;
             UniqueId = item.GetUniqueID();
             Identifier = item.identifier;
-            ModId = item.GetModId();
+            ModId = item.GetModId() ?? string.Empty;
             DisplayName = item.GetDisplayName(preferCustomName: true);
             TypeMask.SetBitByTags(item.GetGameItemType());
             Price = item.GetCurrentValue();
