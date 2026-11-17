@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal sealed class IOBus : InventoryBus, ITriggerableBus
     {

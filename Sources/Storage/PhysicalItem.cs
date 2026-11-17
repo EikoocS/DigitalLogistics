@@ -1,4 +1,4 @@
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal class PhysicalItem : CachedItem
     {

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 using System;
 
-namespace DigitalStorage.Controller
+namespace DigitalLogistics.Controller
 {
     internal sealed class StorageTerminalGroup
     {

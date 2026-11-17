@@ -1,9 +1,9 @@
 using System;
-using DigitalStorage.Controller;
+using DigitalLogistics.Controller;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalList
     {

@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace DigitalStorage.Collections
+namespace DigitalLogistics.Collections
 {
     public class OrderList<T> : IReadOnlyList<T>
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Superpower;
 using Superpower.Model;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     internal enum FilterToken
     {

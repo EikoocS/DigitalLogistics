@@ -1,6 +1,6 @@
 using System;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     [Serializable]
     internal sealed class BusScheduleEntry

@@ -1,13 +1,13 @@
 using System;
 using System.Globalization;
 using System.Linq.Expressions;
-using DigitalStorage.Filtering;
-using DigitalStorage.Storage;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class SearchQueryDebugView
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace DigitalStorage.Collections
+namespace DigitalLogistics.Collections
 {
     public static class ComparerHelper
     {

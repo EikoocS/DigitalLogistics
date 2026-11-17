@@ -1,18 +1,18 @@
-using DigitalStorage.UI;
+using DigitalLogistics.UI;
 
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal static class StorageTerminal
     {
         internal const string ItemId = "storage_terminal";
 
         internal static string Localize(string key) =>
-            ModHelper.GetLocalized(DigitalStorage.Instance.Manifest.ID, key);
+            ModHelper.GetLocalized(DigitalLogistics.Instance.Manifest.ID, key);
 
         internal static GameItem Create()
         {
             var item = ItemDirectory.CreateEmptyItem(ItemId)
-                .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, ItemId)
+                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, ItemId)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 3));
             item.SetContentWindow(StorageTerminalUI.Create(item));
             item.name = Localize("item.storage_terminal.name");

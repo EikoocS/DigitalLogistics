@@ -1,6 +1,6 @@
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     internal static class StoredItemValueResolver
     {

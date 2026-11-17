@@ -2,18 +2,18 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Controller;
-using DigitalStorage.Filtering;
-using DigitalStorage.Item;
+using DigitalLogistics.Controller;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Item;
 using UnityEngine;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal static class IOBusManager
     {
         private const string DataKey = "io_bus_configuration";
-        internal const string OnAddTag = "DIGITAL_STORAGE_IO_BUS_ON_ADD";
-        internal const string OnMoveTag = "DIGITAL_STORAGE_IO_BUS_ON_MOVE";
+        internal const string OnAddTag = "DIGITAL_LOGISTICS_IO_BUS_ON_ADD";
+        internal const string OnMoveTag = "DIGITAL_LOGISTICS_IO_BUS_ON_MOVE";
 
         [Serializable]
         internal sealed class Configuration
@@ -70,7 +70,7 @@ namespace DigitalStorage.Storage
             link.Inventory.onSlotAddItemEndFunc += configuration.OnAdded;
             if (!active.TryGetValue(bus, out var links)) active.Add(bus, links = new());
             links.Add(configuration);
-            DigitalStorage.Manager.NotifyChanged();
+            DigitalLogistics.Manager.NotifyChanged();
         }
 
         internal static void Release(GameItem bus, GameInventory inventory)
@@ -87,12 +87,12 @@ namespace DigitalStorage.Storage
                 active.Remove(bus);
                 pending.Remove(bus);
             }
-            DigitalStorage.Manager.NotifyChanged();
+            DigitalLogistics.Manager.NotifyChanged();
         }
 
         internal static void Load()
         {
-            string json = ModHelper.GetModData(DigitalStorage.Instance.Manifest.ID, DataKey);
+            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
             foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
@@ -101,13 +101,13 @@ namespace DigitalStorage.Storage
         internal static void Save()
         {
             var data = new SaveData { Configurations = active.Values.SelectMany(links => links).ToList() };
-            ModHelper.SetModData(DigitalStorage.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
+            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
         }
 
         internal static void Clear()
         {
             if (scheduled != null)
-                ModHelper.StopCoroutine(DigitalStorage.Instance.Manifest.ID, scheduled);
+                ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, scheduled);
             scheduled = null;
             pending.Clear();
             active.Clear();
@@ -119,7 +119,7 @@ namespace DigitalStorage.Storage
             if (!BusController.CanSchedule || !active.ContainsKey(bus)) return;
             pending.Add(bus);
             if (scheduled == null)
-                scheduled = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, RunPending());
+                scheduled = ModHelper.StartCoroutine(DigitalLogistics.Instance.Manifest.ID, RunPending());
         }
 
         private static IEnumerator RunPending()
@@ -179,7 +179,7 @@ namespace DigitalStorage.Storage
                 if (!expression.Evaluate(stored) || !CanMove(stored)) continue;
                 using var output = stored.PrepareOutput();
                 if (output == null) continue;
-                var result = DigitalStorage.Manager.TryInput(output.Item, output.Item.MaxNumRemove(),
+                var result = DigitalLogistics.Manager.TryInput(output.Item, output.Item.MaxNumRemove(),
                     provider => provider != configuration.Link.Provider);
                 output.Complete(result.Amount);
             }
@@ -187,7 +187,7 @@ namespace DigitalStorage.Storage
 
         private static void Output(Configuration configuration)
         {
-            foreach (var stored in DigitalStorage.Manager.SearchForOutput(
+            foreach (var stored in DigitalLogistics.Manager.SearchForOutput(
                 configuration.Expression, configuration.Link.Provider))
             {
                 if (!CanMove(stored)) continue;

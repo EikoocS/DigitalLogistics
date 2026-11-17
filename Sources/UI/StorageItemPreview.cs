@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageItemPreview
     {

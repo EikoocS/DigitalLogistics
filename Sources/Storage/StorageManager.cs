@@ -1,12 +1,12 @@
-﻿using DigitalStorage.Filtering;
-using DigitalStorage.Collections;
+﻿using DigitalLogistics.Filtering;
+using DigitalLogistics.Collections;
 using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     public class StorageManager
     {

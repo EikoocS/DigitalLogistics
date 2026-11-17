@@ -1,7 +1,7 @@
-using DigitalStorage.Controller;
+using DigitalLogistics.Controller;
 using UnityEngine;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalDragUI
     {

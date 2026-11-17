@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal interface ITriggerableBus
     {

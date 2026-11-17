@@ -1,14 +1,14 @@
-using DigitalStorage.Controller;
+using DigitalLogistics.Controller;
 using HarmonyLib;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(HopperHelper), nameof(HopperHelper.RunWindow))]
     internal static class IOBusCycle
     {
         private static void Postfix(int window)
         {
-            if (DigitalStorage.Instance.Enabled) BusController.RunWindow(window);
+            if (DigitalLogistics.Instance.Enabled) BusController.RunWindow(window);
         }
     }
 }

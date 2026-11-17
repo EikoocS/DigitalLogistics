@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     internal static class StorageTerminalSearchParser
     {

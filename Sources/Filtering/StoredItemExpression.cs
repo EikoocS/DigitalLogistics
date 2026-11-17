@@ -1,8 +1,8 @@
 using System;
 using System.Linq.Expressions;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     public sealed class StoredItemExpression
     {

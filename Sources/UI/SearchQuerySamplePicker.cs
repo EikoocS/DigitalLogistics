@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class SearchQuerySamplePicker : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {

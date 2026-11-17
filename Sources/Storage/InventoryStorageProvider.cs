@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     // StorageProvider bound to GameInventory
     public class InventoryStorageProvider : StorageProvider

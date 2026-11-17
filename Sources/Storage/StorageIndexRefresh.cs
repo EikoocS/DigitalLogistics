@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using DigitalStorage.UI;
+using DigitalLogistics.UI;
 using UnityEngine;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal static class StorageIndexRefresh
     {
@@ -26,13 +26,13 @@ namespace DigitalStorage.Storage
             Succeeded = false;
             ProcessedItems = 0;
             work = Run();
-            coroutine = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, work);
+            coroutine = ModHelper.StartCoroutine(DigitalLogistics.Instance.Manifest.ID, work);
             StateChanged?.Invoke();
         }
 
         internal static void Clear()
         {
-            if (coroutine != null) ModHelper.StopCoroutine(DigitalStorage.Instance.Manifest.ID, coroutine);
+            if (coroutine != null) ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, coroutine);
             (work as IDisposable)?.Dispose();
             work = null;
             coroutine = null;
@@ -45,7 +45,7 @@ namespace DigitalStorage.Storage
             var jobs = new List<IEnumerator>();
             try
             {
-                foreach (var provider in BusManager.Providers.Concat(DigitalStorage.Manager.Providers).Distinct().ToArray())
+                foreach (var provider in BusManager.Providers.Concat(DigitalLogistics.Manager.Providers).Distinct().ToArray())
                     jobs.Add(provider.RefreshCoroutine(() => ProcessedItems++));
                 yield return null;
                 int index = 0;
@@ -62,7 +62,7 @@ namespace DigitalStorage.Storage
                         }
                         if (index == jobs.Count) index = 0;
                     }
-                    while (jobs.Count > 0 && frameTimer.Elapsed.TotalMilliseconds < DigitalStorage.Instance.Settings.IndexRefreshBudgetMilliseconds.Value);
+                    while (jobs.Count > 0 && frameTimer.Elapsed.TotalMilliseconds < DigitalLogistics.Instance.Settings.IndexRefreshBudgetMilliseconds.Value);
                     if (jobs.Count > 0) yield return null;
                 }
                 Succeeded = true;

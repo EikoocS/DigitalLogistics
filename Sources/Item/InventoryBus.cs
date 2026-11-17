@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal abstract class InventoryBus : Bus
     {

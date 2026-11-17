@@ -1,11 +1,11 @@
 using System;
-using DigitalStorage.Controller;
+using DigitalLogistics.Controller;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalRow : EmptyPixelElement, TooltipListener
     {

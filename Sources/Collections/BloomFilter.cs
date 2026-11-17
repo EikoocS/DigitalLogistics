@@ -1,6 +1,6 @@
 using System;
 
-namespace DigitalStorage.Collections
+namespace DigitalLogistics.Collections
 {
     public sealed class BloomFilter
     {

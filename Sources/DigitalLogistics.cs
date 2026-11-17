@@ -1,12 +1,12 @@
-using DigitalStorage.Controller;
-using DigitalStorage.Item;
-using DigitalStorage.Storage;
+using DigitalLogistics.Controller;
+using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage
+namespace DigitalLogistics
 {
-    public class DigitalStorage : IMod
+    public class DigitalLogistics : IMod
     {
-        public static DigitalStorage Instance { get; private set; }
+        public static DigitalLogistics Instance { get; private set; }
         public ModManifest Manifest { get; private set; }
         public ModLog Log { get; private set; }
         public static StorageManager Manager { get; private set; }
@@ -27,7 +27,7 @@ namespace DigitalStorage
         {
             Enabled = true;
             ModHelper.AddDebugFunction(Manifest.ID, CustomUIDebugPanel.CATEGORY_SPECIAL,
-                "DigitalStorage", DebugMenu.Open, tall: true);
+                "DigitalLogistics", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
             ModHook.OnGameLoadedInit += BusController.ClearConnections;
             ModHook.OnGameLoadedEarly += BusManager.Load;

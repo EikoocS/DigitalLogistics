@@ -1,9 +1,9 @@
 using System;
 using System.Linq.Expressions;
-using DigitalStorage.Storage;
-using static DigitalStorage.Storage.StorageSort;
+using DigitalLogistics.Storage;
+using static DigitalLogistics.Storage.StorageSort;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     internal readonly struct FilterValueReference : IEquatable<FilterValueReference>
     {

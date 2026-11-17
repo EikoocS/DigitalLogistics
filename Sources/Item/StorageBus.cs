@@ -1,4 +1,4 @@
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal sealed class StorageBus : InventoryBus
     {

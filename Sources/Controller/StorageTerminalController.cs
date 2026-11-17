@@ -2,17 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using DigitalStorage.Collections;
-using DigitalStorage.Filtering;
-using DigitalStorage.Storage;
-using DigitalStorage.UI;
+using DigitalLogistics.Collections;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage;
+using DigitalLogistics.UI;
 using UnityEngine;
 
-namespace DigitalStorage.Controller
+namespace DigitalLogistics.Controller
 {
     internal sealed class StorageTerminalController : MonoBehaviour
     {
-        private static double RefreshBudgetSeconds => DigitalStorage.Instance.Settings.TerminalBudgetMilliseconds.Value / 1000d;
+        private static double RefreshBudgetSeconds => DigitalLogistics.Instance.Settings.TerminalBudgetMilliseconds.Value / 1000d;
 
         private sealed class GroupState
         {
@@ -65,7 +65,7 @@ namespace DigitalStorage.Controller
         private void Subscribe()
         {
             if (subscribed) return;
-            DigitalStorage.Manager.onChange += OnStorageChanged;
+            DigitalLogistics.Manager.onChange += OnStorageChanged;
             StorageIndexRefresh.StateChanged += OnRefreshStateChanged;
             subscribed = true;
         }
@@ -73,7 +73,7 @@ namespace DigitalStorage.Controller
         private void Unsubscribe()
         {
             if (!subscribed) return;
-            DigitalStorage.Manager.onChange -= OnStorageChanged;
+            DigitalLogistics.Manager.onChange -= OnStorageChanged;
             StorageIndexRefresh.StateChanged -= OnRefreshStateChanged;
             subscribed = false;
         }
@@ -150,7 +150,7 @@ namespace DigitalStorage.Controller
 
             try
             {
-                await using var enumerator = DigitalStorage.Manager.SearchAsync(expression,
+                await using var enumerator = DigitalLogistics.Manager.SearchAsync(expression,
                     view.Configuration.SortBy, view.Configuration.Reverse, cancellationToken: token).GetAsyncEnumerator();
                 while (!token.IsCancellationRequested)
                 {
@@ -243,7 +243,7 @@ namespace DigitalStorage.Controller
 
         internal void InsertItem(CachedItem item)
         {
-            if (searchExpression == null || !item.VerifyValidity() || !DigitalStorage.Manager.Owns(item) || !searchExpression.Evaluate(item)
+            if (searchExpression == null || !item.VerifyValidity() || !DigitalLogistics.Manager.Owns(item) || !searchExpression.Evaluate(item)
                 || Configuration.SortBy.Getter()(item) == null)
             {
                 RemoveItem(item.UniqueId);
@@ -297,12 +297,12 @@ namespace DigitalStorage.Controller
             if (Refreshing) yield break;
             foreach (int id in uniqueIds)
                 if (currentItems.TryGetValue(id, out var item) && item.VerifyValidity()
-                    && DigitalStorage.Manager.Owns(item)) yield return item;
+                    && DigitalLogistics.Manager.Owns(item)) yield return item;
         }
 
         private void AddItem(CachedItem item)
         {
-            if (!DigitalStorage.Manager.Owns(item)) return;
+            if (!DigitalLogistics.Manager.Owns(item)) return;
             string name = item.DisplayName;
             if (currentItems.ContainsKey(item.UniqueId)) return;
             currentItems[item.UniqueId] = item;
@@ -441,7 +441,7 @@ namespace DigitalStorage.Controller
         private void OnSearchChanged(string text)
         {
             StopSearch();
-            searchDeadline = Time.realtimeSinceStartupAsDouble + DigitalStorage.Instance.Settings.SearchDelayMilliseconds.Value / 1000d;
+            searchDeadline = Time.realtimeSinceStartupAsDouble + DigitalLogistics.Instance.Settings.SearchDelayMilliseconds.Value / 1000d;
         }
 
         private void OnConfigurationChanged() => Search();

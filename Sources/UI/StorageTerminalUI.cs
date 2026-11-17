@@ -1,12 +1,12 @@
 using System;
-using DigitalStorage.Controller;
-using DigitalStorage.Item;
-using DigitalStorage.Storage;
+using DigitalLogistics.Controller;
+using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalUI
     {
@@ -101,7 +101,7 @@ namespace DigitalStorage.UI
 
         internal static void NotifyRefreshResult()
         {
-            if (!DigitalStorage.Instance.Settings.NotifyRefreshResult.Value) return;
+            if (!DigitalLogistics.Instance.Settings.NotifyRefreshResult.Value) return;
             string message = string.Format(Localize("refresh_result"),
                 StorageIndexRefresh.ProcessedItems, StorageIndexRefresh.ElapsedMilliseconds);
             if (!StorageIndexRefresh.Succeeded)

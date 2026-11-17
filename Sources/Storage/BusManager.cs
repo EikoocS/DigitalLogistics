@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Filtering;
+using DigitalLogistics.Filtering;
 using UnityEngine;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal static class BusManager
     {
@@ -30,9 +30,9 @@ namespace DigitalStorage.Storage
                 Provider.Priority = Priority;
                 Provider.filter = string.IsNullOrWhiteSpace(Filter)
                     ? StoredItemExpression.Constant(true) : StoredItemExpressionParser.Parse(Filter);
-                if (Disabled) DigitalStorage.Manager.DetachStorageProvider(Provider);
-                else DigitalStorage.Manager.registerStorageProvider(Provider);
-                DigitalStorage.Manager.NotifyChanged();
+                if (Disabled) DigitalLogistics.Manager.DetachStorageProvider(Provider);
+                else DigitalLogistics.Manager.registerStorageProvider(Provider);
+                DigitalLogistics.Manager.NotifyChanged();
             }
         }
 
@@ -60,7 +60,7 @@ namespace DigitalStorage.Storage
 
         internal static void Load()
         {
-            string json = ModHelper.GetModData(DigitalStorage.Instance.Manifest.ID, DataKey);
+            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
             foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
@@ -72,14 +72,14 @@ namespace DigitalStorage.Storage
             {
                 Configurations = configurations.Values.Where(config => config.References > 0).ToList()
             };
-            ModHelper.SetModData(DigitalStorage.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
+            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
         }
 
         internal static void Clear()
         {
             foreach (var link in inventories.Values)
             {
-                DigitalStorage.Manager.DetachStorageProvider(link.Provider);
+                DigitalLogistics.Manager.DetachStorageProvider(link.Provider);
                 link.Provider.Dispose();
             }
             inventories.Clear();
@@ -122,7 +122,7 @@ namespace DigitalStorage.Storage
             var link = inventories[inventory];
             if (storage && --link.Configuration.References == 0)
             {
-                DigitalStorage.Manager.DetachStorageProvider(link.Provider);
+                DigitalLogistics.Manager.DetachStorageProvider(link.Provider);
                 link.Configuration.Provider = null;
                 link.Configuration = null;
             }

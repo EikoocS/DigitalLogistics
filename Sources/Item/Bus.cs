@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Controller;
-using DigitalStorage.UI;
+using DigitalLogistics.Controller;
+using DigitalLogistics.UI;
 using UnityEngine;
 
-namespace DigitalStorage.Item
+namespace DigitalLogistics.Item
 {
     internal abstract class Bus
     {
-        internal const string InternalTag = "DIGITAL_STORAGE_BUS_INTERNAL_TAG";
-        internal const string DisabledTag = "DIGITAL_STORAGE_BUS_DISABLED_TAG";
+        internal const string InternalTag = "DIGITAL_LOGISTICS_BUS_INTERNAL_TAG";
+        internal const string DisabledTag = "DIGITAL_LOGISTICS_BUS_DISABLED_TAG";
 
         internal GameItem Item { get; }
         protected GameInventory Parent { get; private set; }
@@ -22,7 +22,7 @@ namespace DigitalStorage.Item
         protected Bus(string id)
         {
             Item = ItemDirectory.CreateEmptyItem(id)
-                .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, id)
+                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, id)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
             Item.SetContentWindow(BusUI.Create(Item));
             RefreshWindowState();
@@ -72,7 +72,7 @@ namespace DigitalStorage.Item
 
         private void UpdateAppearance()
         {
-            Item.SetSprite(DigitalStorage.Instance.Manifest.ID, Item.identifier);
+            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, Item.identifier);
             Item.name = StorageTerminal.Localize($"item.{Item.identifier}.{Mode}.name");
             Item.contentWindow.SetTitle(Item.GetDisplayName(preferCustomName: true));
             Item.Validate();
@@ -93,7 +93,7 @@ namespace DigitalStorage.Item
 
         private void Connect(GameInventory inventory)
         {
-            if (!DigitalStorage.Instance.Enabled) return;
+            if (!DigitalLogistics.Instance.Enabled) return;
             Disconnect();
             Parent = inventory;
             BusController.Attach(this);

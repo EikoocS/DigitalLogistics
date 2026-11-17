@@ -1,7 +1,7 @@
-using DigitalStorage.Storage;
-using DigitalStorage.UI;
+using DigitalLogistics.Storage;
+using DigitalLogistics.UI;
 
-namespace DigitalStorage.Controller
+namespace DigitalLogistics.Controller
 {
     internal sealed class StorageTerminalRowController
     {

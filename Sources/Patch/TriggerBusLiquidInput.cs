@@ -1,8 +1,8 @@
 using System;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 using HarmonyLib;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(GameItem), nameof(GameItem.ModifyTag),
         new[] { typeof(string), typeof(Action<TagState>), typeof(bool) })]

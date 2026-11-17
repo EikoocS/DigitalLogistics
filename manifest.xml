@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Manifest>
-  <ID>digital_storage</ID>
-  <Name>Digital Storage</Name>
+  <ID>digital_logistics</ID>
+  <Name>数字物流 / Digital Logistics</Name>
   <Author>EikoocSun</Author>
   <ModVersion>0.1.0</ModVersion>
   <Description>Better and larger storage management</Description>
@@ -11,11 +11,11 @@
   <Prerequisites />
   <!-- Every DLL the game must load, relative to this folder. Nothing else in the folder is loaded. -->
   <Assemblies>
-    <Assembly>DigitalStorage.dll</Assembly>
+    <Assembly>DigitalLogistics.dll</Assembly>
     <Assembly>Superpower.dll</Assembly>
   </Assemblies>
   <!-- What your code does beyond the game's API: files, network, process, dynamic-code, native, reflection-external.
        Most mods need none. The game scans your DLL when a player activates the mod; an undeclared capability
-       refuses the activation. Check with the console command: mod-scan digital_storage   (see ModdingGuide.md) -->
+       refuses the activation. Check with the console command: mod-scan digital_logistics   (see ModdingGuide.md) -->
   <Capabilities />
 </Manifest>

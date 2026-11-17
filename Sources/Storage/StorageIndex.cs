@@ -1,9 +1,9 @@
-using DigitalStorage.Collections;
+using DigitalLogistics.Collections;
 using System;
 using System.Collections.Generic;
-using static DigitalStorage.Storage.StorageSort;
+using static DigitalLogistics.Storage.StorageSort;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     public class StorageIndex
     {

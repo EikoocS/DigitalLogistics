@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Item;
-using DigitalStorage.Storage;
+using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.Controller
+namespace DigitalLogistics.Controller
 {
     internal static class BusController
     {
         private static readonly Dictionary<GameItem, Bus> connections = new();
         private static bool running;
         private static BusOperationKind currentKind;
-        private static bool Available => DigitalStorage.Instance.Enabled
+        private static bool Available => DigitalLogistics.Instance.Enabled
             && !(MapUIManager.Instance != null && MapUIManager.Instance.IsOutside);
         internal static bool CanRun => Available && !running;
         internal static bool CanSchedule => Available && (!running || currentKind == BusOperationKind.Trigger);

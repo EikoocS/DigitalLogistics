@@ -1,16 +1,16 @@
 using System;
-using DigitalStorage.Item;
-using DigitalStorage.Storage;
+using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalConfiguration
     {
         internal enum SafetyFilter { All, Legal, Illegal }
 
-        private const string SortByTag = "DIGITAL_STORAGE_TERMINAL_SORT_BY";
-        private const string ReverseTag = "DIGITAL_STORAGE_TERMINAL_REVERSE";
-        private const string SafetyTag = "DIGITAL_STORAGE_TERMINAL_SAFETY";
+        private const string SortByTag = "DIGITAL_LOGISTICS_TERMINAL_SORT_BY";
+        private const string ReverseTag = "DIGITAL_LOGISTICS_TERMINAL_REVERSE";
+        private const string SafetyTag = "DIGITAL_LOGISTICS_TERMINAL_SAFETY";
         private readonly GameItem item;
         private static readonly StorageSort.SortBy[] SortOptions =
             (StorageSort.SortBy[])Enum.GetValues(typeof(StorageSort.SortBy));
@@ -92,7 +92,7 @@ namespace DigitalStorage.UI
         {
             button.SetDescription(string.Format(Localize(setting), Localize(option)));
             button.SetIcon(CustomUIManager.Instance.GetSprite(
-                $"{DigitalStorage.Instance.Manifest.ID}:storage_terminal_{setting}_{option}"));
+                $"{DigitalLogistics.Instance.Manifest.ID}:storage_terminal_{setting}_{option}"));
         }
 
         private static MachineryButton CreateButton(Action callback) =>

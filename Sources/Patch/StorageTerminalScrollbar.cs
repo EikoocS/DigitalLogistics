@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using DigitalStorage.Controller;
-using DigitalStorage.UI;
+using DigitalLogistics.Controller;
+using DigitalLogistics.UI;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(ItemMultiSelectHandler), "IsPointerOverDragSurface")]
     internal static class StorageTerminalScrollbar

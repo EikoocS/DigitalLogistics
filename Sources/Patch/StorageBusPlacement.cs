@@ -1,7 +1,7 @@
-using DigitalStorage.Item;
+using DigitalLogistics.Item;
 using HarmonyLib;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(HopperHelper), nameof(HopperHelper.MayBypassGridRules))]
     internal static class StorageBusPlacement

@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using DigitalStorage.Controller;
-using DigitalStorage.Item;
-using DigitalStorage.Storage;
+using DigitalLogistics.Controller;
+using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class BusUI : MonoBehaviour
     {

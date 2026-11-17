@@ -1,8 +1,8 @@
-using DigitalStorage.UI;
+using DigitalLogistics.UI;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(ItemMouseDragHandler), "EndDrag")]
     internal static class StorageTerminalDrop
@@ -11,7 +11,7 @@ namespace DigitalStorage.Patch
             GameItemElement ___currentItem, int ___currentRemove,
             ref GameItem ___lastItem, ref GameInventory ___lastInventory)
         {
-            if (cancelled || !DigitalStorage.Instance.Enabled || !__instance.IsDraggingItem) return;
+            if (cancelled || !DigitalLogistics.Instance.Enabled || !__instance.IsDraggingItem) return;
             var controller = StorageTerminalUI.FindController(Input.mousePosition, ___currentItem.fakeBackground);
             if (controller == null || !controller.isActiveAndEnabled || controller.Refreshing
                 || !controller.ContainsPointer(Input.mousePosition, ___currentItem.fakeBackground)) return;

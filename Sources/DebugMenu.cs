@@ -1,17 +1,17 @@
 using System;
 using TMPro;
 using UnityEngine.UI;
-using DigitalStorage.Filtering;
-using DigitalStorage.UI;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.UI;
 
-namespace DigitalStorage
+namespace DigitalLogistics
 {
     internal static class DebugMenu
     {
-        private const string WindowId = "digital_storage__debug";
-        private const string ProvidersWindowId = "digital_storage__providers_debug";
-        private const string SearchQueryWindowId = "digital_storage__search_query_debug";
-        private const string ExpressionWindowId = "digital_storage__expression_debug";
+        private const string WindowId = "digital_logistics__debug";
+        private const string ProvidersWindowId = "digital_logistics__providers_debug";
+        private const string SearchQueryWindowId = "digital_logistics__search_query_debug";
+        private const string ExpressionWindowId = "digital_logistics__expression_debug";
 
         internal static void Open()
         {
@@ -26,7 +26,7 @@ namespace DigitalStorage
                 return;
             }
 
-            var builder = CreateWindow(WindowId, "DigitalStorage", CustomUIDebugPanel.WINDOW_ID);
+            var builder = CreateWindow(WindowId, "DigitalLogistics", CustomUIDebugPanel.WINDOW_ID);
             AddMenuButton(builder, "View storage providers", OpenProviders);
             AddMenuButton(builder, "Parse search query", OpenSearchQuery);
             AddMenuButton(builder, "Parse expression", OpenExpression);
@@ -55,7 +55,7 @@ namespace DigitalStorage
         private static void RefreshProviders(CustomUIBuilder builder)
         {
             CustomUIBuilder.ClearContainer(builder.CurrentContainer);
-            foreach (var provider in DigitalStorage.Manager.Providers)
+            foreach (var provider in DigitalLogistics.Manager.Providers)
             {
                 builder.AddLabel(provider.Name);
                 builder.Last.text.richText = false;

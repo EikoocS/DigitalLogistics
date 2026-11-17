@@ -1,4 +1,4 @@
-﻿namespace DigitalStorage.Storage
+﻿namespace DigitalLogistics.Storage
 {
     public abstract class CachedItem
     {

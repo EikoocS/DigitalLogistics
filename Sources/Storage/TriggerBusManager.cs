@@ -2,11 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalStorage.Item;
-using DigitalStorage.Controller;
+using DigitalLogistics.Item;
+using DigitalLogistics.Controller;
 using UnityEngine;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal static class TriggerBusManager
     {
@@ -29,7 +29,7 @@ namespace DigitalStorage.Storage
             internal TriggerBusAction.Option[] Options => Action.GetOptions?.Invoke()
                 ?? Array.Empty<TriggerBusAction.Option>();
             internal string Name => Machine.GetDisplayName(preferCustomName: true);
-            internal int TriggerCount => LoopTrigger ? DigitalStorage.Instance.Settings.MaxContinuousTriggers.Value : Count;
+            internal int TriggerCount => LoopTrigger ? DigitalLogistics.Instance.Settings.MaxContinuousTriggers.Value : Count;
         }
 
         [Serializable]
@@ -90,11 +90,11 @@ namespace DigitalStorage.Storage
 
         private static void Schedule(Configuration configuration)
         {
-            if (!DigitalStorage.Instance.Enabled || SaveManager.IsDecoding || configuration.Disabled
+            if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding || configuration.Disabled
                 || !configuration.OnInputUpdate || executing.Contains(configuration)) return;
             pending.Add(configuration);
             if (scheduled == null)
-                scheduled = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, RunPending());
+                scheduled = ModHelper.StartCoroutine(DigitalLogistics.Instance.Manifest.ID, RunPending());
         }
 
         private static IEnumerator RunPending()
@@ -147,18 +147,18 @@ namespace DigitalStorage.Storage
 
         internal static void Load()
         {
-            string json = ModHelper.GetModData(DigitalStorage.Instance.Manifest.ID, DataKey);
+            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
             foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
         }
 
-        internal static void Save() => ModHelper.SetModData(DigitalStorage.Instance.Manifest.ID, DataKey,
+        internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
             JsonUtility.ToJson(new SaveData { Configurations = configurations.Values.ToList() }));
 
         internal static void Clear()
         {
-            if (scheduled != null) ModHelper.StopCoroutine(DigitalStorage.Instance.Manifest.ID, scheduled);
+            if (scheduled != null) ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, scheduled);
             scheduled = null;
             foreach (var bus in active.Keys.ToArray()) Disconnect(bus);
             pending.Clear();

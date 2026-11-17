@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     public static class StorageSort
     {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     internal sealed class TriggerBusInputWatcher : IDisposable
     {

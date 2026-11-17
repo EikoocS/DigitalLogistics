@@ -1,4 +1,4 @@
-﻿using DigitalStorage.Filtering;
+﻿using DigitalLogistics.Filtering;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DigitalStorage.Storage
+namespace DigitalLogistics.Storage
 {
     public abstract class StorageProvider : IDisposable
     {
@@ -101,7 +101,7 @@ namespace DigitalStorage.Storage
                     timer.Restart();
                 }
 
-                if (timer.Elapsed.TotalMilliseconds >= DigitalStorage.Instance.Settings.SearchBudgetMilliseconds.Value)
+                if (timer.Elapsed.TotalMilliseconds >= DigitalLogistics.Instance.Settings.SearchBudgetMilliseconds.Value)
                 {
                     await Task.Yield();
                     timer.Restart();

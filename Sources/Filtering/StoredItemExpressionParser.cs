@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
-using DigitalStorage.Storage;
+using DigitalLogistics.Storage;
 using Superpower;
 using Superpower.Model;
 using Superpower.Parsers;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     public static class StoredItemExpressionParser
     {

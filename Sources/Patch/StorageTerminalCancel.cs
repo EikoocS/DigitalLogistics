@@ -1,14 +1,14 @@
-using DigitalStorage.Controller;
+using DigitalLogistics.Controller;
 using HarmonyLib;
 
-namespace DigitalStorage.Patch
+namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(StoreUIManager), nameof(StoreUIManager.ResolveEscape))]
     internal static class StorageTerminalCancel
     {
         private static bool Prefix(ref bool __result)
         {
-            if (!DigitalStorage.Instance.Enabled || !StorageTerminalInteraction.TryCancelHeldItem()) return true;
+            if (!DigitalLogistics.Instance.Enabled || !StorageTerminalInteraction.TryCancelHeldItem()) return true;
             __result = true;
             return false;
         }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using DigitalStorage.Collections;
-using static DigitalStorage.Storage.StorageSort;
+using DigitalLogistics.Collections;
+using static DigitalLogistics.Storage.StorageSort;
 
-namespace DigitalStorage.Filtering
+namespace DigitalLogistics.Filtering
 {
     public sealed class StoredItemFilterPlan
     {

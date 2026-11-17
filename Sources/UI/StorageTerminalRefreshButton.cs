@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace DigitalStorage.UI
+namespace DigitalLogistics.UI
 {
     internal sealed class StorageTerminalRefreshButton : MonoBehaviour,
         IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
@@ -23,7 +23,7 @@ namespace DigitalStorage.UI
         internal void Init(Button button)
         {
             this.button = button;
-            string prefix = DigitalStorage.Instance.Manifest.ID + ":storage_terminal_refresh";
+            string prefix = DigitalLogistics.Instance.Manifest.ID + ":storage_terminal_refresh";
             normalSprite = CustomUIManager.Instance.GetSprite(prefix);
             pendingSprite = CustomUIManager.Instance.GetSprite(prefix + "_pending");
             var root = new GameObject("RefreshIcon", typeof(RectTransform), typeof(Image));
@@ -63,7 +63,7 @@ namespace DigitalStorage.UI
         private void Update()
         {
             if (!pressed || held || !button.interactable
-                || Time.realtimeSinceStartupAsDouble - pressedAt < DigitalStorage.Instance.Settings.RefreshHoldMilliseconds.Value / 1000d) return;
+                || Time.realtimeSinceStartupAsDouble - pressedAt < DigitalLogistics.Instance.Settings.RefreshHoldMilliseconds.Value / 1000d) return;
             held = true;
             Held?.Invoke();
         }

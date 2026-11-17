@@ -4,12 +4,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using DigitalStorage.Filtering;
-using DigitalStorage.Storage;
-using DigitalStorage.UI;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage;
+using DigitalLogistics.UI;
 using UnityEngine;
 
-namespace DigitalStorage.Controller
+namespace DigitalLogistics.Controller
 {
     internal sealed class StorageTerminalInteraction : EmptyActionHandler
     {
@@ -334,7 +334,7 @@ namespace DigitalStorage.Controller
         private async Task<bool> TryMoveOutput(StoredItemExpression expression,
             Func<GameItem, SlotMarker> findSlot, CancellationToken token)
         {
-            await foreach (var stored in DigitalStorage.Manager.SearchAsync(expression,
+            await foreach (var stored in DigitalLogistics.Manager.SearchAsync(expression,
                 owner.Configuration.SortBy, owner.Configuration.Reverse, cancellationToken: token,
                 prioritizeOutput: pressedGroup))
             {
@@ -357,7 +357,7 @@ namespace DigitalStorage.Controller
         {
             if (!CanTakeExternal(item)) return;
             int uniqueId = item.GetUniqueID();
-            var result = DigitalStorage.Manager.TryInput(item, amount);
+            var result = DigitalLogistics.Manager.TryInput(item, amount);
             if (result.Amount == 0) return;
             if (!result.Items.Any(stored => stored.UniqueId == uniqueId)) owner.RemoveItem(uniqueId);
             foreach (var stored in result.Items) owner.InsertItem(stored);
