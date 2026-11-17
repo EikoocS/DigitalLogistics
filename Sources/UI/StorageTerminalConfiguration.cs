@@ -8,6 +8,10 @@ namespace DigitalStorage.UI
     {
         internal enum SafetyFilter { All, Legal, Illegal }
 
+        private const string SortByTag = "DIGITAL_STORAGE_TERMINAL_SORT_BY";
+        private const string ReverseTag = "DIGITAL_STORAGE_TERMINAL_REVERSE";
+        private const string SafetyTag = "DIGITAL_STORAGE_TERMINAL_SAFETY";
+        private readonly GameItem item;
         private static readonly StorageSort.SortBy[] SortOptions =
             (StorageSort.SortBy[])Enum.GetValues(typeof(StorageSort.SortBy));
         private readonly MachineryButton sortButton;
@@ -15,13 +19,26 @@ namespace DigitalStorage.UI
         private readonly MachineryButton safetyButton;
 
         internal MachineryStack Layout { get; }
-        internal StorageSort.SortBy SortBy { get; private set; } = StorageSort.SortBy.IDENTIFIER;
-        internal bool Reverse { get; private set; } = false;
-        internal SafetyFilter Safety { get; private set; }
+        internal StorageSort.SortBy SortBy
+        {
+            get => (StorageSort.SortBy)item.GetTagReadonly(SortByTag).GetInt();
+            private set => item.ModifyTag(SortByTag, state => state.Enable().SetInt((int)value));
+        }
+        internal bool Reverse
+        {
+            get => item.GetTagReadonly(ReverseTag).GetBool();
+            private set => item.ModifyTag(ReverseTag, state => state.Enable().SetBool(value));
+        }
+        internal SafetyFilter Safety
+        {
+            get => (SafetyFilter)item.GetTagReadonly(SafetyTag).GetInt();
+            private set => item.ModifyTag(SafetyTag, state => state.Enable().SetInt((int)value));
+        }
         internal event Action Changed;
 
-        internal StorageTerminalConfiguration()
+        internal StorageTerminalConfiguration(GameItem item)
         {
+            this.item = item;
             sortButton = CreateButton(() =>
             {
                 SortBy = SortOptions[(Array.IndexOf(SortOptions, SortBy) + 1) % SortOptions.Length];

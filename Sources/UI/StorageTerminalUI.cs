@@ -25,9 +25,9 @@ namespace DigitalStorage.UI
         internal string SearchText => searchInput.text;
         internal event Action<string> SearchChanged;
 
-        internal static PixelWindow Create() => new StorageTerminalUI().window;
+        internal static PixelWindow Create(GameItem item) => new StorageTerminalUI(item).window;
 
-        private StorageTerminalUI()
+        private StorageTerminalUI(GameItem item)
         {
             var (inputHost, inputRoot) = CreateControl(CustomUIManager.ElementKind.Input, 204, 18);
             var input = CustomUIElement.Bind(inputRoot, "search");
@@ -59,7 +59,7 @@ namespace DigitalStorage.UI
             var content = MachineryStack.Vertical(searchRow, listHost)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
-            Configuration = new StorageTerminalConfiguration();
+            Configuration = new StorageTerminalConfiguration(item);
             var body = MachineryStack.Horizontal(Configuration.Layout, content)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
@@ -101,6 +101,7 @@ namespace DigitalStorage.UI
 
         internal static void NotifyRefreshResult()
         {
+            if (!DigitalStorage.Instance.Settings.NotifyRefreshResult.Value) return;
             string message = string.Format(Localize("refresh_result"),
                 StorageIndexRefresh.ProcessedItems, StorageIndexRefresh.ElapsedMilliseconds);
             if (!StorageIndexRefresh.Succeeded)

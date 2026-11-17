@@ -11,7 +11,6 @@ namespace DigitalStorage.Storage
     internal static class TriggerBusManager
     {
         private const string DataKey = "trigger_bus_configuration";
-        private const int MaxContinuousTriggers = 999;
 
         [Serializable]
         internal sealed class Configuration
@@ -30,7 +29,7 @@ namespace DigitalStorage.Storage
             internal TriggerBusAction.Option[] Options => Action.GetOptions?.Invoke()
                 ?? Array.Empty<TriggerBusAction.Option>();
             internal string Name => Machine.GetDisplayName(preferCustomName: true);
-            internal int TriggerCount => LoopTrigger ? MaxContinuousTriggers : Count;
+            internal int TriggerCount => LoopTrigger ? DigitalStorage.Instance.Settings.MaxContinuousTriggers.Value : Count;
         }
 
         [Serializable]

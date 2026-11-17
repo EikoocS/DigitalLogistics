@@ -11,11 +11,13 @@ namespace DigitalStorage
         public ModLog Log { get; private set; }
         public static StorageManager Manager { get; private set; }
         internal bool Enabled { get; private set; }
+        internal ModConfiguration Settings { get; private set; }
 
         public void Init(ModManifest manifest)
         {
             Instance = this;
             Manifest = manifest;
+            Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");

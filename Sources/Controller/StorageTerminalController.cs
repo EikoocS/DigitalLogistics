@@ -12,8 +12,7 @@ namespace DigitalStorage.Controller
 {
     internal sealed class StorageTerminalController : MonoBehaviour
     {
-        private const double RefreshBudgetSeconds = 0.002;
-        private const double SearchDelaySeconds = 0.3;
+        private static double RefreshBudgetSeconds => DigitalStorage.Instance.Settings.TerminalBudgetMilliseconds.Value / 1000d;
 
         private sealed class GroupState
         {
@@ -442,7 +441,7 @@ namespace DigitalStorage.Controller
         private void OnSearchChanged(string text)
         {
             StopSearch();
-            searchDeadline = Time.realtimeSinceStartupAsDouble + SearchDelaySeconds;
+            searchDeadline = Time.realtimeSinceStartupAsDouble + DigitalStorage.Instance.Settings.SearchDelayMilliseconds.Value / 1000d;
         }
 
         private void OnConfigurationChanged() => Search();

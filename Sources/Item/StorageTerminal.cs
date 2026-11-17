@@ -13,8 +13,8 @@ namespace DigitalStorage.Item
         {
             var item = ItemDirectory.CreateEmptyItem(ItemId)
                 .SetSpriteAndShapeFromMod(DigitalStorage.Instance.Manifest.ID, ItemId)
-                .SetShape(new GridShapeBuilder().SetDataFill(3, 3))
-                .SetContentWindow(StorageTerminalUI.Create());
+                .SetShape(new GridShapeBuilder().SetDataFill(3, 3));
+            item.SetContentWindow(StorageTerminalUI.Create(item));
             item.name = Localize("item.storage_terminal.name");
             item.shortDescription = Localize("item.storage_terminal.desc");
             item.flavorText = Localize("item.storage_terminal.flavor");

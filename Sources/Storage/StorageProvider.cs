@@ -11,8 +11,6 @@ namespace DigitalStorage.Storage
 {
     public abstract class StorageProvider : IDisposable
     {
-        // TODO CONFIG NEED
-        private const double SearchBudgetMilliseconds = 2;
         public int Priority { get; set; } = 0;
         public string Name { get; set; } = "Unnamed";
         public StoredItemExpression filter { get; set; } = StoredItemExpression.Constant(true);
@@ -103,7 +101,7 @@ namespace DigitalStorage.Storage
                     timer.Restart();
                 }
 
-                if (timer.Elapsed.TotalMilliseconds >= SearchBudgetMilliseconds)
+                if (timer.Elapsed.TotalMilliseconds >= DigitalStorage.Instance.Settings.SearchBudgetMilliseconds.Value)
                 {
                     await Task.Yield();
                     timer.Restart();

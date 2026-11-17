@@ -10,7 +10,6 @@ namespace DigitalStorage.Storage
 {
     internal static class StorageIndexRefresh
     {
-        private const double FrameBudgetMilliseconds = 2;
         private static Coroutine coroutine;
         private static IEnumerator work;
 
@@ -63,7 +62,7 @@ namespace DigitalStorage.Storage
                         }
                         if (index == jobs.Count) index = 0;
                     }
-                    while (jobs.Count > 0 && frameTimer.Elapsed.TotalMilliseconds < FrameBudgetMilliseconds);
+                    while (jobs.Count > 0 && frameTimer.Elapsed.TotalMilliseconds < DigitalStorage.Instance.Settings.IndexRefreshBudgetMilliseconds.Value);
                     if (jobs.Count > 0) yield return null;
                 }
                 Succeeded = true;

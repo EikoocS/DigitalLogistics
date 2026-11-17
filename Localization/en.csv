@@ -62,3 +62,10 @@ ui.io_bus.filter_configuration,Input/output filter:
 ui.bus.no_connections,No valid connected targets
 ui.trigger_bus.on_input_update,Execute on input updates
 ui.trigger_bus.loop_trigger,Loop when executing
+config.search_delay_ms,Search input delay (ms)
+config.refresh_hold_ms,Refresh button hold duration (ms)
+config.notify_refresh_result,Show index refresh result notification
+config.search_budget_ms,Item search time budget (ms)
+config.terminal_budget_ms,Terminal list time budget per frame (ms)
+config.index_refresh_budget_ms,Index refresh time budget per frame (ms)
+config.max_continuous_triggers,Maximum consecutive triggers per execution

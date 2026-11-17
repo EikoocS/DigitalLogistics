@@ -8,7 +8,6 @@ namespace DigitalStorage.UI
     internal sealed class StorageTerminalRefreshButton : MonoBehaviour,
         IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
-        private const double HoldSeconds = 0.65;
         private double pressedAt;
         private bool pressed;
         private bool held;
@@ -64,7 +63,7 @@ namespace DigitalStorage.UI
         private void Update()
         {
             if (!pressed || held || !button.interactable
-                || Time.realtimeSinceStartupAsDouble - pressedAt < HoldSeconds) return;
+                || Time.realtimeSinceStartupAsDouble - pressedAt < DigitalStorage.Instance.Settings.RefreshHoldMilliseconds.Value / 1000d) return;
             held = true;
             Held?.Invoke();
         }
