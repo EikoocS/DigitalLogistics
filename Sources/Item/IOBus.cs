@@ -21,6 +21,6 @@ namespace DigitalStorage.Item
             if (IOBusManager.IsOnMove(Item)) IOBusManager.Schedule(Item);
         }
 
-        public IEnumerable<BusOperation> GetOperations() => IOBusManager.GetOperations(Item);
+        public IEnumerable<BusOperation> GetOperations(bool nightly) => IOBusManager.GetOperations(Item, nightly);
     }
 }

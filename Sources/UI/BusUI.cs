@@ -39,12 +39,19 @@ namespace DigitalStorage.UI
         private int DefaultRowHeight => bus.identifier switch
         {
             StorageBus.ItemId => 96,
-            IOBus.InputOutputId => 184,
-            TriggerBus.ItemId => 184,
-            _ => 140
+            IOBus.InputOutputId => 200,
+            TriggerBus.ItemId => 192,
+            _ => 148
         };
-        private int RowHeight(object configuration) => configuration is TriggerBusManager.Configuration trigger
-            && trigger.Options.Length > 0 ? 228 : DefaultRowHeight;
+        private int BaseRowHeight(object configuration) => configuration is TriggerBusManager.Configuration trigger
+            && trigger.Options.Length > 0 ? DefaultRowHeight + 44 : DefaultRowHeight;
+        private int RowHeight(object configuration) => BaseRowHeight(configuration) + (configuration switch
+        {
+            TriggerBusManager.Configuration trigger => trigger.Schedule.Count * 44,
+            IOBusManager.Configuration io => (IOBus.CanInput(bus) ? io.InputSchedule.Count * 44 : 0)
+                + (IOBus.CanOutput(bus) ? io.OutputSchedule.Count * 44 : 0),
+            _ => 0
+        });
 
         internal static PixelWindow Create(GameItem bus)
         {
@@ -124,10 +131,10 @@ namespace DigitalStorage.UI
         internal static void RefreshConnections(GameItem bus) =>
             bus.contentWindow.handler.GetComponentInChildren<BusUI>(true).Rebuild();
 
-        private void Rebuild()
+        private void Rebuild(bool force = false)
         {
             var configurations = BusController.GetConfigurations(bus).ToArray();
-            if (rows.Select(row => row.Configuration).SequenceEqual(configurations)) return;
+            if (!force && rows.Select(row => row.Configuration).SequenceEqual(configurations)) return;
             foreach (var row in rows)
             {
                 row.Root.gameObject.SetActive(false);
@@ -155,18 +162,20 @@ namespace DigitalStorage.UI
                 else BuildIORow(root, (IOBusManager.Configuration)configuration);
                 rows.Add(new Row { Configuration = configuration, Root = root });
             }
-            ResizeWindow();
+            ResizeWindow(resetScroll: !force);
         }
 
-        private int ContentHeight(int count) =>
-            Padding * 2 + (count == 0 ? DefaultRowHeight : rows.Take(count).Sum(row => RowHeight(row.Configuration)))
+        private int ContentHeight(int count, bool includeSchedule = true) =>
+            Padding * 2 + (count == 0 ? DefaultRowHeight : rows.Take(count).Sum(row => includeSchedule
+                ? RowHeight(row.Configuration) : BaseRowHeight(row.Configuration)))
                 + Mathf.Max(0, count - 1) * RowGap;
 
-        private void ResizeWindow()
+        private void ResizeWindow(bool resetScroll = true)
         {
             emptyState.SetActive(rows.Count == 0);
-            bool overflow = rows.Count > VisibleRows;
-            int height = ContentHeight(Mathf.Min(rows.Count, VisibleRows));
+            int contentHeight = ContentHeight(rows.Count);
+            int height = ContentHeight(Mathf.Min(rows.Count, VisibleRows), includeSchedule: false);
+            bool overflow = contentHeight > height;
             host.ResizePixels(Width, height / 2);
             host.rectTransform.sizeDelta = new Vector2(Width, height / 2);
             controls.sizeDelta = new Vector2(Width * 2, height);
@@ -184,9 +193,10 @@ namespace DigitalStorage.UI
                 bar.offsetMin = new Vector2(-16, 0);
                 bar.offsetMax = Vector2.zero;
             }
-            scroll.content.sizeDelta = new Vector2(0, ContentHeight(rows.Count));
+            scroll.content.sizeDelta = new Vector2(0, contentHeight);
             scroll.StopMovement();
-            scroll.content.anchoredPosition = Vector2.zero;
+            scroll.content.anchoredPosition = resetScroll ? Vector2.zero
+                : new Vector2(0, Mathf.Clamp(scroll.content.anchoredPosition.y, 0, Mathf.Max(0, contentHeight - height)));
             intake.ResizePixels(0, 0);
             panel.ResizePixels(0, 0);
             window.Validate();
@@ -201,7 +211,11 @@ namespace DigitalStorage.UI
 
         private void BuildStorageRow(RectTransform root, BusManager.Configuration configuration)
         {
-            BindText(CreateInput(root, new Vector2(Padding + 72, -Padding), -216),
+            var priorityLabel = CreateLabel(root, new Vector2(-Padding - 120 - Padding, -Padding),
+                "storage_priority", anchor: 1);
+            int priorityLabelWidth = FitLabel(priorityLabel);
+            ((RectTransform)priorityLabel.root.transform).pivot = Vector2.one;
+            BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -192 - priorityLabelWidth - Padding),
                 () => configuration.Name, () => configuration.DefaultName, value =>
                 {
                     configuration.Name = value;
@@ -213,7 +227,8 @@ namespace DigitalStorage.UI
                     configuration.Priority = value;
                     configuration.Apply();
                 });
-            BindFilter(CreateInput(root, new Vector2(Padding, -52), -Padding * 2),
+            int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), "storage_configuration"));
+            BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
                 () => configuration.Filter, () => BusManager.Configuration.DefaultFilter, value =>
                 {
                     configuration.Filter = value;
@@ -228,68 +243,62 @@ namespace DigitalStorage.UI
 
         private void BuildIORow(RectTransform root, IOBusManager.Configuration configuration)
         {
-            BindText(CreateInput(root, new Vector2(Padding + 72, -Padding), -Padding * 2 - 72),
+            BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -Padding * 2 - 48),
                 () => configuration.Name, () => configuration.DefaultName, value => configuration.Name = value);
-            int y = 52;
-            if (IOBus.CanInput(bus))
+            string configurationKey = bus.identifier switch
             {
-                BindOperation(root, y, "input", () => configuration.InputOrder,
-                    value => configuration.InputOrder = value, () => configuration.InputPriority,
-                    value => configuration.InputPriority = value);
-                y += 44;
-            }
-            if (IOBus.CanOutput(bus))
-            {
-                BindOperation(root, y, "output", () => configuration.OutputOrder,
-                    value => configuration.OutputOrder = value, () => configuration.OutputPriority,
-                    value => configuration.OutputPriority = value);
-                y += 44;
-            }
-            BindFilter(CreateInput(root, new Vector2(Padding, -y), -Padding * 2),
+                IOBus.InputId => "input_configuration",
+                IOBus.OutputId => "output_configuration",
+                _ => "filter_configuration"
+            };
+            int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), configurationKey));
+            BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
                 () => configuration.Filter, () => configuration.DefaultFilter, value =>
                 {
                     configuration.Filter = value;
                     configuration.Apply();
                 });
+            int y = 96;
+            if (IOBus.CanInput(bus))
+                y = BindSchedule(root, y, "input", configuration.InputSchedule);
+            if (IOBus.CanOutput(bus))
+                BindSchedule(root, y, "output", configuration.OutputSchedule);
             BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
         }
 
         private void BuildTriggerRow(RectTransform root, TriggerBusManager.Configuration configuration)
         {
-            var label = CreateLabel(root, new Vector2(Padding + 72, -Padding), "");
-            ((RectTransform)label.root.transform).sizeDelta = new Vector2(Width * 2 - Padding * 4 - 72, 36);
+            var label = CreateLabel(root, new Vector2(Padding + 48, -Padding), "");
+            ((RectTransform)label.root.transform).sizeDelta = new Vector2(Width * 2 - Padding * 4 - 48, 36);
             label.text.enableWordWrapping = false;
             label.text.overflowMode = TextOverflowModes.Ellipsis;
             label.text.richText = false;
             refreshers.Add(() => label.SetText(configuration.Name));
             label.SetText(configuration.Name);
-            BindOperation(root, 52, "trigger", () => configuration.Order,
-                value => configuration.Order = value, () => configuration.Priority,
-                value => configuration.Priority = value);
-            CreateLabel(root, new Vector2(Padding, -96), "trigger_count");
-            var countInput = CreateInput(root, new Vector2(-Padding, -96), 128, right: true);
-            BindInteger(countInput, () => configuration.Count, value => configuration.Count = Mathf.Max(0, value));
-            var inputToggle = BindSwitch(root, new Vector2(Padding, -140), () => configuration.OnInputUpdate,
-                value => configuration.OnInputUpdate = value);
-            var inputLabel = CreateLabel(root, new Vector2(80, -140), "");
-            inputLabel.SetText(StorageTerminal.Localize("ui.trigger_bus.on_input_update"));
-            inputLabel.text.raycastTarget = false;
-            var loopToggle = BindSwitch(root, new Vector2(360, -140), () => configuration.LoopTrigger,
-                value => configuration.LoopTrigger = value);
-            var loopLabel = CreateLabel(root, new Vector2(432, -140), "");
-            loopLabel.SetText(StorageTerminal.Localize("ui.trigger_bus.loop_trigger"));
-            loopLabel.text.raycastTarget = false;
+            var inputToggle = BindToggle(root, new Vector2(Padding, -52), () => configuration.OnInputUpdate,
+                value => configuration.OnInputUpdate = value,
+                text: StorageTerminal.Localize("ui.trigger_bus.on_input_update"));
+            var loopToggle = BindToggle(root, new Vector2(Padding, -96), () => configuration.LoopTrigger,
+                value => configuration.LoopTrigger = value,
+                text: StorageTerminal.Localize("ui.trigger_bus.loop_trigger"));
+            int countX = 360 + Padding + FitLabel(CreateLabel(root, new Vector2(360, -96), "trigger_count"));
+            var countInput = CreateInput(root, new Vector2(countX, -96), 128, stretch: false);
+            BindInteger(countInput, () => configuration.TriggerCount, value =>
+            {
+                if (!configuration.LoopTrigger) configuration.Count = Mathf.Max(0, value);
+            });
             var options = configuration.Options;
             if (options.Length > 0)
             {
+                int optionX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -140), "trigger_configuration"));
                 var dropdownRoot = CustomUIManager.Instance.SpawnElement(
                     CustomUIManager.ElementKind.Dropdown, root, null, "TriggerOption");
                 CustomUIMachineryStyle.Reskin(dropdownRoot);
                 var rect = (RectTransform)dropdownRoot.transform;
                 rect.anchorMin = rect.pivot = new Vector2(0, 1);
                 rect.anchorMax = Vector2.one;
-                rect.anchoredPosition = new Vector2(Padding, -184);
-                rect.sizeDelta = new Vector2(-Padding * 2, 36);
+                rect.anchoredPosition = new Vector2(optionX, -140);
+                rect.sizeDelta = new Vector2(-Padding - optionX, 36);
                 var dropdown = CustomUIElement.Bind(dropdownRoot, "option").dropdown;
                 dropdown.ClearOptions();
                 dropdown.AddOptions(options.Select(option => option.Name).ToList());
@@ -299,12 +308,13 @@ namespace DigitalStorage.UI
                 refreshers.Add(RefreshOption);
                 RefreshOption();
             }
+            BindSchedule(root, options.Length > 0 ? 184 : 140, "trigger", configuration.Schedule);
             BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
             refreshers.Add(() =>
             {
                 countInput.interactable = !configuration.Disabled && !configuration.LoopTrigger;
-                loopToggle.interactable = !configuration.Disabled;
-                inputToggle.interactable = !configuration.Disabled;
+                loopToggle.SetDisabled(configuration.Disabled);
+                inputToggle.SetDisabled(configuration.Disabled);
             });
         }
 
@@ -313,7 +323,7 @@ namespace DigitalStorage.UI
             var group = root.gameObject.AddComponent<CanvasGroup>();
             var inputs = root.GetComponentsInChildren<TMP_InputField>(true);
             var dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
-            BindSwitch(root, new Vector2(Padding, -Padding), get, set, enabled =>
+            BindToggle(root, new Vector2(Padding, -Padding), get, set, enabled =>
             {
                 group.alpha = enabled ? 1 : 0.45f;
                 foreach (var input in inputs) input.interactable = enabled;
@@ -321,60 +331,128 @@ namespace DigitalStorage.UI
             });
         }
 
-        private Toggle BindSwitch(RectTransform root, Vector2 position, Func<bool> get, Action<bool> set,
-            Action<bool> onRefresh = null)
+        private MachineryRadioButton BindToggle(RectTransform root, Vector2 position, Func<bool> get, Action<bool> set,
+            Action<bool> onRefresh = null, string text = null)
         {
-            var switchRoot = new GameObject("Switch", typeof(RectTransform), typeof(Image), typeof(Toggle));
-            var rect = (RectTransform)switchRoot.transform;
+            var toggle = new MachineryRadioButton(text, get());
+            toggle.handler.SetParent(host.handler);
+            var rect = toggle.rectTransform;
             rect.SetParent(root, false);
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
-            rect.anchoredPosition = position;
-            rect.sizeDelta = new Vector2(64, 36);
-            var track = switchRoot.GetComponent<Image>();
-            track.sprite = MachineryStyle.BevelFrame;
-            track.type = Image.Type.Sliced;
-            track.pixelsPerUnitMultiplier = 0.5f;
-
-            var thumbRoot = new GameObject("Thumb", typeof(RectTransform), typeof(Image));
-            var thumbRect = (RectTransform)thumbRoot.transform;
-            thumbRect.SetParent(rect, false);
-            thumbRect.anchorMin = thumbRect.anchorMax = thumbRect.pivot = new Vector2(0, 0.5f);
-            thumbRect.sizeDelta = new Vector2(24, 24);
-            var thumb = thumbRoot.GetComponent<Image>();
-            thumb.sprite = MachineryStyle.BevelFrame;
-            thumb.type = Image.Type.Sliced;
-            thumb.pixelsPerUnitMultiplier = 0.5f;
-            thumb.raycastTarget = false;
-            var toggle = switchRoot.GetComponent<Toggle>();
-            toggle.targetGraphic = thumb;
+            rect.anchoredPosition = position + new Vector2(0, -2);
+            rect.sizeDelta = new Vector2(toggle.widthPixels, toggle.heightPixels);
+            rect.localScale = new Vector3(2, 2, 1);
 
             void Refresh()
             {
                 bool enabled = get();
-                toggle.SetIsOnWithoutNotify(enabled);
-                thumbRect.anchoredPosition = new Vector2(enabled ? 34 : 6, 0);
-                track.color = enabled ? MachineryStyle.PROGRESS_FILL : MachineryStyle.SLIDER_FILL;
+                toggle.SetOn(enabled);
                 onRefresh?.Invoke(enabled);
             }
-            toggle.onValueChanged.AddListener(value =>
+            toggle.onChanged += value =>
             {
                 set(value);
                 Refresh();
-            });
+            };
             refreshers.Add(Refresh);
             Refresh();
             return toggle;
         }
 
-        private void BindOperation(RectTransform root, int y, string direction, Func<int> order,
-            Action<int> setOrder, Func<int> priority, Action<int> setPriority)
+        private int BindSchedule(RectTransform root, int y, string direction, List<BusScheduleEntry> schedule)
         {
-            CreateLabel(root, new Vector2(Padding, -y), direction + "_order");
-            CreateLabel(root, new Vector2(Padding, -y), direction + "_priority", anchor: 0.5f);
-            var orderInput = CreateInput(root, new Vector2(208, -y), 128, stretch: false);
-            BindInteger(orderInput, order, value => setOrder(Mathf.Clamp(value, 1, 15)));
-            var priorityInput = CreateInput(root, new Vector2(-Padding, -y), 128, right: true);
-            BindInteger(priorityInput, priority, setPriority);
+            int height = (schedule.Count + 1) * 44;
+            var table = new GameObject("ScheduleTable", typeof(RectTransform)).GetComponent<RectTransform>();
+            table.SetParent(root, false);
+            table.anchorMin = table.pivot = new Vector2(0, 1);
+            table.anchorMax = Vector2.one;
+            table.anchoredPosition = new Vector2(Padding, -y);
+            table.sizeDelta = new Vector2(-Padding * 2, height);
+            CreateTableLine(table, true, 0);
+            CreateTableLine(table, true, 64);
+            CreateTableLine(table, true, 0, anchor: 0.5f);
+            CreateTableLine(table, true, -64, anchor: 1);
+            CreateTableLine(table, true, -2, anchor: 1);
+            for (int line = 0; line <= schedule.Count; line++) CreateTableLine(table, false, line * 44);
+            CreateTableLine(table, false, height - 2);
+            for (int column = 1; column <= 2; column++)
+            {
+                var label = CreateLabel(CreateScheduleCell(table, 0, column), new Vector2(4, -4),
+                    direction + (column == 1 ? "_order" : "_priority"));
+                var rect = (RectTransform)label.root.transform;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = new Vector2(-8, 36);
+                label.text.alignment = TextAlignmentOptions.Center;
+            }
+            CreateScheduleButton(CreateScheduleCell(table, 0, 3), 4, "+", () =>
+            {
+                schedule.Add(new BusScheduleEntry());
+                Rebuild(force: true);
+            });
+            int row = 1;
+            foreach (var entry in schedule)
+            {
+                BindToggle(CreateScheduleCell(table, row, 0), new Vector2(16, -4),
+                    () => entry.Enabled, value => entry.Enabled = value);
+                BindInteger(CreateInput(CreateScheduleCell(table, row, 1), new Vector2(4, -4), -8),
+                    () => entry.Order, value => entry.Order = Mathf.Clamp(value, 1, 15));
+                BindInteger(CreateInput(CreateScheduleCell(table, row, 2), new Vector2(4, -4), -8),
+                    () => entry.Priority, value => entry.Priority = value);
+                CreateScheduleButton(CreateScheduleCell(table, row, 3), 4, "×", () =>
+                {
+                    schedule.Remove(entry);
+                    Rebuild(force: true);
+                });
+                row++;
+            }
+            return y + height + RowGap;
+        }
+
+        private static RectTransform CreateScheduleCell(RectTransform table, int row, int column)
+        {
+            var rect = new GameObject("ScheduleCell", typeof(RectTransform)).GetComponent<RectTransform>();
+            rect.SetParent(table, false);
+            var (min, max, x, width) = column switch
+            {
+                0 => (0f, 0f, 0, 64),
+                1 => (0f, 0.5f, 64, -64),
+                2 => (0.5f, 1f, 0, -64),
+                _ => (1f, 1f, -64, 64)
+            };
+            rect.anchorMin = new Vector2(min, 1);
+            rect.anchorMax = new Vector2(max, 1);
+            rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = new Vector2(x, -row * 44);
+            rect.sizeDelta = new Vector2(width, 44);
+            return rect;
+        }
+
+        private static void CreateTableLine(RectTransform parent, bool vertical, int position, float anchor = 0)
+        {
+            var root = new GameObject("TableBorder", typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)root.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = vertical ? new Vector2(anchor, 0) : new Vector2(0, 1);
+            rect.anchorMax = vertical ? new Vector2(anchor, 1) : Vector2.one;
+            rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = vertical ? new Vector2(position, 0) : new Vector2(0, -position);
+            rect.sizeDelta = vertical ? new Vector2(2, 0) : new Vector2(0, 2);
+            var image = root.GetComponent<Image>();
+            image.color = new Color(0.55f, 0.55f, 0.55f, 1);
+            image.raycastTarget = false;
+        }
+
+        private static void CreateScheduleButton(RectTransform parent, int y, string text, Action onClick)
+        {
+            var root = CustomUIManager.Instance.SpawnElement(CustomUIManager.ElementKind.Button, parent, null, "ScheduleButton");
+            CustomUIMachineryStyle.Reskin(root);
+            var rect = (RectTransform)root.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
+            rect.anchoredPosition = new Vector2(-Padding, -y);
+            rect.sizeDelta = new Vector2(48, 36);
+            var element = CustomUIElement.Bind(root, "schedule");
+            element.SetText(text);
+            element.button.onClick.AddListener(() => onClick());
         }
 
         private static CustomUIElement CreateLabel(RectTransform parent, Vector2 position, string key, float anchor = 0)
@@ -389,6 +467,15 @@ namespace DigitalStorage.UI
             var element = CustomUIElement.Bind(root, key);
             element.SetText(StorageTerminal.Localize("ui.io_bus." + key));
             return element;
+        }
+
+        private static int FitLabel(CustomUIElement label)
+        {
+            label.text.enableAutoSizing = false;
+            label.text.enableWordWrapping = false;
+            int width = Mathf.CeilToInt(label.text.GetPreferredValues(label.text.text).x);
+            ((RectTransform)label.root.transform).sizeDelta = new Vector2(width, 36);
+            return width;
         }
 
         private void BindInteger(TMP_InputField input, Func<int> get, Action<int> set)

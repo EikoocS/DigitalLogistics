@@ -18,8 +18,7 @@ namespace DigitalStorage.Storage
         {
             public string Key;
             public bool Disabled = true;
-            public int Order = 6;
-            public int Priority;
+            public List<BusScheduleEntry> Schedule = new();
             public int Count = 1;
             public bool LoopTrigger;
             public bool OnInputUpdate;
@@ -31,6 +30,7 @@ namespace DigitalStorage.Storage
             internal TriggerBusAction.Option[] Options => Action.GetOptions?.Invoke()
                 ?? Array.Empty<TriggerBusAction.Option>();
             internal string Name => Machine.GetDisplayName(preferCustomName: true);
+            internal int TriggerCount => LoopTrigger ? MaxContinuousTriggers : Count;
         }
 
         [Serializable]
@@ -108,13 +108,20 @@ namespace DigitalStorage.Storage
                 .Select(configuration => (configuration.Bus, CreateOperation(configuration))));
         }
 
-        internal static IEnumerable<BusOperation> GetOperations(GameItem bus) =>
-            GetConfigurations(bus)
-                .Where(configuration => !configuration.Disabled)
-                .Select(CreateOperation);
+        internal static IEnumerable<BusOperation> GetOperations(GameItem bus, bool nightly)
+        {
+            foreach (var configuration in GetConfigurations(bus))
+            {
+                if (configuration.Disabled) continue;
+                if (!nightly) yield return CreateOperation(configuration);
+                else
+                    foreach (var entry in configuration.Schedule)
+                        if (entry.Enabled) yield return CreateOperation(configuration, entry.Order, entry.Priority);
+            }
+        }
 
-        private static BusOperation CreateOperation(Configuration configuration) => new(configuration.Order,
-            configuration.Priority, BusOperationKind.Trigger, () => Trigger(configuration));
+        private static BusOperation CreateOperation(Configuration configuration, int order = 6, int priority = 0) =>
+            new(order, priority, BusOperationKind.Trigger, () => Trigger(configuration));
 
         private static void Trigger(Configuration configuration)
         {
@@ -122,7 +129,7 @@ namespace DigitalStorage.Storage
             pending.Remove(configuration);
             try
             {
-                int limit = configuration.LoopTrigger ? MaxContinuousTriggers : configuration.Count;
+                int limit = configuration.TriggerCount;
                 for (int i = 0; i < limit; i++)
                 {
                     if (configuration.Disabled || !GetConfigurations(configuration.Bus).Contains(configuration)

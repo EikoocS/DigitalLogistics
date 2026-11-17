@@ -5,7 +5,7 @@ namespace DigitalStorage.Item
 {
     internal interface ITriggerableBus
     {
-        IEnumerable<BusOperation> GetOperations();
+        IEnumerable<BusOperation> GetOperations(bool nightly);
     }
 
     internal enum BusOperationKind

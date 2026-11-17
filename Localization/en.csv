@@ -50,9 +50,15 @@ item.trigger_bus.internal.name,
 item.trigger_bus.disabled.name,
 item.trigger_bus.desc,
 item.trigger_bus.flavor,
-ui.io_bus.trigger_order,Trigger order
-ui.io_bus.trigger_priority,Trigger priority
-ui.io_bus.trigger_count,Trigger count
+ui.io_bus.trigger_order,Execution order
+ui.io_bus.trigger_priority,Execution priority
+ui.io_bus.trigger_count,Trigger count:
+ui.io_bus.trigger_configuration,Trigger configuration:
+ui.io_bus.storage_configuration,Storage filter:
+ui.io_bus.storage_priority,Priority:
+ui.io_bus.input_configuration,Input filter:
+ui.io_bus.output_configuration,Output filter:
+ui.io_bus.filter_configuration,Input/output filter:
 ui.bus.no_connections,No valid connected targets
-ui.trigger_bus.on_input_update,Trigger on input updates
-ui.trigger_bus.loop_trigger,Loop trigger
+ui.trigger_bus.on_input_update,Execute on input updates
+ui.trigger_bus.loop_trigger,Loop when executing

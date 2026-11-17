@@ -42,14 +42,15 @@ namespace DigitalStorage.Controller
             .Where(entry => connections.ContainsKey(entry.Item))
             .Select(entry => (connections[entry.Item], entry.Operation)));
 
-        internal static void RunWindow(int window) => Execute(GetOperations(connections.Values)
+        internal static void RunWindow(int window) => Execute(GetOperations(connections.Values, nightly: true)
             .Where(entry => HopperHelper.WindowOf(entry.Operation.Order) == window));
 
-        private static IEnumerable<(Bus Bus, BusOperation Operation)> GetOperations(IEnumerable<Bus> buses)
+        private static IEnumerable<(Bus Bus, BusOperation Operation)> GetOperations(IEnumerable<Bus> buses,
+            bool nightly = false)
         {
             foreach (var bus in buses)
                 if (bus is ITriggerableBus triggerable)
-                    foreach (var operation in triggerable.GetOperations())
+                    foreach (var operation in triggerable.GetOperations(nightly))
                         yield return (bus, operation);
         }
 

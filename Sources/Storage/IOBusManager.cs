@@ -21,10 +21,8 @@ namespace DigitalStorage.Storage
             public string Key;
             public string Name = string.Empty;
             public bool Disabled = true;
-            public int InputOrder = 6;
-            public int OutputOrder = 6;
-            public int InputPriority;
-            public int OutputPriority;
+            public List<BusScheduleEntry> InputSchedule = new();
+            public List<BusScheduleEntry> OutputSchedule = new();
             public string Filter = string.Empty;
             [NonSerialized] internal GameItem Bus;
             [NonSerialized] internal BusManager.Link Link;
@@ -133,19 +131,31 @@ namespace DigitalStorage.Storage
             BusController.Run(buses);
         }
 
-        internal static IEnumerable<BusOperation> GetOperations(GameItem bus)
+        internal static IEnumerable<BusOperation> GetOperations(GameItem bus, bool nightly)
         {
             foreach (var configuration in GetConfigurations(bus))
             {
                 if (configuration.Disabled) continue;
-                if (IOBus.CanInput(bus)) yield return CreateOperation(configuration, true);
-                if (IOBus.CanOutput(bus)) yield return CreateOperation(configuration, false);
+                if (IOBus.CanInput(bus))
+                    foreach (var operation in GetOperations(configuration, true, nightly)) yield return operation;
+                if (IOBus.CanOutput(bus))
+                    foreach (var operation in GetOperations(configuration, false, nightly)) yield return operation;
             }
         }
 
-        private static BusOperation CreateOperation(Configuration configuration, bool input) => new(
-            input ? configuration.InputOrder : configuration.OutputOrder,
-            input ? configuration.InputPriority : configuration.OutputPriority, input ? BusOperationKind.Input : BusOperationKind.Output, () =>
+        private static IEnumerable<BusOperation> GetOperations(Configuration configuration, bool input, bool nightly)
+        {
+            if (!nightly)
+            {
+                yield return CreateOperation(configuration, input);
+                yield break;
+            }
+            foreach (var entry in input ? configuration.InputSchedule : configuration.OutputSchedule)
+                if (entry.Enabled) yield return CreateOperation(configuration, input, entry.Order, entry.Priority);
+        }
+
+        private static BusOperation CreateOperation(Configuration configuration, bool input, int order = 6,
+            int priority = 0) => new(order, priority, input ? BusOperationKind.Input : BusOperationKind.Output, () =>
             {
                 if (configuration.Link == null) return;
                 if (input) Input(configuration);

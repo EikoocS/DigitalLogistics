@@ -14,7 +14,7 @@ namespace DigitalStorage.Item
         internal static GameItem Create() => new TriggerBus().Item;
         protected override void UpdateLinks(IEnumerable<GameItem> targets) => TriggerBusManager.Connect(Item, targets);
         protected override void ClearLinks() => TriggerBusManager.Disconnect(Item);
-        public IEnumerable<BusOperation> GetOperations() =>
-            TriggerBusManager.GetOperations(Item);
+        public IEnumerable<BusOperation> GetOperations(bool nightly) =>
+            TriggerBusManager.GetOperations(Item, nightly);
     }
 }
