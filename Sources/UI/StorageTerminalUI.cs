@@ -15,7 +15,6 @@ namespace DigitalStorage.UI
         private readonly RectTransform dropArea;
         private readonly TreeNodeRender listHandler;
         private readonly StorageTerminalController controller;
-        private readonly TMP_Text refreshResult;
         private readonly ScrollRect scroll;
         private readonly TreeNodeRender refreshOverlay;
         private readonly Button refreshButton;
@@ -57,15 +56,7 @@ namespace DigitalStorage.UI
             listHandler.image.color = Color.clear;
             listHandler.image.alphaHitTestMinimumThreshold = 0;
 
-            var (resultHost, resultRoot) = CreateControl(CustomUIManager.ElementKind.Label, 232, 28);
-            refreshResult = CustomUIElement.Bind(resultRoot, "refreshResult").text;
-            refreshResult.fontSize = 16;
-            refreshResult.enableAutoSizing = false;
-            refreshResult.alignment = TextAlignmentOptions.TopLeft;
-            refreshResult.richText = false;
-            refreshResult.text = string.Empty;
-
-            var content = MachineryStack.Vertical(searchRow, listHost, resultHost)
+            var content = MachineryStack.Vertical(searchRow, listHost)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
             Configuration = new StorageTerminalConfiguration();
@@ -108,13 +99,13 @@ namespace DigitalStorage.UI
             refreshOverlay.rectTransform.SetAsLastSibling();
         }
 
-        internal void ShowRefreshResult()
+        internal static void NotifyRefreshResult()
         {
-            refreshResult.text = !StorageIndexRefresh.HasResult ? string.Empty
-                : $"{Localize("refresh_elapsed")}: {StorageIndexRefresh.ElapsedMilliseconds:N0} ms\n"
-                    + $"{Localize("refresh_items")}: {StorageIndexRefresh.ProcessedItems:N0}";
-            refreshResult.color = StorageIndexRefresh.Succeeded
-                ? MachineryStyle.BODY_TEXT : MachineryStyle.PROGRESS_FILL_DANGER;
+            string message = string.Format(Localize("refresh_result"),
+                StorageIndexRefresh.ProcessedItems, StorageIndexRefresh.ElapsedMilliseconds);
+            if (!StorageIndexRefresh.Succeeded)
+                message = $"<color=#{ColorUtility.ToHtmlStringRGB(MachineryStyle.PROGRESS_FILL_DANGER)}>{message}</color>";
+            ReputationUIManager.Instance.Notify(message);
         }
 
         private static string Localize(string key) => StorageTerminal.Localize("ui.storage_terminal." + key);

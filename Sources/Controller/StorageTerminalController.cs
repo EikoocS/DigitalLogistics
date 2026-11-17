@@ -84,7 +84,6 @@ namespace DigitalStorage.Controller
             view.Configuration.RefreshDescriptions();
             view.RefreshButton.SetPending(false);
             view.SetRefreshing(Refreshing);
-            view.ShowRefreshResult();
             if (Refreshing) return;
             Search(true);
         }
@@ -104,7 +103,6 @@ namespace DigitalStorage.Controller
                 interaction.Suspend();
             }
             view.SetRefreshing(Refreshing);
-            view.ShowRefreshResult();
             if (Refreshing || !isActiveAndEnabled) return;
             Search(true);
         }

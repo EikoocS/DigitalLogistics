@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using DigitalStorage.UI;
 using UnityEngine;
 
 namespace DigitalStorage.Storage
@@ -14,7 +15,6 @@ namespace DigitalStorage.Storage
         private static IEnumerator work;
 
         internal static bool Running { get; private set; }
-        internal static bool HasResult { get; private set; }
         internal static bool Succeeded { get; private set; }
         internal static long ProcessedItems { get; private set; }
         internal static double ElapsedMilliseconds { get; private set; }
@@ -24,7 +24,6 @@ namespace DigitalStorage.Storage
         {
             if (Running) return;
             Running = true;
-            HasResult = false;
             Succeeded = false;
             ProcessedItems = 0;
             work = Run();
@@ -39,7 +38,6 @@ namespace DigitalStorage.Storage
             work = null;
             coroutine = null;
             Running = false;
-            HasResult = false;
         }
 
         private static IEnumerator Run()
@@ -74,11 +72,11 @@ namespace DigitalStorage.Storage
             {
                 foreach (var job in jobs) (job as IDisposable)?.Dispose();
                 ElapsedMilliseconds = timer.Elapsed.TotalMilliseconds;
-                HasResult = true;
                 Running = false;
                 coroutine = null;
                 work = null;
                 StateChanged?.Invoke();
+                StorageTerminalUI.NotifyRefreshResult();
             }
         }
     }

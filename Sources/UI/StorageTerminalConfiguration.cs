@@ -22,17 +22,17 @@ namespace DigitalStorage.UI
 
         internal StorageTerminalConfiguration()
         {
-            sortButton = CreateButton("storage_terminal_sort_by", () =>
+            sortButton = CreateButton(() =>
             {
                 SortBy = SortOptions[(Array.IndexOf(SortOptions, SortBy) + 1) % SortOptions.Length];
                 OnChanged();
             });
-            directionButton = CreateButton("storage_terminal_sort_direction", () =>
+            directionButton = CreateButton(() =>
             {
                 Reverse = !Reverse;
                 OnChanged();
             });
-            safetyButton = CreateButton("storage_terminal_safety", () =>
+            safetyButton = CreateButton(() =>
             {
                 Safety = (SafetyFilter)(((int)Safety + 1) % 3);
                 OnChanged();
@@ -45,15 +45,15 @@ namespace DigitalStorage.UI
 
         internal void RefreshDescriptions()
         {
-            sortButton.SetDescription($"{Localize("sort_by")}: {SortBy}");
-            directionButton.SetDescription($"{Localize("sort_direction")}: {Localize(Reverse ? "descending" : "ascending")}");
+            SetOption(sortButton, "sort_by", SortBy.ToString().ToLowerInvariant());
+            SetOption(directionButton, "sort_direction", Reverse ? "descending" : "ascending");
             string safety = Safety switch
             {
                 SafetyFilter.Legal => "legal",
                 SafetyFilter.Illegal => "illegal",
                 _ => "all"
             };
-            safetyButton.SetDescription($"{Localize("safety")}: {Localize(safety)}");
+            SetOption(safetyButton, "safety", safety);
         }
 
         internal void SetEnabled(bool enabled)
@@ -71,10 +71,14 @@ namespace DigitalStorage.UI
 
         private static string Localize(string key) => StorageTerminal.Localize("ui.storage_terminal." + key);
 
-        private static MachineryButton CreateButton(string spriteName, Action callback)
+        private static void SetOption(MachineryButton button, string setting, string option)
         {
-            var sprite = CustomUIManager.Instance.GetSprite(DigitalStorage.Instance.Manifest.ID + ":" + spriteName);
-            return new MachineryButton(sprite, sprite, sprite, sprite, callback).SetSize(24, 24);
+            button.SetDescription(string.Format(Localize(setting), Localize(option)));
+            button.SetIcon(CustomUIManager.Instance.GetSprite(
+                $"{DigitalStorage.Instance.Manifest.ID}:storage_terminal_{setting}_{option}"));
         }
+
+        private static MachineryButton CreateButton(Action callback) =>
+            new MachineryButton(callback: callback, width: 32, height: 24).SetFillWidth(false);
     }
 }

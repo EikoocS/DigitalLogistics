@@ -3,8 +3,7 @@ item.storage_terminal.desc,
 item.storage_terminal.flavor,
 ui.storage_terminal.search_placeholder,
 ui.storage_terminal.refreshing,
-ui.storage_terminal.refresh_elapsed,
-ui.storage_terminal.refresh_items,
+ui.storage_terminal.refresh_result,
 item.storage_bus.external.name,Storage Bus (External)
 item.storage_bus.internal.name,Storage Bus (Internal)
 item.storage_bus.disabled.name,Storage Bus (Disabled)
@@ -14,6 +13,12 @@ storage.slot.energy,Energy
 ui.storage_terminal.sort_by,
 ui.storage_terminal.sort_direction,
 ui.storage_terminal.safety,
+ui.storage_terminal.identifier,
+ui.storage_terminal.mod_id,
+ui.storage_terminal.display_name,
+ui.storage_terminal.price,
+ui.storage_terminal.base_price,
+ui.storage_terminal.heat,
 ui.storage_terminal.ascending,
 ui.storage_terminal.descending,
 ui.storage_terminal.all,
