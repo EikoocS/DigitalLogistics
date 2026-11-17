@@ -1,186 +1,75 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalStorage.Item;
 using DigitalStorage.Storage;
-using DigitalStorage.UI;
-using UnityEngine;
 
 namespace DigitalStorage.Controller
 {
     internal static class BusController
     {
-        private static readonly Dictionary<GameItem, Connection> connections =
-            new Dictionary<GameItem, Connection>();
+        private static readonly Dictionary<GameItem, Bus> connections = new();
+        private static bool running;
+        private static BusOperationKind currentKind;
+        private static bool Available => DigitalStorage.Instance.Enabled
+            && !(MapUIManager.Instance != null && MapUIManager.Instance.IsOutside);
+        internal static bool CanRun => Available && !running;
+        internal static bool CanSchedule => Available && (!running || currentKind == BusOperationKind.Trigger);
+
+        internal static void Attach(Bus bus) => connections.Add(bus.Item, bus);
+        internal static void Detach(Bus bus) => connections.Remove(bus.Item);
+
         internal static void ClearConnections()
         {
             StorageIndexRefresh.Clear();
-            foreach (var connection in connections.Values) connection.Dispose();
-            connections.Clear();
+            foreach (var bus in connections.Values.ToArray()) bus.Disconnect();
             IOBusManager.Clear();
+            TriggerBusManager.Clear();
             BusManager.Clear();
         }
 
-        internal static void OnLoaded(GameItem item)
+        internal static void RefreshConnections(GameItem item)
         {
-            UpdateAppearance(item);
-            if (item.parentInventory != null) Connect(item, item.parentInventory);
+            if (connections.TryGetValue(item, out var bus)) bus.Refresh();
         }
 
-        internal static void OnAdded(GameItem item, GameInventory inventory, SlotMarker slot)
+        internal static IEnumerable<object> GetConfigurations(GameItem item) =>
+            connections.TryGetValue(item, out var bus) ? bus.Configurations : Enumerable.Empty<object>();
+
+        internal static void Run(IEnumerable<GameItem> items) => Execute(GetOperations(
+            items.Where(connections.ContainsKey).Select(item => connections[item])));
+
+        internal static void Run(IEnumerable<(GameItem Item, BusOperation Operation)> operations) => Execute(operations
+            .Where(entry => connections.ContainsKey(entry.Item))
+            .Select(entry => (connections[entry.Item], entry.Operation)));
+
+        internal static void RunWindow(int window) => Execute(GetOperations(connections.Values)
+            .Where(entry => HopperHelper.WindowOf(entry.Operation.Order) == window));
+
+        private static IEnumerable<(Bus Bus, BusOperation Operation)> GetOperations(IEnumerable<Bus> buses)
         {
-            Connect(item, inventory);
-            if (IOBus.IsIO(item) && !SaveManager.IsDecoding && IOBusManager.IsOnMove(item))
-                IOBusManager.Schedule(item);
+            foreach (var bus in buses)
+                if (bus is ITriggerableBus triggerable)
+                    foreach (var operation in triggerable.GetOperations())
+                        yield return (bus, operation);
         }
 
-        private static void Connect(GameItem item, GameInventory inventory)
+        private static void Execute(IEnumerable<(Bus Bus, BusOperation Operation)> operations)
         {
-            if (!DigitalStorage.Instance.Enabled) return;
-            OnRemoved(item, inventory, null);
-            var connection = new Connection(item, inventory);
-            connections.Add(item, connection);
-            connection.Refresh();
-        }
-
-        internal static void OnRemoved(GameItem item, GameInventory inventory, SlotMarker slot)
-        {
-            if (connections.TryGetValue(item, out var connection))
+            if (!CanRun) return;
+            var ordered = operations.OrderBy(entry => entry.Operation.Order)
+                .ThenByDescending(entry => entry.Operation.Priority)
+                .ThenBy(entry => entry.Operation.Kind).ToArray();
+            running = true;
+            try
             {
-                connection.Dispose();
-                connections.Remove(item);
-            }
-        }
-
-        internal static void Toggle(GameItem item, GameInventory inventory, SlotMarker slot)
-        {
-            if (item.IsTag(StorageBus.DisabledTag))
-                item.DisableTag(StorageBus.DisabledTag);
-            else if (item.IsTag(StorageBus.InternalTag))
-            {
-                item.DisableTag(StorageBus.InternalTag);
-                item.EnableTag(StorageBus.DisabledTag);
-            }
-            else item.EnableTag(StorageBus.InternalTag);
-            UpdateAppearance(item);
-            if (connections.TryGetValue(item, out var connection)) connection.Refresh();
-        }
-
-        internal static IEnumerable<BusManager.Configuration> GetConfigurations(GameItem bus) =>
-            connections.TryGetValue(bus, out var connection)
-                ? connection.Inventories.Select(BusManager.GetConfiguration)
-                : Enumerable.Empty<BusManager.Configuration>();
-
-        internal static void InitAppearance(GameItem item)
-        {
-            item.getItemSpriteModifierForItemFunc = self => new List<ItemSpriteModifier>
-            {
-                new(((GameItemElement)self).ResolveSpriteByName($"{self.identifier}_{GetMode(self)}"), Vector2.zero)
-            };
-            UpdateAppearance(item);
-        }
-
-        private static string GetMode(GameItem item) => item.IsTag(StorageBus.DisabledTag) ? "disabled"
-            : item.IsTag(StorageBus.InternalTag) ? "internal" : "external";
-
-        private static void UpdateAppearance(GameItem item)
-        {
-            item.SetSprite(DigitalStorage.Instance.Manifest.ID, item.identifier);
-            item.name = StorageTerminal.Localize($"item.{item.identifier}.{GetMode(item)}.name");
-            item.contentWindow.SetTitle(item.GetDisplayName(preferCustomName: true));
-            item.Validate();
-        }
-
-        private sealed class Connection : IDisposable
-        {
-            private readonly GameItem bus;
-            private readonly GameInventory parent;
-            private bool IsStorage => !IOBus.IsIO(bus);
-            private readonly HashSet<GameInventory> inventories = new();
-            internal IEnumerable<GameInventory> Inventories => inventories;
-
-            internal Connection(GameItem bus, GameInventory parent)
-            {
-                this.bus = bus;
-                this.parent = parent;
-                parent.onSlotAddItemEndFunc += OnInventoryChanged;
-                parent.onSlotRemoveItemEndFunc += OnInventoryChanged;
-            }
-
-            internal void Refresh()
-            {
-                var desired = new Dictionary<GameInventory, GameItem>();
-                if (!bus.IsTag(StorageBus.DisabledTag) && bus.IsTag(StorageBus.InternalTag))
+                foreach (var entry in ordered)
                 {
-                    var owner = GraphUtils.FindParentType<GameItem>(parent);
-                    if (InventoryStorageProvider.GetPanel(parent)?.role != "note")
-                        desired.Add(parent, owner is GameCharacterItem ? null : owner);
-                }
-                else if (!bus.IsTag(StorageBus.DisabledTag))
-                {
-                    foreach (var target in FindTargets())
-                        foreach (var inventory in GraphUtils.FindChildrenType<GameInventory>(target.contentWindow))
-                            if (InventoryStorageProvider.GetPanel(inventory)?.role != "note")
-                                desired[inventory] = target;
-                }
-
-                foreach (var inventory in inventories.ToArray())
-                {
-                    if (desired.ContainsKey(inventory)) continue;
-                    if (!IsStorage) IOBusManager.Release(bus, inventory);
-                    BusManager.Release(inventory, IsStorage);
-                    inventories.Remove(inventory);
-                }
-
-                foreach (var entry in desired)
-                {
-                    if (inventories.Contains(entry.Key)) continue;
-                    var link = BusManager.Acquire(entry.Key, entry.Value, IsStorage);
-                    if (!IsStorage) IOBusManager.Acquire(bus, link);
-                    inventories.Add(entry.Key);
-                }
-
-                if (inventories.Count == 0 && IsStorage) bus.contentWindow.Lock();
-                else if (bus.contentWindow.isLocked) bus.contentWindow.Unlock();
-                BusUI.RefreshConnections(bus);
-            }
-
-            private IEnumerable<GameItem> FindTargets()
-            {
-                if (!(parent is GameGridInventory) && !(parent is GameGridScrollableInventory)) yield break;
-                var shape = bus.modifiedShape;
-                foreach (var item in parent.childItems)
-                {
-                    if (ReferenceEquals(item, bus) || item.contentWindow == null) continue;
-                    for (int column = 0; column < shape.width; column++)
-                    {
-                        var (x, y) = shape.ForwardTransform(column, -1);
-                        if (!item.modifiedShape.Intersects(x, y)) continue;
-                        yield return item;
-                        break;
-                    }
+                    if (!entry.Bus.CanExecute) continue;
+                    currentKind = entry.Operation.Kind;
+                    entry.Operation.Execute();
                 }
             }
-
-            private void Unregister()
-            {
-                foreach (var inventory in inventories)
-                {
-                    if (!IsStorage) IOBusManager.Release(bus, inventory);
-                    BusManager.Release(inventory, IsStorage);
-                }
-                inventories.Clear();
-            }
-
-            private void OnInventoryChanged(GameItem item, GameInventory inventory, SlotMarker slot) => Refresh();
-
-            public void Dispose()
-            {
-                parent.onSlotAddItemEndFunc -= OnInventoryChanged;
-                parent.onSlotRemoveItemEndFunc -= OnInventoryChanged;
-                Unregister();
-                bus.contentWindow.Lock();
-            }
+            finally { running = false; }
         }
     }
 }

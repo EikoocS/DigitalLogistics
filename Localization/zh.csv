@@ -45,3 +45,14 @@ ui.io_bus.input_order,输入运行顺序
 ui.io_bus.output_order,输出运行顺序
 ui.io_bus.input_priority,输入优先级
 ui.io_bus.output_priority,输出优先级
+item.trigger_bus.external.name,触发总线（外接）
+item.trigger_bus.internal.name,触发总线（内接）
+item.trigger_bus.disabled.name,触发总线（停用）
+item.trigger_bus.desc,
+item.trigger_bus.flavor,
+ui.io_bus.trigger_order,触发顺序
+ui.io_bus.trigger_priority,触发优先级
+ui.io_bus.trigger_count,触发次数
+ui.bus.no_connections,无有效无连接对象
+ui.trigger_bus.on_input_update,输入更新时触发
+ui.trigger_bus.loop_trigger,循环触发

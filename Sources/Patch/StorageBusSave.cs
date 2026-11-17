@@ -18,6 +18,7 @@ namespace DigitalStorage.Patch
             if (!DigitalStorage.Instance.Enabled) return;
             BusManager.Save();
             IOBusManager.Save();
+            TriggerBusManager.Save();
         }
     }
 }

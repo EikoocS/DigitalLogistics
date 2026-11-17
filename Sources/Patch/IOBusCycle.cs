@@ -1,4 +1,4 @@
-using DigitalStorage.Storage;
+using DigitalStorage.Controller;
 using HarmonyLib;
 
 namespace DigitalStorage.Patch
@@ -8,7 +8,7 @@ namespace DigitalStorage.Patch
     {
         private static void Postfix(int window)
         {
-            if (DigitalStorage.Instance.Enabled) IOBusManager.RunWindow(window);
+            if (DigitalStorage.Instance.Enabled) BusController.RunWindow(window);
         }
     }
 }

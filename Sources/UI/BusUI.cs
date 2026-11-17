@@ -16,7 +16,7 @@ namespace DigitalStorage.UI
         private const int Width = 360;
         private const int RowGap = 8;
         private const int Padding = 8;
-        private int VisibleRows => bus.identifier == IOBus.InputOutputId ? 3 : 4;
+        private const int VisibleRows = 4;
 
         private sealed class Row
         {
@@ -31,11 +31,20 @@ namespace DigitalStorage.UI
         private MachineryIntake intake;
         private MachineryPanel panel;
         private PixelWindow window;
+        private GameObject emptyState;
         private readonly List<Row> rows = new();
         private readonly List<Action> refreshers = new();
         private readonly List<Action> globalRefreshers = new();
         private bool IsIO => IOBus.IsIO(bus);
-        private int RowHeight => !IsIO ? 96 : bus.identifier == IOBus.InputOutputId ? 184 : 140;
+        private int DefaultRowHeight => bus.identifier switch
+        {
+            StorageBus.ItemId => 96,
+            IOBus.InputOutputId => 184,
+            TriggerBus.ItemId => 184,
+            _ => 140
+        };
+        private int RowHeight(object configuration) => configuration is TriggerBusManager.Configuration trigger
+            && trigger.Options.Length > 0 ? 228 : DefaultRowHeight;
 
         internal static PixelWindow Create(GameItem bus)
         {
@@ -57,19 +66,20 @@ namespace DigitalStorage.UI
             ui.scroll.content.anchorMin = new Vector2(0, 1);
             ui.scroll.content.anchorMax = Vector2.one;
             ui.scroll.content.pivot = new Vector2(0, 1);
+            ui.emptyState = ui.CreateEmptyState();
             PixelElement content = host;
             if (ui.IsIO)
             {
-                var onAdd = ui.CreateToggle("on_add", IOBusManager.OnAddTag);
-                var onMove = ui.CreateToggle("on_move", IOBusManager.OnMoveTag);
+                var onAdd = ui.CreateToggle("ui.io_bus.on_add", IOBusManager.OnAddTag);
+                var onMove = ui.CreateToggle("ui.io_bus.on_move", IOBusManager.OnMoveTag);
                 content = MachineryStack.Vertical(onAdd, onMove, host)
                     .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
             }
             ui.intake = new MachineryIntake(content);
             ui.panel = new MachineryPanel((string)null, ui.intake);
             ui.window = MachineHelper.CreateMachineryWindow(true, ui.panel);
-            if (!ui.IsIO) ui.window.Lock();
             ui.Rebuild();
+            ui.ResizeWindow();
             return ui.window;
         }
 
@@ -79,15 +89,31 @@ namespace DigitalStorage.UI
             foreach (var refresh in refreshers) refresh();
         }
 
-        private EmptyPixelElement CreateToggle(string caption, string tag)
+        private GameObject CreateEmptyState()
         {
-            var (toggleHost, root) = StorageTerminalUI.CreateControl(CustomUIManager.ElementKind.Toggle, Width, 22);
-            var element = CustomUIElement.Bind(root, caption);
-            element.SetText(StorageTerminal.Localize("ui.io_bus." + caption));
-            globalRefreshers.Add(() => element.toggle.SetIsOnWithoutNotify(bus.GetTagReadonly(tag).GetBool()));
-            element.toggle.onValueChanged.AddListener(value =>
-                bus.ModifyTag(tag, state => state.Enable().SetBool(value)));
-            return toggleHost;
+            var root = CustomUIManager.Instance.SpawnElement(
+                CustomUIManager.ElementKind.Label, scroll.content, null, "EmptyState");
+            CustomUIMachineryStyle.Reskin(root);
+            var rect = (RectTransform)root.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            var label = CustomUIElement.Bind(root, "empty");
+            label.SetText(StorageTerminal.Localize("ui.bus.no_connections"));
+            label.text.alignment = TextAlignmentOptions.Center;
+            label.text.enableAutoSizing = false;
+            label.text.richText = false;
+            label.text.raycastTarget = false;
+            return root;
+        }
+
+        private MachineryRadioButton CreateToggle(string key, string tag)
+        {
+            var toggle = new MachineryRadioButton(StorageTerminal.Localize(key),
+                bus.GetTagReadonly(tag).GetBool(), value =>
+                    bus.ModifyTag(tag, state => state.Enable().SetBool(value)));
+            globalRefreshers.Add(() => toggle.SetOn(bus.GetTagReadonly(tag).GetBool()));
+            return toggle;
         }
 
         private static void RefreshInput(TMP_InputField input, string value)
@@ -100,8 +126,7 @@ namespace DigitalStorage.UI
 
         private void Rebuild()
         {
-            var configurations = IsIO ? IOBusManager.GetConfigurations(bus).Cast<object>().ToArray()
-                : BusController.GetConfigurations(bus).Cast<object>().ToArray();
+            var configurations = BusController.GetConfigurations(bus).ToArray();
             if (rows.Select(row => row.Configuration).SequenceEqual(configurations)) return;
             foreach (var row in rows)
             {
@@ -116,8 +141,9 @@ namespace DigitalStorage.UI
                 root.SetParent(scroll.content, false);
                 root.anchorMin = root.pivot = new Vector2(0, 1);
                 root.anchorMax = Vector2.one;
-                root.anchoredPosition = new Vector2(Padding, -Padding - rows.Count * (RowHeight + RowGap));
-                root.sizeDelta = new Vector2(-Padding * 2, RowHeight);
+                root.anchoredPosition = new Vector2(Padding,
+                    -Padding - rows.Sum(row => RowHeight(row.Configuration) + RowGap));
+                root.sizeDelta = new Vector2(-Padding * 2, RowHeight(configuration));
                 var background = root.gameObject.AddComponent<Image>();
                 background.sprite = MachineryStyle.BevelFrame;
                 background.type = Image.Type.Sliced;
@@ -125,6 +151,7 @@ namespace DigitalStorage.UI
                 background.color = Color.white;
                 background.raycastTarget = false;
                 if (configuration is BusManager.Configuration storage) BuildStorageRow(root, storage);
+                else if (configuration is TriggerBusManager.Configuration trigger) BuildTriggerRow(root, trigger);
                 else BuildIORow(root, (IOBusManager.Configuration)configuration);
                 rows.Add(new Row { Configuration = configuration, Root = root });
             }
@@ -132,10 +159,12 @@ namespace DigitalStorage.UI
         }
 
         private int ContentHeight(int count) =>
-            Padding * 2 + count * RowHeight + Mathf.Max(0, count - 1) * RowGap;
+            Padding * 2 + (count == 0 ? DefaultRowHeight : rows.Take(count).Sum(row => RowHeight(row.Configuration)))
+                + Mathf.Max(0, count - 1) * RowGap;
 
         private void ResizeWindow()
         {
+            emptyState.SetActive(rows.Count == 0);
             bool overflow = rows.Count > VisibleRows;
             int height = ContentHeight(Mathf.Min(rows.Count, VisibleRows));
             host.ResizePixels(Width, height / 2);
@@ -225,15 +254,81 @@ namespace DigitalStorage.UI
             BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
         }
 
+        private void BuildTriggerRow(RectTransform root, TriggerBusManager.Configuration configuration)
+        {
+            var label = CreateLabel(root, new Vector2(Padding + 72, -Padding), "");
+            ((RectTransform)label.root.transform).sizeDelta = new Vector2(Width * 2 - Padding * 4 - 72, 36);
+            label.text.enableWordWrapping = false;
+            label.text.overflowMode = TextOverflowModes.Ellipsis;
+            label.text.richText = false;
+            refreshers.Add(() => label.SetText(configuration.Name));
+            label.SetText(configuration.Name);
+            BindOperation(root, 52, "trigger", () => configuration.Order,
+                value => configuration.Order = value, () => configuration.Priority,
+                value => configuration.Priority = value);
+            CreateLabel(root, new Vector2(Padding, -96), "trigger_count");
+            var countInput = CreateInput(root, new Vector2(-Padding, -96), 128, right: true);
+            BindInteger(countInput, () => configuration.Count, value => configuration.Count = Mathf.Max(0, value));
+            var inputToggle = BindSwitch(root, new Vector2(Padding, -140), () => configuration.OnInputUpdate,
+                value => configuration.OnInputUpdate = value);
+            var inputLabel = CreateLabel(root, new Vector2(80, -140), "");
+            inputLabel.SetText(StorageTerminal.Localize("ui.trigger_bus.on_input_update"));
+            inputLabel.text.raycastTarget = false;
+            var loopToggle = BindSwitch(root, new Vector2(360, -140), () => configuration.LoopTrigger,
+                value => configuration.LoopTrigger = value);
+            var loopLabel = CreateLabel(root, new Vector2(432, -140), "");
+            loopLabel.SetText(StorageTerminal.Localize("ui.trigger_bus.loop_trigger"));
+            loopLabel.text.raycastTarget = false;
+            var options = configuration.Options;
+            if (options.Length > 0)
+            {
+                var dropdownRoot = CustomUIManager.Instance.SpawnElement(
+                    CustomUIManager.ElementKind.Dropdown, root, null, "TriggerOption");
+                CustomUIMachineryStyle.Reskin(dropdownRoot);
+                var rect = (RectTransform)dropdownRoot.transform;
+                rect.anchorMin = rect.pivot = new Vector2(0, 1);
+                rect.anchorMax = Vector2.one;
+                rect.anchoredPosition = new Vector2(Padding, -184);
+                rect.sizeDelta = new Vector2(-Padding * 2, 36);
+                var dropdown = CustomUIElement.Bind(dropdownRoot, "option").dropdown;
+                dropdown.ClearOptions();
+                dropdown.AddOptions(options.Select(option => option.Name).ToList());
+                dropdown.onValueChanged.AddListener(index => configuration.OptionId = options[index].Id);
+                void RefreshOption() => dropdown.SetValueWithoutNotify(
+                    Array.FindIndex(options, option => option.Id == configuration.OptionId));
+                refreshers.Add(RefreshOption);
+                RefreshOption();
+            }
+            BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
+            refreshers.Add(() =>
+            {
+                countInput.interactable = !configuration.Disabled && !configuration.LoopTrigger;
+                loopToggle.interactable = !configuration.Disabled;
+                inputToggle.interactable = !configuration.Disabled;
+            });
+        }
+
         private void BindEnabled(RectTransform root, Func<bool> get, Action<bool> set)
         {
             var group = root.gameObject.AddComponent<CanvasGroup>();
             var inputs = root.GetComponentsInChildren<TMP_InputField>(true);
-            var switchRoot = new GameObject("Enabled", typeof(RectTransform), typeof(Image), typeof(Toggle));
+            var dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
+            BindSwitch(root, new Vector2(Padding, -Padding), get, set, enabled =>
+            {
+                group.alpha = enabled ? 1 : 0.45f;
+                foreach (var input in inputs) input.interactable = enabled;
+                foreach (var dropdown in dropdowns) dropdown.interactable = enabled;
+            });
+        }
+
+        private Toggle BindSwitch(RectTransform root, Vector2 position, Func<bool> get, Action<bool> set,
+            Action<bool> onRefresh = null)
+        {
+            var switchRoot = new GameObject("Switch", typeof(RectTransform), typeof(Image), typeof(Toggle));
             var rect = (RectTransform)switchRoot.transform;
             rect.SetParent(root, false);
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
-            rect.anchoredPosition = new Vector2(Padding, -Padding);
+            rect.anchoredPosition = position;
             rect.sizeDelta = new Vector2(64, 36);
             var track = switchRoot.GetComponent<Image>();
             track.sprite = MachineryStyle.BevelFrame;
@@ -259,8 +354,7 @@ namespace DigitalStorage.UI
                 toggle.SetIsOnWithoutNotify(enabled);
                 thumbRect.anchoredPosition = new Vector2(enabled ? 34 : 6, 0);
                 track.color = enabled ? MachineryStyle.PROGRESS_FILL : MachineryStyle.SLIDER_FILL;
-                group.alpha = enabled ? 1 : 0.45f;
-                foreach (var input in inputs) input.interactable = enabled;
+                onRefresh?.Invoke(enabled);
             }
             toggle.onValueChanged.AddListener(value =>
             {
@@ -269,6 +363,7 @@ namespace DigitalStorage.UI
             });
             refreshers.Add(Refresh);
             Refresh();
+            return toggle;
         }
 
         private void BindOperation(RectTransform root, int y, string direction, Func<int> order,
@@ -282,7 +377,7 @@ namespace DigitalStorage.UI
             BindInteger(priorityInput, priority, setPriority);
         }
 
-        private static void CreateLabel(RectTransform parent, Vector2 position, string key, float anchor = 0)
+        private static CustomUIElement CreateLabel(RectTransform parent, Vector2 position, string key, float anchor = 0)
         {
             var root = CustomUIManager.Instance.SpawnElement(CustomUIManager.ElementKind.Label, parent, null, key);
             CustomUIMachineryStyle.Reskin(root);
@@ -291,7 +386,9 @@ namespace DigitalStorage.UI
             rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = position;
             rect.sizeDelta = new Vector2(192, 36);
-            CustomUIElement.Bind(root, key).SetText(StorageTerminal.Localize("ui.io_bus." + key));
+            var element = CustomUIElement.Bind(root, key);
+            element.SetText(StorageTerminal.Localize("ui.io_bus." + key));
+            return element;
         }
 
         private void BindInteger(TMP_InputField input, Func<int> get, Action<int> set)

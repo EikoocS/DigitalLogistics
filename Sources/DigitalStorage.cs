@@ -30,6 +30,7 @@ namespace DigitalStorage
             ModHook.OnGameLoadedInit += BusController.ClearConnections;
             ModHook.OnGameLoadedEarly += BusManager.Load;
             ModHook.OnGameLoadedEarly += IOBusManager.Load;
+            ModHook.OnGameLoadedEarly += TriggerBusManager.Load;
             Log.Log("Enabled.");
         }
 
@@ -42,6 +43,7 @@ namespace DigitalStorage
             ModHook.OnGameLoadedInit -= BusController.ClearConnections;
             ModHook.OnGameLoadedEarly -= BusManager.Load;
             ModHook.OnGameLoadedEarly -= IOBusManager.Load;
+            ModHook.OnGameLoadedEarly -= TriggerBusManager.Load;
             BusController.ClearConnections();
             Log.Log("Disabled.");
         }
@@ -50,6 +52,7 @@ namespace DigitalStorage
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
             directory.Add(StorageBus.ItemId, StorageBus.Create);
+            directory.Add(TriggerBus.ItemId, TriggerBus.Create);
             directory.Add(IOBus.InputId, () => IOBus.Create(IOBus.InputId));
             directory.Add(IOBus.OutputId, () => IOBus.Create(IOBus.OutputId));
             directory.Add(IOBus.InputOutputId, () => IOBus.Create(IOBus.InputOutputId));

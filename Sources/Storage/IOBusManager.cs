@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DigitalStorage.Controller;
 using DigitalStorage.Filtering;
 using DigitalStorage.Item;
 using UnityEngine;
@@ -42,25 +43,10 @@ namespace DigitalStorage.Storage
             public List<Configuration> Configurations = new();
         }
 
-        private readonly struct Operation
-        {
-            internal readonly Configuration Configuration;
-            internal readonly bool Input;
-            internal int Order => Input ? Configuration.InputOrder : Configuration.OutputOrder;
-            internal int Priority => Input ? Configuration.InputPriority : Configuration.OutputPriority;
-
-            internal Operation(Configuration configuration, bool input)
-            {
-                Configuration = configuration;
-                Input = input;
-            }
-        }
-
         private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameItem, List<Configuration>> active = new();
         private static readonly HashSet<GameItem> pending = new();
         private static Coroutine scheduled;
-        private static bool running;
 
         internal static bool IsOnAdd(GameItem bus) => bus.GetTagReadonly(OnAddTag).GetBool();
         internal static bool IsOnMove(GameItem bus) => bus.GetTagReadonly(OnMoveTag).GetBool();
@@ -81,7 +67,7 @@ namespace DigitalStorage.Storage
             configuration.Apply();
             configuration.OnAdded = (item, _, _) =>
             {
-                if (!configuration.Disabled && !SaveManager.IsDecoding && !IOBus.IsBus(item) && IsOnAdd(bus)) Schedule(bus);
+                if (!configuration.Disabled && !SaveManager.IsDecoding && !Bus.IsBus(item) && IsOnAdd(bus)) Schedule(bus);
             };
             link.Inventory.onSlotAddItemEndFunc += configuration.OnAdded;
             if (!active.TryGetValue(bus, out var links)) active.Add(bus, links = new());
@@ -132,7 +118,7 @@ namespace DigitalStorage.Storage
 
         internal static void Schedule(GameItem bus)
         {
-            if (running || IsAway() || !active.ContainsKey(bus)) return;
+            if (!BusController.CanSchedule || !active.ContainsKey(bus)) return;
             pending.Add(bus);
             if (scheduled == null)
                 scheduled = ModHelper.StartCoroutine(DigitalStorage.Instance.Manifest.ID, RunPending());
@@ -144,53 +130,33 @@ namespace DigitalStorage.Storage
             scheduled = null;
             var buses = pending.ToArray();
             pending.Clear();
-            Execute(GetOperations(buses));
+            BusController.Run(buses);
         }
 
-        internal static void Run(GameItem bus) => Execute(GetOperations(new[] { bus }));
-
-        internal static void RunWindow(int window) => Execute(GetOperations(active.Keys)
-            .Where(operation => HopperHelper.WindowOf(operation.Order) == window));
-
-        private static IEnumerable<Operation> GetOperations(IEnumerable<GameItem> buses)
+        internal static IEnumerable<BusOperation> GetOperations(GameItem bus)
         {
-            foreach (var bus in buses)
-                foreach (var configuration in GetConfigurations(bus))
-                {
-                    if (configuration.Disabled) continue;
-                    if (IOBus.CanInput(bus)) yield return new Operation(configuration, true);
-                    if (IOBus.CanOutput(bus)) yield return new Operation(configuration, false);
-                }
-        }
-
-        private static bool IsAway() => MapUIManager.Instance != null && MapUIManager.Instance.IsOutside;
-
-        private static void Execute(IEnumerable<Operation> operations)
-        {
-            if (running || IsAway() || !DigitalStorage.Instance.Enabled) return;
-            var ordered = operations.OrderBy(operation => operation.Order)
-                .ThenBy(operation => operation.Input ? 0 : 1)
-                .ThenByDescending(operation => operation.Priority).ToArray();
-            running = true;
-            try
+            foreach (var configuration in GetConfigurations(bus))
             {
-                foreach (var operation in ordered)
-                {
-                    var configuration = operation.Configuration;
-                    if (configuration.Link == null || configuration.Bus.IsTag(StorageBus.DisabledTag)
-                        || !GeneralHelper.IsItemOwned(configuration.Bus)) continue;
-                    if (operation.Input) Input(configuration);
-                    else Output(configuration);
-                }
+                if (configuration.Disabled) continue;
+                if (IOBus.CanInput(bus)) yield return CreateOperation(configuration, true);
+                if (IOBus.CanOutput(bus)) yield return CreateOperation(configuration, false);
             }
-            finally { running = false; }
         }
+
+        private static BusOperation CreateOperation(Configuration configuration, bool input) => new(
+            input ? configuration.InputOrder : configuration.OutputOrder,
+            input ? configuration.InputPriority : configuration.OutputPriority, input ? BusOperationKind.Input : BusOperationKind.Output, () =>
+            {
+                if (configuration.Link == null) return;
+                if (input) Input(configuration);
+                else Output(configuration);
+            });
 
         private static bool CanMove(CachedItem stored)
         {
             if (!stored.VerifyValidity()) return false;
             var item = stored.GetItemInstance();
-            return !IOBus.IsBus(item)
+            return !Bus.IsBus(item)
                 && GeneralHelper.IsItemOwned(item) && item.MayRemove() && item.MaxNumRemove() > 0;
         }
 
