@@ -21,13 +21,15 @@ namespace DigitalLogistics.Storage
             public string Key;
             public string Name = string.Empty;
             public bool Disabled = true;
-            public List<BusScheduleEntry> InputSchedule = new();
-            public List<BusScheduleEntry> OutputSchedule = new();
+            public List<IOBusScheduleEntry> InputSchedule = new();
+            public List<IOBusScheduleEntry> OutputSchedule = new();
             public string Filter = string.Empty;
+            public int Count = 1;
             [NonSerialized] internal GameItem Bus;
             [NonSerialized] internal BusManager.Link Link;
             [NonSerialized] internal StoredItemExpression Expression;
             [NonSerialized] internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
+            internal int RepeatCount => Math.Max(1, Count);
             internal string DefaultName => Link.Name;
             internal string DefaultFilter => Bus.identifier == IOBus.InputId ? "True" : "False";
 
@@ -151,16 +153,35 @@ namespace DigitalLogistics.Storage
                 yield break;
             }
             foreach (var entry in input ? configuration.InputSchedule : configuration.OutputSchedule)
-                if (entry.Enabled) yield return CreateOperation(configuration, input, entry.Order, entry.Priority);
+                if (entry.Enabled) yield return CreateOperation(configuration, input, entry);
         }
 
-        private static BusOperation CreateOperation(Configuration configuration, bool input, int order = 6,
-            int priority = 0) => new(order, priority, input ? BusOperationKind.Input : BusOperationKind.Output, () =>
+        private static BusOperation CreateOperation(Configuration configuration, bool input, IOBusScheduleEntry entry = null) =>
+            new(entry?.Order ?? 6, entry?.Priority ?? 0, input ? BusOperationKind.Input : BusOperationKind.Output,
+                () => Transfer(configuration, input, entry));
+
+        private static void Transfer(Configuration configuration, bool input, IOBusScheduleEntry entry)
+        {
+            if (configuration.Disabled || configuration.Link == null) return;
+            var provider = configuration.Link.Provider;
+            var expression = entry?.Expression ?? (input && configuration.Bus.identifier == IOBus.InputOutputId
+                ? configuration.Expression.Not() : configuration.Expression);
+            int remaining = entry?.RepeatCount ?? configuration.RepeatCount;
+            var candidates = input ? provider.Snapshot().Where(expression.Evaluate)
+                : DigitalLogistics.Manager.SearchForOutput(expression, provider);
+            foreach (var stored in candidates)
             {
-                if (configuration.Link == null) return;
-                if (input) Input(configuration);
-                else Output(configuration);
-            });
+                if (!CanMove(stored)) continue;
+                using var output = stored.PrepareOutput();
+                if (output == null) continue;
+                int amount = output.Item.MaxNumRemove();
+                var result = input
+                    ? DigitalLogistics.Manager.TryInput(output.Item, amount, target => target != provider)
+                    : provider.InputFromSystem(output.Item, amount);
+                output.Complete(result.Amount);
+                if (result.Amount > 0 && --remaining == 0) break;
+            }
+        }
 
         private static bool CanMove(CachedItem stored)
         {
@@ -168,34 +189,6 @@ namespace DigitalLogistics.Storage
             var item = stored.GetItemInstance();
             return !Bus.IsBus(item)
                 && GeneralHelper.IsItemOwned(item) && item.MayRemove() && item.MaxNumRemove() > 0;
-        }
-
-        private static void Input(Configuration configuration)
-        {
-            var expression = configuration.Bus.identifier == IOBus.InputOutputId
-                ? configuration.Expression.Not() : configuration.Expression;
-            foreach (var stored in configuration.Link.Provider.Snapshot())
-            {
-                if (!expression.Evaluate(stored) || !CanMove(stored)) continue;
-                using var output = stored.PrepareOutput();
-                if (output == null) continue;
-                var result = DigitalLogistics.Manager.TryInput(output.Item, output.Item.MaxNumRemove(),
-                    provider => provider != configuration.Link.Provider);
-                output.Complete(result.Amount);
-            }
-        }
-
-        private static void Output(Configuration configuration)
-        {
-            foreach (var stored in DigitalLogistics.Manager.SearchForOutput(
-                configuration.Expression, configuration.Link.Provider))
-            {
-                if (!CanMove(stored)) continue;
-                using var output = stored.PrepareOutput();
-                if (output == null) continue;
-                var result = configuration.Link.Provider.InputFromSystem(output.Item, output.Item.MaxNumRemove());
-                output.Complete(result.Amount);
-            }
         }
     }
 }

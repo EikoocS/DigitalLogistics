@@ -59,6 +59,10 @@ ui.io_bus.storage_priority,优先级：
 ui.io_bus.input_configuration,输入过滤：
 ui.io_bus.output_configuration,输出过滤：
 ui.io_bus.filter_configuration,输入输出过滤：
+ui.io_bus.transfer_count,转移次数：
+ui.io_bus.schedule_count,次数
+ui.io_bus.schedule_filter,过滤器
+ui.io_bus.inherit_filter,使用全局过滤器
 ui.bus.no_connections,无有效无连接对象
 ui.trigger_bus.on_input_update,输入更新时执行
 ui.trigger_bus.loop_trigger,执行时循环触发

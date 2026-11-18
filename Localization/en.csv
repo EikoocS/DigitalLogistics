@@ -41,10 +41,10 @@ item.input_output_bus.desc,
 item.input_output_bus.flavor,
 ui.io_bus.on_add,
 ui.io_bus.on_move,
-ui.io_bus.input_order,
-ui.io_bus.output_order,
-ui.io_bus.input_priority,
-ui.io_bus.output_priority,
+ui.io_bus.input_order,Input order
+ui.io_bus.output_order,Output order
+ui.io_bus.input_priority,Input priority
+ui.io_bus.output_priority,Output priority
 item.trigger_bus.external.name,
 item.trigger_bus.internal.name,
 item.trigger_bus.disabled.name,
@@ -59,6 +59,10 @@ ui.io_bus.storage_priority,Priority:
 ui.io_bus.input_configuration,Input filter:
 ui.io_bus.output_configuration,Output filter:
 ui.io_bus.filter_configuration,Input/output filter:
+ui.io_bus.transfer_count,Transfer count:
+ui.io_bus.schedule_count,Count
+ui.io_bus.schedule_filter,Filter
+ui.io_bus.inherit_filter,Use global filter
 ui.bus.no_connections,No valid connected targets
 ui.trigger_bus.on_input_update,Execute on input updates
 ui.trigger_bus.loop_trigger,Loop when executing

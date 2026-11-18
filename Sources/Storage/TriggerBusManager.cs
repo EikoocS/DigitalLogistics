@@ -115,20 +115,20 @@ namespace DigitalLogistics.Storage
                 if (!nightly) yield return CreateOperation(configuration);
                 else
                     foreach (var entry in configuration.Schedule)
-                        if (entry.Enabled) yield return CreateOperation(configuration, entry.Order, entry.Priority);
+                        if (entry.Enabled) yield return CreateOperation(configuration, entry);
             }
         }
 
-        private static BusOperation CreateOperation(Configuration configuration, int order = 6, int priority = 0) =>
-            new(order, priority, BusOperationKind.Trigger, () => Trigger(configuration));
+        private static BusOperation CreateOperation(Configuration configuration, BusScheduleEntry entry = null) =>
+            new(entry?.Order ?? 6, entry?.Priority ?? 0, BusOperationKind.Trigger,
+                () => Trigger(configuration, entry?.RepeatCount ?? configuration.TriggerCount));
 
-        private static void Trigger(Configuration configuration)
+        private static void Trigger(Configuration configuration, int limit)
         {
             if (!executing.Add(configuration)) return;
             pending.Remove(configuration);
             try
             {
-                int limit = configuration.TriggerCount;
                 for (int i = 0; i < limit; i++)
                 {
                     if (configuration.Disabled || !GetConfigurations(configuration.Bus).Contains(configuration)

@@ -17,5 +17,7 @@
   <!-- What your code does beyond the game's API: files, network, process, dynamic-code, native, reflection-external.
        Most mods need none. The game scans your DLL when a player activates the mod; an undeclared capability
        refuses the activation. Check with the console command: mod-scan digital_logistics   (see ModdingGuide.md) -->
-  <Capabilities />
+  <Capabilities>
+    <Capability>dynamic-code</Capability>
+  </Capabilities>
 </Manifest>

@@ -243,8 +243,14 @@ namespace DigitalLogistics.UI
 
         private void BuildIORow(RectTransform root, IOBusManager.Configuration configuration)
         {
-            BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -Padding * 2 - 48),
+            const int countWidth = 120;
+            var countLabel = CreateLabel(root, new Vector2(-Padding * 2 - countWidth, -Padding), "transfer_count", anchor: 1);
+            int countLabelWidth = FitLabel(countLabel);
+            ((RectTransform)countLabel.root.transform).pivot = Vector2.one;
+            BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -Padding * 4 - 48 - countWidth - countLabelWidth),
                 () => configuration.Name, () => configuration.DefaultName, value => configuration.Name = value);
+            BindInteger(CreateInput(root, new Vector2(-Padding, -Padding), countWidth, right: true),
+                () => configuration.RepeatCount, value => configuration.Count = Mathf.Max(1, value));
             string configurationKey = bus.identifier switch
             {
                 IOBus.InputId => "input_configuration",
@@ -260,9 +266,9 @@ namespace DigitalLogistics.UI
                 });
             int y = 96;
             if (IOBus.CanInput(bus))
-                y = BindSchedule(root, y, "input", configuration.InputSchedule);
+                y = BindSchedule(root, y, "input", configuration.InputSchedule, BindScheduleFilter);
             if (IOBus.CanOutput(bus))
-                BindSchedule(root, y, "output", configuration.OutputSchedule);
+                BindSchedule(root, y, "output", configuration.OutputSchedule, BindScheduleFilter);
             BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
         }
 
@@ -359,8 +365,16 @@ namespace DigitalLogistics.UI
             return toggle;
         }
 
-        private int BindSchedule(RectTransform root, int y, string direction, List<BusScheduleEntry> schedule)
+        private int BindSchedule<T>(RectTransform root, int y, string direction, List<T> schedule,
+            Action<RectTransform, T> bindFilter = null) where T : BusScheduleEntry, new()
         {
+            const int edge = 64;
+            var divisions = bindFilter == null ? new[] { 0f, 1f / 3, 2f / 3, 1f }
+                : new[] { 0f, 0.22f, 0.44f, 0.62f, 1f };
+            var boundaries = new List<(float Anchor, float Offset)> { (0, 0) };
+            boundaries.AddRange(divisions.Select(part => (part, edge * (1 - 2 * part))));
+            boundaries.Add((1, 0));
+            int lastColumn = boundaries.Count - 2;
             int height = (schedule.Count + 1) * 44;
             var table = new GameObject("ScheduleTable", typeof(RectTransform)).GetComponent<RectTransform>();
             table.SetParent(root, false);
@@ -368,37 +382,43 @@ namespace DigitalLogistics.UI
             table.anchorMax = Vector2.one;
             table.anchoredPosition = new Vector2(Padding, -y);
             table.sizeDelta = new Vector2(-Padding * 2, height);
-            CreateTableLine(table, true, 0);
-            CreateTableLine(table, true, 64);
-            CreateTableLine(table, true, 0, anchor: 0.5f);
-            CreateTableLine(table, true, -64, anchor: 1);
+            foreach (var (anchor, offset) in boundaries.Take(boundaries.Count - 1))
+                CreateTableLine(table, true, offset, anchor);
             CreateTableLine(table, true, -2, anchor: 1);
             for (int line = 0; line <= schedule.Count; line++) CreateTableLine(table, false, line * 44);
             CreateTableLine(table, false, height - 2);
-            for (int column = 1; column <= 2; column++)
+
+            RectTransform Cell(int row, int column) =>
+                CreateScheduleCell(table, row, boundaries[column], boundaries[column + 1]);
+            void Header(int column, string key)
             {
-                var label = CreateLabel(CreateScheduleCell(table, 0, column), new Vector2(4, -4),
-                    direction + (column == 1 ? "_order" : "_priority"));
+                var label = CreateLabel(Cell(0, column), new Vector2(4, -4), key);
                 var rect = (RectTransform)label.root.transform;
                 rect.anchorMax = Vector2.one;
                 rect.sizeDelta = new Vector2(-8, 36);
                 label.text.alignment = TextAlignmentOptions.Center;
             }
-            CreateScheduleButton(CreateScheduleCell(table, 0, 3), 4, "+", () =>
+            Header(1, direction + "_order");
+            Header(2, direction + "_priority");
+            Header(3, "schedule_count");
+            if (bindFilter != null) Header(4, "schedule_filter");
+            CreateScheduleButton(Cell(0, lastColumn), 4, "+", () =>
             {
-                schedule.Add(new BusScheduleEntry());
+                schedule.Add(new T());
                 Rebuild(force: true);
             });
             int row = 1;
             foreach (var entry in schedule)
             {
-                BindToggle(CreateScheduleCell(table, row, 0), new Vector2(16, -4),
-                    () => entry.Enabled, value => entry.Enabled = value);
-                BindInteger(CreateInput(CreateScheduleCell(table, row, 1), new Vector2(4, -4), -8),
+                BindToggle(Cell(row, 0), new Vector2(16, -4), () => entry.Enabled, value => entry.Enabled = value);
+                BindInteger(CreateInput(Cell(row, 1), new Vector2(4, -4), -8),
                     () => entry.Order, value => entry.Order = Mathf.Clamp(value, 1, 15));
-                BindInteger(CreateInput(CreateScheduleCell(table, row, 2), new Vector2(4, -4), -8),
+                BindInteger(CreateInput(Cell(row, 2), new Vector2(4, -4), -8),
                     () => entry.Priority, value => entry.Priority = value);
-                CreateScheduleButton(CreateScheduleCell(table, row, 3), 4, "×", () =>
+                BindInteger(CreateInput(Cell(row, 3), new Vector2(4, -4), -8),
+                    () => entry.RepeatCount, value => entry.Count = Mathf.Max(1, value));
+                if (bindFilter != null) bindFilter(Cell(row, 4), entry);
+                CreateScheduleButton(Cell(row, lastColumn), 4, "×", () =>
                 {
                     schedule.Remove(entry);
                     Rebuild(force: true);
@@ -408,26 +428,32 @@ namespace DigitalLogistics.UI
             return y + height + RowGap;
         }
 
-        private static RectTransform CreateScheduleCell(RectTransform table, int row, int column)
+        private void BindScheduleFilter(RectTransform cell, IOBusScheduleEntry entry)
+        {
+            var input = CreateInput(cell, new Vector2(4, -4), -8);
+            BindText(input, () => entry.Filter, () => StorageTerminal.Localize("ui.io_bus.inherit_filter"), value =>
+            {
+                bool valid = string.IsNullOrWhiteSpace(value) || ParseFilter(value) != null;
+                input.textComponent.color = valid ? Color.white : Color.red;
+                if (valid) entry.SetFilter(value.Trim());
+            });
+            input.onValueChanged.AddListener(_ => input.textComponent.color = Color.white);
+        }
+
+        private static RectTransform CreateScheduleCell(RectTransform table, int row,
+            (float Anchor, float Offset) left, (float Anchor, float Offset) right)
         {
             var rect = new GameObject("ScheduleCell", typeof(RectTransform)).GetComponent<RectTransform>();
             rect.SetParent(table, false);
-            var (min, max, x, width) = column switch
-            {
-                0 => (0f, 0f, 0, 64),
-                1 => (0f, 0.5f, 64, -64),
-                2 => (0.5f, 1f, 0, -64),
-                _ => (1f, 1f, -64, 64)
-            };
-            rect.anchorMin = new Vector2(min, 1);
-            rect.anchorMax = new Vector2(max, 1);
+            rect.anchorMin = new Vector2(left.Anchor, 1);
+            rect.anchorMax = new Vector2(right.Anchor, 1);
             rect.pivot = new Vector2(0, 1);
-            rect.anchoredPosition = new Vector2(x, -row * 44);
-            rect.sizeDelta = new Vector2(width, 44);
+            rect.anchoredPosition = new Vector2(left.Offset, -row * 44);
+            rect.sizeDelta = new Vector2(right.Offset - left.Offset, 44);
             return rect;
         }
 
-        private static void CreateTableLine(RectTransform parent, bool vertical, int position, float anchor = 0)
+        private static void CreateTableLine(RectTransform parent, bool vertical, float position, float anchor = 0)
         {
             var root = new GameObject("TableBorder", typeof(RectTransform), typeof(Image));
             var rect = (RectTransform)root.transform;
