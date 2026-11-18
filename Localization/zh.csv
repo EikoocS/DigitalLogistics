@@ -68,7 +68,7 @@ ui.trigger_bus.on_input_update,输入更新时执行
 ui.trigger_bus.loop_trigger,执行时循环触发
 config.search_delay_ms,搜索输入等待时间（毫秒）
 config.refresh_hold_ms,刷新按钮长按时间（毫秒）
-config.notify_refresh_result,显示索引刷新结果通知
+config.terminal_refresh_mode,终端刷新方式
 config.search_budget_ms,物品搜索时间预算（毫秒）
 config.terminal_budget_ms,终端列表每帧时间预算（毫秒）
 config.index_refresh_budget_ms,索引刷新每帧时间预算（毫秒）

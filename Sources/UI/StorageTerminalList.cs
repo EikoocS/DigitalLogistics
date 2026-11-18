@@ -10,19 +10,24 @@ namespace DigitalLogistics.UI
         private const float RowSpacing = 4;
         private readonly ScrollRect scroll;
         private readonly TreeNodeRender rowParent;
+        private readonly Vector2 contentOffsetMin;
+        private readonly Vector2 contentOffsetMax;
+        private readonly RectOffset contentPadding;
         private string priceUnit;
         internal float ScrollPosition => scroll.content.anchoredPosition.y;
 
         internal sealed class GroupView
         {
             private readonly StorageTerminalList list;
+            private readonly RectTransform content;
             private RectTransform root;
             private RectTransform children;
             internal StorageTerminalRow Header { get; }
 
-            internal GroupView(StorageTerminalList list, StorageTerminalRow header)
+            internal GroupView(StorageTerminalList list, RectTransform content, StorageTerminalRow header)
             {
                 this.list = list;
+                this.content = content;
                 Header = header;
                 root = header.rectTransform;
             }
@@ -30,7 +35,7 @@ namespace DigitalLogistics.UI
             internal void MakeGroup(bool expanded, Action toggle)
             {
                 int index = root.GetSiblingIndex();
-                root = CreateContainer(list.scroll.content, "StorageTerminalGroup");
+                root = CreateContainer(content, "StorageTerminalGroup");
                 root.SetSiblingIndex(index);
                 Header.rectTransform.SetParent(root, false);
                 children = CreateContainer(root, "StorageTerminalChildren");
@@ -42,7 +47,7 @@ namespace DigitalLogistics.UI
             internal void MakeSingle()
             {
                 int index = root.GetSiblingIndex();
-                Header.rectTransform.SetParent(list.scroll.content, false);
+                Header.rectTransform.SetParent(content, false);
                 Header.SetIndex(index);
                 Destroy();
                 root = Header.rectTransform;
@@ -77,17 +82,49 @@ namespace DigitalLogistics.UI
             this.rowParent = rowParent;
             scroll = root.GetComponentInChildren<ScrollRect>(true);
             scroll.horizontal = false;
-            scroll.content.anchorMin = new Vector2(0, 1);
-            scroll.content.anchorMax = Vector2.one;
-            scroll.content.pivot = new Vector2(0.5f, 1);
-            ConfigureLayout(scroll.content.GetComponent<VerticalLayoutGroup>());
-            var fitter = scroll.content.GetComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            ConfigureContent(scroll.content);
+            contentOffsetMin = scroll.content.offsetMin;
+            contentOffsetMax = scroll.content.offsetMax;
+            contentPadding = scroll.content.GetComponent<VerticalLayoutGroup>().padding;
         }
 
-        internal GroupView CreateRow(StorageTerminalRowController controller) =>
-            new GroupView(this, CreateRow(controller, scroll.content));
+        internal RectTransform CreateStagingContent()
+        {
+            var root = new GameObject("StorageTerminalContent", typeof(RectTransform), typeof(VerticalLayoutGroup),
+                typeof(ContentSizeFitter), typeof(CanvasGroup));
+            var canvas = root.GetComponent<CanvasGroup>();
+            canvas.alpha = 0;
+            canvas.blocksRaycasts = canvas.interactable = false;
+            var content = (RectTransform)root.transform;
+            content.SetParent(scroll.content.parent, false);
+            ConfigureContent(content);
+            content.GetComponent<VerticalLayoutGroup>().padding = contentPadding;
+            content.offsetMin = contentOffsetMin;
+            content.offsetMax = contentOffsetMax;
+            content.anchoredPosition = Vector2.zero;
+            return content;
+        }
+
+        internal void Publish(RectTransform content, float position)
+        {
+            var previous = scroll.content;
+            scroll.content = content;
+            RestoreScroll(position);
+            Discard(previous);
+            var canvas = content.GetComponent<CanvasGroup>();
+            canvas.alpha = 1;
+            canvas.blocksRaycasts = canvas.interactable = true;
+        }
+
+        internal static void Discard(RectTransform content)
+        {
+            if (content == null) return;
+            content.gameObject.SetActive(false);
+            UnityEngine.Object.Destroy(content.gameObject);
+        }
+
+        internal GroupView CreateRow(RectTransform content, StorageTerminalRowController controller) =>
+            new GroupView(this, content, CreateRow(controller, content));
 
         private StorageTerminalRow CreateRow(StorageTerminalRowController controller, RectTransform parent)
         {
@@ -96,16 +133,9 @@ namespace DigitalLogistics.UI
             return row;
         }
 
-        internal void ResetScroll()
-        {
-            scroll.StopMovement();
-            scroll.content.anchoredPosition = Vector2.zero;
-            LayoutRebuilder.MarkLayoutForRebuild(scroll.content);
-        }
-
         internal void RefreshPriceUnit() => priceUnit = LocHelper.GetLocalizedMechanic("mech_credits");
 
-        internal void RestoreScroll(float position)
+        private void RestoreScroll(float position)
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
             float maximum = Mathf.Max(0, scroll.content.rect.height - scroll.viewport.rect.height);
@@ -123,6 +153,17 @@ namespace DigitalLogistics.UI
             rect.SetParent(parent, false);
             ConfigureLayout(root.GetComponent<VerticalLayoutGroup>());
             return rect;
+        }
+
+        private static void ConfigureContent(RectTransform content)
+        {
+            content.anchorMin = new Vector2(0, 1);
+            content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(0.5f, 1);
+            ConfigureLayout(content.GetComponent<VerticalLayoutGroup>());
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
         private static void ConfigureLayout(VerticalLayoutGroup layout)

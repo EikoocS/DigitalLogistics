@@ -101,7 +101,7 @@ namespace DigitalLogistics.UI
 
         internal static void NotifyRefreshResult()
         {
-            if (!DigitalLogistics.Instance.Settings.NotifyRefreshResult.Value) return;
+            if (DigitalLogistics.Instance.Settings.RefreshMode != TerminalRefreshMode.Notify) return;
             string message = string.Format(Localize("refresh_result"),
                 StorageIndexRefresh.ProcessedItems, StorageIndexRefresh.ElapsedMilliseconds);
             if (!StorageIndexRefresh.Succeeded)

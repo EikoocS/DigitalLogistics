@@ -3,7 +3,7 @@ item.storage_terminal.desc,
 item.storage_terminal.flavor,
 ui.storage_terminal.search_placeholder,
 ui.storage_terminal.refreshing,
-ui.storage_terminal.refresh_result,
+ui.storage_terminal.refresh_result,Refreshed {0:N0} items / {1:N0} ms
 item.storage_bus.external.name,Storage Bus (External)
 item.storage_bus.internal.name,Storage Bus (Internal)
 item.storage_bus.disabled.name,Storage Bus (Disabled)
@@ -68,7 +68,7 @@ ui.trigger_bus.on_input_update,Execute on input updates
 ui.trigger_bus.loop_trigger,Loop when executing
 config.search_delay_ms,Search input delay (ms)
 config.refresh_hold_ms,Refresh button hold duration (ms)
-config.notify_refresh_result,Show index refresh result notification
+config.terminal_refresh_mode,Terminal refresh mode
 config.search_budget_ms,Item search time budget (ms)
 config.terminal_budget_ms,Terminal list time budget per frame (ms)
 config.index_refresh_budget_ms,Index refresh time budget per frame (ms)

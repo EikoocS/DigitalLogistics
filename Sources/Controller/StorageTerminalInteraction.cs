@@ -36,6 +36,7 @@ namespace DigitalLogistics.Controller
 
         internal bool Consuming => previewItem != null || quickTransfer || movement != null
             || Time.frameCount <= consumeUntilFrame;
+        internal bool HasActiveInput => pointerDown || Consuming;
 
         public override List<KeyCode> keyListeners => new() { KeyCode.Mouse0, KeyCode.Mouse1, KeyCode.Escape };
 
