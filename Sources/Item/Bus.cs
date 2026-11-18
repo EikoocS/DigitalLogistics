@@ -1,8 +1,7 @@
 using DigitalLogistics.Buses;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Controller;
-using DigitalLogistics.UI;
+using DigitalLogistics.UI.Buses;
 using UnityEngine;
 
 namespace DigitalLogistics.Item
@@ -29,8 +28,8 @@ namespace DigitalLogistics.Item
             RefreshWindowState();
             Item.SetGameItemType("MACHINE");
             Item.EnableTag(GeneralHelper.IS_UNLOAD_DISABLED_TAG);
-            Item.shortDescription = StorageTerminal.Localize($"item.{id}.desc");
-            Item.flavorText = StorageTerminal.Localize($"item.{id}.flavor");
+            Item.shortDescription = DigitalLogistics.Localize($"item.{id}.desc");
+            Item.flavorText = DigitalLogistics.Localize($"item.{id}.flavor");
             Item.mayToggleSlotItemFunc = (_, _, _) => true;
             Item.canToggleSlotItemFunc = (_, _, _) => true;
             Item.onToggleSlotItemFunc += (_, _, _) => Toggle();
@@ -74,7 +73,7 @@ namespace DigitalLogistics.Item
         private void UpdateAppearance()
         {
             Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, Item.identifier);
-            Item.name = StorageTerminal.Localize($"item.{Item.identifier}.{Mode}.name");
+            Item.name = DigitalLogistics.Localize($"item.{Item.identifier}.{Mode}.name");
             Item.contentWindow.SetTitle(Item.GetDisplayName(preferCustomName: true));
             Item.Validate();
         }

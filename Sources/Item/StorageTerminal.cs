@@ -6,18 +6,15 @@ namespace DigitalLogistics.Item
     {
         internal const string ItemId = "storage_terminal";
 
-        internal static string Localize(string key) =>
-            ModHelper.GetLocalized(DigitalLogistics.Instance.Manifest.ID, key);
-
         internal static GameItem Create()
         {
             var item = ItemDirectory.CreateEmptyItem(ItemId)
                 .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, ItemId)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 3));
             item.SetContentWindow(StorageTerminalUI.Create(item));
-            item.name = Localize("item.storage_terminal.name");
-            item.shortDescription = Localize("item.storage_terminal.desc");
-            item.flavorText = Localize("item.storage_terminal.flavor");
+            item.name = DigitalLogistics.Localize("item.storage_terminal.name");
+            item.shortDescription = DigitalLogistics.Localize("item.storage_terminal.desc");
+            item.flavorText = DigitalLogistics.Localize("item.storage_terminal.flavor");
             item.SetGameItemType("MACHINE");
             return item;
         }

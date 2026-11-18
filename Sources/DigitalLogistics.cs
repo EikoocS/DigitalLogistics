@@ -14,6 +14,8 @@ namespace DigitalLogistics
         internal bool Enabled { get; private set; }
         internal ModConfiguration Settings { get; private set; }
 
+        internal static string Localize(string key) => ModHelper.GetLocalized(Instance.Manifest.ID, key);
+
         public void Init(ModManifest manifest)
         {
             Instance = this;

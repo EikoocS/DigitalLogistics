@@ -1,10 +1,10 @@
 using System;
 using DigitalLogistics.Controller;
-using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static DigitalLogistics.UI.Common.MachineryControlFactory;
 
 namespace DigitalLogistics.UI
 {
@@ -35,7 +35,7 @@ namespace DigitalLogistics.UI
             searchInput = input.input;
             searchInput.lineType = TMP_InputField.LineType.SingleLine;
             ((TMP_Text)searchInput.placeholder).text =
-                StorageTerminal.Localize("ui.storage_terminal.search_placeholder");
+                DigitalLogistics.Localize("ui.storage_terminal.search_placeholder");
 
             var (refreshHost, refreshRoot) = CreateControl(CustomUIManager.ElementKind.Button, 24, 18);
             var refresh = CustomUIElement.Bind(refreshRoot, "refresh");
@@ -71,7 +71,7 @@ namespace DigitalLogistics.UI
             Stretch(refreshOverlay.rectTransform);
             var busyText = TreeNodeRender.InstantiateText().SetParent(refreshOverlay);
             MachineryStyle.InitText(busyText, 8, MachineryStyle.BODY_TEXT, HorizontalAlignmentOptions.Center);
-            busyText.text.text = StorageTerminal.Localize("ui.storage_terminal.refreshing");
+            busyText.text.text = DigitalLogistics.Localize("ui.storage_terminal.refreshing");
             busyText.text.raycastTarget = false;
             Stretch(busyText.rectTransform);
             refreshOverlay.gameObject.SetActive(false);
@@ -109,7 +109,7 @@ namespace DigitalLogistics.UI
             ReputationUIManager.Instance.Notify(message);
         }
 
-        private static string Localize(string key) => StorageTerminal.Localize("ui.storage_terminal." + key);
+        private static string Localize(string key) => DigitalLogistics.Localize("ui.storage_terminal." + key);
 
         private void OnSearchChanged(string text) => SearchChanged?.Invoke(text);
 
@@ -129,22 +129,6 @@ namespace DigitalLogistics.UI
             if (hit != null) return hit.Controller.Owner == controller;
             return RectTransformUtility.RectangleContainsScreenPoint(dropArea, position)
                 && RenderHandler.RaycastFindParentElement<EmptyPixelElement>(position, ignored)?.handler == listHandler;
-        }
-
-        internal static (EmptyPixelElement Host, GameObject Root) CreateControl(
-            CustomUIManager.ElementKind kind, int width, int height, bool canResize = false)
-        {
-            var host = new EmptyPixelElement(width, height, canResize);
-            host.handler.image.enabled = false;
-            host.rectTransform.sizeDelta = new Vector2(width, height);
-            var root = CustomUIManager.Instance.SpawnElement(kind, host.handler.transform, null, kind.ToString());
-            CustomUIMachineryStyle.Reskin(root);
-            var rect = (RectTransform)root.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(width * 2, height * 2);
-            rect.localScale = new Vector3(0.5f, 0.5f, 1);
-            return (host, root);
         }
     }
 }

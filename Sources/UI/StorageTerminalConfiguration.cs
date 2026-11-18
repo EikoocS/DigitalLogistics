@@ -1,7 +1,5 @@
 using DigitalLogistics.Storage.Indexing;
 using System;
-using DigitalLogistics.Item;
-using DigitalLogistics.Storage;
 
 namespace DigitalLogistics.UI
 {
@@ -87,7 +85,7 @@ namespace DigitalLogistics.UI
             Changed?.Invoke();
         }
 
-        private static string Localize(string key) => StorageTerminal.Localize("ui.storage_terminal." + key);
+        private static string Localize(string key) => DigitalLogistics.Localize("ui.storage_terminal." + key);
 
         private static void SetOption(MachineryButton button, string setting, string option)
         {
