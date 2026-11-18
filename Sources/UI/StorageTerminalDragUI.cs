@@ -9,12 +9,14 @@ namespace DigitalLogistics.UI
         private TreeNodeRender inputShield;
         private readonly HighlightManager highlights = new();
 
-        internal void ShowPreview(GameItem item)
+        internal void ShowPreview(GameItem item, GridShape shape)
         {
             preview?.Destroy();
-            preview = new StorageItemPreview((GameItemElement)item);
+            preview = new StorageItemPreview((GameItemElement)item, shape);
             preview.Move(Input.mousePosition);
         }
+
+        internal void SetShape(GridShape shape) => preview.SetShape(shape);
 
         internal void HidePreview()
         {
@@ -63,6 +65,12 @@ namespace DigitalLogistics.UI
 
         internal bool IsOverTerminal(StorageTerminalController owner, Vector3 position) =>
             owner.ContainsPointer(position, inputShield);
+
+        internal bool IsOverTerminalWindow(Vector3 position)
+        {
+            var window = RenderHandler.RaycastFindParentElement<PixelWindow>(position, inputShield);
+            return window?.handler.GetComponentInChildren<StorageTerminalController>() != null;
+        }
 
         internal void HideInputShield()
         {

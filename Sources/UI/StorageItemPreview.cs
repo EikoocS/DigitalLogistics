@@ -7,8 +7,9 @@ namespace DigitalLogistics.UI
     internal sealed class StorageItemPreview
     {
         private readonly RectTransform root;
+        private readonly RectTransform visual;
 
-        internal StorageItemPreview(GameItemElement item)
+        internal StorageItemPreview(GameItemElement item, GridShape shape)
         {
             root = new GameObject("StorageItemPreview", typeof(RectTransform), typeof(CanvasGroup))
                 .GetComponent<RectTransform>();
@@ -20,9 +21,16 @@ namespace DigitalLogistics.UI
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = UISettings.current.dragOpacity;
             group.blocksRaycasts = group.interactable = false;
-            var visual = CopyVisual(item.rotator.rectTransform, root);
+            visual = CopyVisual(item.rotator.rectTransform, root);
             visual.anchorMin = visual.anchorMax = visual.pivot = new Vector2(0.5f, 0.5f);
             visual.anchoredPosition = Vector2.zero;
+            SetShape(shape);
+        }
+
+        internal void SetShape(GridShape shape)
+        {
+            visual.localEulerAngles = 90 * shape.orientation * Vector3.forward;
+            visual.localScale = new Vector3(shape.flipped ? -1 : 1, 1, 1);
         }
 
         internal void Move(Vector3 position) => root.position = position;

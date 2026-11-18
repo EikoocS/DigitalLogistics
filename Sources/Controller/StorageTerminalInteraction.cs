@@ -39,7 +39,13 @@ namespace DigitalLogistics.Controller
             || Time.frameCount <= consumeUntilFrame;
         internal bool HasActiveInput => pointerDown || Consuming;
 
-        public override List<KeyCode> keyListeners => new() { KeyCode.Mouse0, KeyCode.Mouse1, KeyCode.Escape };
+        public override List<KeyCode> keyListeners => new()
+        {
+            KeyCode.Mouse0, KeyCode.Escape,
+            KeyBindHelper.Get("rotate_cw"), KeyBindHelper.Get("rotate_ccw"),
+            KeyBindHelper.Get("flip_item"), KeyBindHelper.Get("flip_item_alt"),
+            KeyBindHelper.Get("reset_orientation"), KeyBindHelper.Get("secondary_click")
+        };
 
         internal void Init(StorageTerminalController controller) => owner = controller;
 
@@ -69,12 +75,24 @@ namespace DigitalLogistics.Controller
         {
             if (!isActiveAndEnabled || owner.Refreshing) return;
             if (keysPressed.Contains(KeyCode.Escape) && TryCancelHeldItem()) return;
-            if (keysPressed.Contains(KeyCode.Mouse1) && (previewItem != null || movement != null))
+            if (previewItem != null && movement == null)
+            {
+                var drag = ItemMouseDragHandler.current;
+                bool swap = EmporiumOption.Instance != null && EmporiumOption.Instance.swapDragRotateFlip;
+                bool clockwise = keysPressed.Contains(drag.rotateCWKey) || swap && keysPressed.Contains(drag.secondaryKey);
+                bool counterclockwise = keysPressed.Contains(drag.rotateCCWKey);
+                bool flip = keysPressed.Contains(drag.flipKey) || keysPressed.Contains(drag.flipAltKey)
+                    || !swap && keysPressed.Contains(drag.secondaryKey);
+                bool reset = keysPressed.Contains(drag.resetKey);
+                if (clockwise || counterclockwise || flip || reset)
+                    ChangeOrientation((counterclockwise ? 1 : 0) - (clockwise ? 1 : 0), flip, reset);
+            }
+            if (!keysPressed.Contains(KeyCode.Mouse0) || movement != null) return;
+            if (previewItem != null && view.IsOverTerminalWindow(Input.mousePosition))
             {
                 Cancel();
                 return;
             }
-            if (!keysPressed.Contains(KeyCode.Mouse0) || movement != null) return;
             if (!Consuming) view.HideInputShield();
 
             fromList = previewItem == null;
@@ -132,6 +150,28 @@ namespace DigitalLogistics.Controller
                 }
                 CaptureInput();
             }
+        }
+
+        protected override void OnEventMouseScroll(Vector2 scrollDelta)
+        {
+            if (!isActiveAndEnabled || owner.Refreshing || previewItem == null || movement != null
+                || Input.GetKey(ItemMouseDragHandler.current.scrollIgnoreKey)) return;
+            int direction = (int)(scrollDelta.x + scrollDelta.y);
+            if (direction == 0) return;
+            bool swap = EmporiumOption.Instance != null && EmporiumOption.Instance.swapDragRotateFlip;
+            ChangeOrientation(swap ? 0 : direction > 0 ? 1 : -1, swap, false);
+        }
+
+        private void ChangeOrientation(int rotation, bool flip, bool reset)
+        {
+            shape.SetOrientation(shape.orientation + rotation);
+            if (flip)
+            {
+                if (shape.orientation % 2 != 0) shape.SetOrientation(shape.orientation + 2);
+                shape.SetFlipped(!shape.flipped);
+            }
+            if (reset) shape.SetOrientation(0).SetFlipped(false);
+            view.SetShape(shape);
         }
 
         protected override void OnEventRelease(ISet<KeyCode> keysReleased)
@@ -226,11 +266,13 @@ namespace DigitalLogistics.Controller
                 lease?.Dispose();
                 return false;
             }
+            var nextShape = new GridShapeBuilder(lease.Item.modifiedShape);
+            if (previewItem != null) nextShape.SetOrientation(shape.orientation).SetFlipped(shape.flipped);
             view.HidePreview();
             previewLease?.Dispose();
             previewLease = lease;
-            shape = new GridShapeBuilder(lease.Item.modifiedShape);
-            view.ShowPreview(lease.Item);
+            shape = nextShape;
+            view.ShowPreview(lease.Item, shape);
             return true;
         }
 
@@ -375,6 +417,7 @@ namespace DigitalLogistics.Controller
             view.HidePreview();
             previewLease?.Dispose();
             previewLease = null;
+            shape = null;
             quickInputItem = null;
             pressedRow = null;
             selection.Clear();
