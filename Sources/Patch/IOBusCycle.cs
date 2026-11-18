@@ -1,4 +1,4 @@
-using DigitalLogistics.Controller;
+using DigitalLogistics.Buses;
 using HarmonyLib;
 
 namespace DigitalLogistics.Patch

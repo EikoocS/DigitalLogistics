@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using DigitalLogistics.Collections;
-using static DigitalLogistics.Storage.StorageSort;
+using static DigitalLogistics.Storage.Indexing.StorageSort;
 
 namespace DigitalLogistics.Filtering
 {

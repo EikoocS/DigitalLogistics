@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Buses
 {
     internal sealed class TriggerBusAction
     {

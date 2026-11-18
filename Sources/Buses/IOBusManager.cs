@@ -2,13 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Controller;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Item;
+using DigitalLogistics.Storage;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Buses
 {
     internal static class IOBusManager
     {
@@ -26,16 +26,18 @@ namespace DigitalLogistics.Storage
             public List<IOBusScheduleEntry> OutputSchedule = new();
             public string Filter = string.Empty;
             public int Count = 1;
-            [NonSerialized] internal GameItem Bus;
-            [NonSerialized] internal BusManager.Link Link;
-            [NonSerialized] internal StoredItemExpression Expression;
-            [NonSerialized] internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
             internal int RepeatCount => Math.Max(1, Count);
+        }
+
+        internal sealed class Connection
+        {
+            internal Configuration Configuration;
+            internal GameItem Bus;
+            internal SharedProviderRegistry.InventoryLink Link;
+            internal StoredItemExpression Expression;
+            internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
             internal string DefaultName => Link.Name;
             internal string DefaultFilter => Bus.identifier == IOBus.InputId ? "True" : "False";
-
-            internal void Apply() => Expression = StoredItemExpressionParser.Parse(
-                string.IsNullOrWhiteSpace(Filter) ? DefaultFilter : Filter);
         }
 
         [Serializable]
@@ -45,46 +47,42 @@ namespace DigitalLogistics.Storage
         }
 
         private static readonly Dictionary<string, Configuration> configurations = new();
-        private static readonly Dictionary<GameItem, List<Configuration>> active = new();
+        private static readonly Dictionary<GameItem, List<Connection>> active = new();
         private static readonly HashSet<GameItem> pending = new();
         private static Coroutine scheduled;
 
         internal static bool IsOnAdd(GameItem bus) => bus.GetTagReadonly(OnAddTag).GetBool();
         internal static bool IsOnMove(GameItem bus) => bus.GetTagReadonly(OnMoveTag).GetBool();
+        internal static IEnumerable<Connection> GetConfigurations(GameItem bus) =>
+            active.TryGetValue(bus, out var links) ? links : Enumerable.Empty<Connection>();
 
-        internal static IEnumerable<Configuration> GetConfigurations(GameItem bus) =>
-            active.TryGetValue(bus, out var links) ? links : Enumerable.Empty<Configuration>();
+        internal static void ApplyConfiguration(Connection connection) => connection.Expression =
+            StoredItemExpressionParser.Parse(string.IsNullOrWhiteSpace(connection.Configuration.Filter)
+                ? connection.DefaultFilter : connection.Configuration.Filter);
 
-        internal static void Acquire(GameItem bus, BusManager.Link link)
+        internal static void Acquire(GameItem bus, SharedProviderRegistry.InventoryLink link)
         {
             string key = bus.GetUniqueID() + ":" + link.Key;
             if (!configurations.TryGetValue(key, out var configuration))
-            {
-                configuration = new Configuration { Key = key };
-                configurations.Add(key, configuration);
-            }
-            configuration.Bus = bus;
-            configuration.Link = link;
-            configuration.Apply();
-            configuration.OnAdded = (item, _, _) =>
+                configurations.Add(key, configuration = new Configuration { Key = key });
+            var connection = new Connection { Configuration = configuration, Bus = bus, Link = link };
+            ApplyConfiguration(connection);
+            connection.OnAdded = (item, _, _) =>
             {
                 if (!configuration.Disabled && !SaveManager.IsDecoding && !Bus.IsBus(item) && IsOnAdd(bus)) Schedule(bus);
             };
-            link.Inventory.onSlotAddItemEndFunc += configuration.OnAdded;
+            link.Inventory.onSlotAddItemEndFunc += connection.OnAdded;
             if (!active.TryGetValue(bus, out var links)) active.Add(bus, links = new());
-            links.Add(configuration);
+            links.Add(connection);
             DigitalLogistics.Manager.NotifyChanged();
         }
 
         internal static void Release(GameItem bus, GameInventory inventory)
         {
             var links = active[bus];
-            var configuration = links.Single(config => config.Link.Inventory == inventory);
-            inventory.onSlotAddItemEndFunc -= configuration.OnAdded;
-            links.Remove(configuration);
-            configuration.Link = null;
-            configuration.Bus = null;
-            configuration.OnAdded = null;
+            var connection = links.Single(row => row.Link.Inventory == inventory);
+            inventory.onSlotAddItemEndFunc -= connection.OnAdded;
+            links.Remove(connection);
             if (links.Count == 0)
             {
                 active.Remove(bus);
@@ -101,19 +99,19 @@ namespace DigitalLogistics.Storage
                 configurations.Add(configuration.Key, configuration);
         }
 
-        internal static void Save()
-        {
-            var data = new SaveData { Configurations = active.Values.SelectMany(links => links).ToList() };
-            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonConvert.SerializeObject(data));
-        }
+        internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
+            JsonConvert.SerializeObject(new SaveData
+            {
+                Configurations = active.Values.SelectMany(links => links).Select(row => row.Configuration).ToList()
+            }));
 
         internal static void Clear()
         {
-            if (scheduled != null)
-                ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, scheduled);
+            if (scheduled != null) ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, scheduled);
             scheduled = null;
             pending.Clear();
-            active.Clear();
+            foreach (var bus in active.Keys.ToArray())
+                foreach (var connection in active[bus].ToArray()) Release(bus, connection.Link.Inventory);
             configurations.Clear();
         }
 
@@ -136,55 +134,50 @@ namespace DigitalLogistics.Storage
 
         internal static IEnumerable<BusOperation> GetOperations(GameItem bus, bool nightly)
         {
-            foreach (var configuration in GetConfigurations(bus))
+            foreach (var connection in GetConfigurations(bus))
             {
-                if (configuration.Disabled) continue;
+                if (connection.Configuration.Disabled) continue;
                 if (IOBus.CanInput(bus))
-                    foreach (var operation in GetOperations(configuration, true, nightly)) yield return operation;
+                    foreach (var operation in GetOperations(connection, true, nightly)) yield return operation;
                 if (IOBus.CanOutput(bus))
-                    foreach (var operation in GetOperations(configuration, false, nightly)) yield return operation;
+                    foreach (var operation in GetOperations(connection, false, nightly)) yield return operation;
             }
         }
 
-        private static IEnumerable<BusOperation> GetOperations(Configuration configuration, bool input, bool nightly)
+        private static IEnumerable<BusOperation> GetOperations(Connection connection, bool input, bool nightly)
         {
             if (!nightly)
             {
-                yield return CreateOperation(configuration, input);
+                yield return CreateOperation(connection, input);
                 yield break;
             }
-            foreach (var entry in input ? configuration.InputSchedule : configuration.OutputSchedule)
-                if (entry.Enabled) yield return CreateOperation(configuration, input, entry);
+            foreach (var entry in input ? connection.Configuration.InputSchedule : connection.Configuration.OutputSchedule)
+                if (entry.Enabled) yield return CreateOperation(connection, input, entry);
         }
 
-        private static BusOperation CreateOperation(Configuration configuration, bool input, IOBusScheduleEntry entry = null) =>
+        private static BusOperation CreateOperation(Connection connection, bool input, IOBusScheduleEntry entry = null) =>
             new(entry?.Order ?? 6, entry?.Priority ?? 0, input ? BusOperationKind.Input : BusOperationKind.Output,
-                () => Transfer(configuration, input, entry));
+                () => Transfer(connection, input, entry));
 
-        private static void Transfer(Configuration configuration, bool input, IOBusScheduleEntry entry)
+        private static void Transfer(Connection connection, bool input, IOBusScheduleEntry entry)
         {
-            if (configuration.Disabled || configuration.Link == null) return;
-            var provider = configuration.Link.Provider;
-            var expression = entry?.Expression ?? (input && configuration.Bus.identifier == IOBus.InputOutputId
-                ? configuration.Expression.Not() : configuration.Expression);
+            var configuration = connection.Configuration;
+            if (configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)) return;
+            var provider = connection.Link.Provider;
+            var expression = entry?.Expression ?? (input && connection.Bus.identifier == IOBus.InputOutputId
+                ? connection.Expression.Not() : connection.Expression);
             int remaining = entry?.RepeatCount ?? configuration.RepeatCount;
             var candidates = input ? provider.Snapshot().Where(expression.Evaluate)
                 : DigitalLogistics.Manager.SearchForOutput(expression, provider);
             foreach (var stored in candidates)
             {
-                using var output = stored.PrepareOutput();
-                if (output == null || !CanMove(output.Item, stored.IsDigitalItems())) continue;
-                int amount = output.Item.MaxNumRemove();
-                int moved = input
-                    ? DigitalLogistics.Manager.TryInput(output.Item, amount, target => target != provider).Amount
-                    : stored.IsDigitalItems() ? provider.InputFromSystem(output, amount)
-                        : provider.InputFromSystem(output.Item, amount).Amount;
-                output.Complete(moved);
-                if (moved > 0 && --remaining == 0) break;
+                using (var lease = stored.AcquireInstance())
+                    if (lease == null || Bus.IsBus(lease.Item) || !GeneralHelper.IsItemOwned(lease.Item)) continue;
+                var result = input
+                    ? StorageTransfer.TryInput(stored, providerFilter: target => target != provider)
+                    : StorageTransfer.TryInput(stored, provider);
+                if (result.Amount > 0 && --remaining == 0) break;
             }
         }
-
-        private static bool CanMove(GameItem item, bool digital) => !Bus.IsBus(item)
-            && GeneralHelper.IsItemOwned(item) && (digital || item.MayRemove()) && item.MaxNumRemove() > 0;
     }
 }

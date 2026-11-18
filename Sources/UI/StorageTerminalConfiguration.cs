@@ -1,3 +1,4 @@
+using DigitalLogistics.Storage.Indexing;
 using System;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;

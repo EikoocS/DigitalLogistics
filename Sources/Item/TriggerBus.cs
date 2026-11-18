@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Storage;
+using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Item
 {

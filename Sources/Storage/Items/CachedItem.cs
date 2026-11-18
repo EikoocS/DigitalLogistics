@@ -1,8 +1,9 @@
-﻿namespace DigitalLogistics.Storage
+using System;
+
+namespace DigitalLogistics.Storage.Items
 {
     public abstract class CachedItem
     {
-        // The following content should be cached in CachedItem, not GameItem.
         public int UniqueId { get; protected set; } = 0;
         public string Identifier { get; protected set; } = string.Empty;
         public string ModId { get; protected set; } = string.Empty;
@@ -26,24 +27,25 @@
             ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
         }
 
-        // Does GetItemInstance return the item in the inventory or the virtualized item
-        public abstract bool IsDigitalItems();
-
-        // Get a GameItem instance; if it's a virtual item, create it.
-        public abstract GameItem GetItemInstance();
-
-        public abstract StorageOutput PrepareOutput();
-
-        // Verify the validity of the CachedItem, without applying the cache.
+        public abstract ItemInstanceLease AcquireInstance();
         public abstract bool VerifyValidity();
 
-        // obtaining ToolTip, Maybe temporary deserialization
-        public abstract RichText GetTooltip();
+        public RichText GetTooltip() => ReadItem(item =>
+            item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltip() : new RichTextBuilder().Build());
 
-        public abstract RichText GetTooltipAdvanced();
+        public RichText GetTooltipAdvanced() => ReadItem(item =>
+            item is TooltipListener listener && listener.HasTooltip()
+                ? listener.GetTooltipAdvanced() : new RichTextBuilder().Build());
 
-        // Get Item Tag, Return a clone
-        public abstract TagState getTag(string key);
+        public TagState GetTag(string key) => ReadItem(item =>
+            item.modifiedState.dict.TryGetValue(key, out var tag) ? tag?.Clone() : null);
+
+        private T ReadItem<T>(Func<GameItem, T> read)
+        {
+            using var lease = AcquireInstance();
+            return lease == null ? default : read(lease.Item);
+        }
 
         public override bool Equals(object obj)
         {

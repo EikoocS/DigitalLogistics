@@ -1,4 +1,3 @@
-﻿using DigitalLogistics.Filtering;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,23 +5,41 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage.Indexing;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage
 {
     public abstract class StorageProvider : IDisposable
     {
-        public int Priority { get; set; } = 0;
+        public int Priority { get; set; }
         public string Name { get; set; } = "Unnamed";
-        public StoredItemExpression filter { get; set; } = StoredItemExpression.Constant(true);
-        protected StorageIndex storageIndex = new();
+        public StoredItemExpression Filter { get; set; } = StoredItemExpression.Constant(true);
+        private StorageIndex storageIndex = new();
+        private StorageIndex rebuildingIndex;
         public int Size => storageIndex.Size;
-        public event Action onChange;
+        public bool Disposed { get; private set; }
+        public event Action Changed;
 
         protected StorageProvider() => storageIndex.onChange += NotifyChanged;
+        protected void NotifyChanged() => Changed?.Invoke();
 
-        protected void NotifyChanged() => onChange?.Invoke();
+        protected void Upsert(CachedItem item)
+        {
+            storageIndex.Remove(item.UniqueId);
+            storageIndex.Add(item);
+            rebuildingIndex?.Remove(item.UniqueId);
+            rebuildingIndex?.Add(item);
+        }
 
-        protected void ReplaceIndex(StorageIndex index)
+        protected void Remove(int uniqueId)
+        {
+            storageIndex.Remove(uniqueId);
+            rebuildingIndex?.Remove(uniqueId);
+        }
+
+        private void ReplaceIndex(StorageIndex index)
         {
             storageIndex.onChange -= NotifyChanged;
             storageIndex = index;
@@ -30,21 +47,53 @@ namespace DigitalLogistics.Storage
             NotifyChanged();
         }
 
-        public abstract void Dispose();
-        public abstract bool Contains(int uniqueId);
-        internal CachedItem FindIndexedItem(int uniqueId) => storageIndex.Find(uniqueId);
-        public abstract void Refresh();
-        public abstract IEnumerator RefreshCoroutine(Action onItemProcessed);
-
-        /// <summary>Returns the actual inserted count and the resulting destination entries.</summary>
-        public StorageInputResult TryInput(GameItem item, int amount = -1)
+        public void Dispose()
         {
-            if (!filter.Evaluate(new PhysicalItem(item))) return StorageInputResult.Empty;
-            amount = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
-            return amount > 0 ? InputCore(item, amount) : StorageInputResult.Empty;
+            Disposed = true;
+            storageIndex.onChange -= NotifyChanged;
+            DisposeCore();
         }
 
-        protected abstract StorageInputResult InputCore(GameItem item, int amount);
+        protected abstract void DisposeCore();
+        public abstract bool Contains(int uniqueId);
+        internal CachedItem FindIndexedItem(int uniqueId) => Disposed ? null : storageIndex.Find(uniqueId);
+        protected abstract IEnumerable<CachedItem> ReadItems();
+
+        public void Refresh()
+        {
+            var work = RefreshCoroutine(null);
+            try { while (work.MoveNext()) { } }
+            finally { (work as IDisposable)?.Dispose(); }
+        }
+
+        public IEnumerator RefreshCoroutine(Action onItemProcessed)
+        {
+            if (Disposed) yield break;
+            rebuildingIndex = new StorageIndex();
+            try
+            {
+                foreach (var item in ReadItems())
+                {
+                    if (Disposed) yield break;
+                    rebuildingIndex.Remove(item.UniqueId);
+                    rebuildingIndex.Add(item);
+                    onItemProcessed?.Invoke();
+                    yield return null;
+                }
+                if (!Disposed) ReplaceIndex(rebuildingIndex);
+            }
+            finally { rebuildingIndex = null; }
+        }
+
+        internal StorageInputResult TryInput(StorageOutput output, int amount, bool applyFilter)
+        {
+            if (Disposed || applyFilter && !Filter.Evaluate(new PhysicalItem(output.Item)))
+                return StorageInputResult.Empty;
+            amount = Math.Min(amount, output.Item.MaxNumRemove());
+            return amount > 0 ? InputCore(output, amount) : StorageInputResult.Empty;
+        }
+
+        protected abstract StorageInputResult InputCore(StorageOutput output, int amount);
 
         internal IReadOnlyList<CachedItem> Snapshot()
         {
@@ -54,34 +103,6 @@ namespace DigitalLogistics.Storage
             return items;
         }
 
-        /// <summary>Place and complete each output before advancing the enumerator.</summary>
-        public async IAsyncEnumerable<StorageOutput> PrepareOutputAsync(    
-            StoredItemExpression expression,
-            StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
-            bool reverse = false,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!PrepareSearch(expression)) yield break;
-
-            await foreach (var item in SearchAsync(expression, sortBy, reverse, cancellationToken))
-            {
-                using var output = item.PrepareOutput();
-                if (output != null) yield return output;
-            }
-        }
-
-        // false to skip
-        public bool PrepareSearch(StoredItemExpression expression)
-        {
-            var plan = new StoredItemFilterBuilder()
-                .AddExpression(expression)
-                .AddExpression(filter)
-                .WithIndexBlooms(storageIndex.GetIndexBloom())
-                .WithTypeBloom(storageIndex.GetTypeBloom())
-                .Build();
-            return plan.MayMatch();
-        }
         public async IAsyncEnumerable<CachedItem> SearchAsync(
             StoredItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
@@ -89,9 +110,10 @@ namespace DigitalLogistics.Storage
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var filteredExpression = expression.And(Filter);
+            if (Disposed || !storageIndex.MayMatch(filteredExpression)) yield break;
             var timer = Stopwatch.StartNew();
-            var enumerator = storageIndex.GetEnumerator(sortBy, reverse);
-            var filteredExpression = expression.And(filter);
+            using var enumerator = storageIndex.GetEnumerator(sortBy, reverse);
             while (enumerator.MoveNext())
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -101,7 +123,6 @@ namespace DigitalLogistics.Storage
                     yield return item;
                     timer.Restart();
                 }
-
                 if (timer.Elapsed.TotalMilliseconds >= DigitalLogistics.Instance.Settings.SearchBudgetMilliseconds.Value)
                 {
                     await Task.Yield();

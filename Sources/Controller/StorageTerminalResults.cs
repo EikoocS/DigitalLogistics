@@ -1,3 +1,5 @@
+using DigitalLogistics.Storage.Items;
+using DigitalLogistics.Storage.Indexing;
 using System;
 using System.Collections.Generic;
 using DigitalLogistics.Collections;
@@ -48,7 +50,7 @@ namespace DigitalLogistics.Controller
             searchExpression = expression;
             expandedGroups = expanded == null ? new() : new(expanded);
             Content = list.CreateStagingContent();
-            var comparer = ComparerHelper.ComparedBy(sortBy.Getter());
+            var comparer = sortBy.Comparer();
             itemComparer = reverse
                 ? Comparer<CachedItem>.Create((left, right) => comparer.Compare(right, left)) : comparer;
             groupComparer = Comparer<GroupState>.Create((left, right) =>

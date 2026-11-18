@@ -1,7 +1,7 @@
 using System;
 using DigitalLogistics.Filtering;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Buses
 {
     [Serializable]
     internal class BusScheduleEntry

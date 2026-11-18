@@ -1,52 +1,53 @@
 using System;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage
 {
     public sealed class StorageOutput : IDisposable
     {
-        private Action<int> onSucceeded;
-        private Action onDisposed;
-        private readonly bool wholePlacement;
+        private readonly ItemInstanceLease lease;
+        private Action<int> commit;
+        public GameItem Item => lease.Item;
 
-        public GameItem Item { get; }
-
-        public StorageOutput(GameItem item, Action<int> onSucceeded = null, Action onDisposed = null)
-            : this(item, onSucceeded, onDisposed, false) { }
-
-        internal StorageOutput(GameItem item, Action<int> onSucceeded, Action onDisposed, bool wholePlacement)
+        internal StorageOutput(ItemInstanceLease lease, Action<int> commit = null)
         {
-            Item = item;
-            this.onSucceeded = onSucceeded;
-            this.onDisposed = onDisposed;
-            this.wholePlacement = wholePlacement;
+            this.lease = lease;
+            this.commit = commit;
         }
 
-        /// <summary>Places up to the requested amount; report the return value through Complete.</summary>
         public int TryPlace(SlotMarker slot, int amount)
         {
             if (slot == null) return 0;
-            if (!wholePlacement) return slot.TryAcceptOnce(amount);
-
-            amount = Math.Min(amount, Math.Min(slot.numTransfer, Item.unitCount));
+            amount = Math.Min(amount, Math.Min(slot.numTransfer, Item.MaxNumRemove()));
             if (amount <= 0) return 0;
-            Item.unitCount = amount;
-            return slot.TryAcceptOnce(amount);
+            if (lease.OwnsInstance) Item.unitCount = amount;
+            int moved = slot.TryAcceptOnce(amount);
+            if (moved > 0)
+            {
+                if (slot.targetItem == null) lease.Detach();
+                Complete(moved);
+            }
+            return moved;
         }
 
-        /// <summary>Confirms the actual transferred count once; zero leaves the source unchanged.</summary>
-        public void Complete(int moved)
+        public bool Consume(int amount)
         {
-            var callback = onSucceeded;
-            onSucceeded = null;
-            if (moved > 0) callback?.Invoke(moved);
+            if (!lease.OwnsInstance && !GameItemTransfer.Remove(Item, amount)) return false;
+            Complete(amount);
+            return true;
+        }
+
+        private void Complete(int moved)
+        {
+            var callback = commit;
+            commit = null;
+            callback?.Invoke(moved);
         }
 
         public void Dispose()
         {
-            onSucceeded = null;
-            var callback = onDisposed;
-            onDisposed = null;
-            callback?.Invoke();
+            commit = null;
+            lease.Dispose();
         }
     }
 }

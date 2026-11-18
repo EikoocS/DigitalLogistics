@@ -1,10 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Item;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Disks;
+using DigitalLogistics.Storage.Items;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Providers
 {
     public sealed class DiskStorageProvider : StorageProvider
     {
@@ -21,43 +23,34 @@ namespace DigitalLogistics.Storage
         private readonly StorageDiskData data;
         private readonly Guid diskId;
         private readonly int capacity;
-        private bool disposed;
 
-        internal DiskStorageProvider(ItemDisk disk, StorageDiskData data)
+        internal DiskStorageProvider(Guid diskId, StorageDiskData data, int capacity, string name,
+            StoredItemExpression filter)
         {
+            this.diskId = diskId;
             this.data = data;
-            diskId = disk.DiskId.Value;
-            capacity = disk.Capacity;
-            Name = disk.DiskName;
-            filter = disk.Filter;
+            this.capacity = capacity;
+            Name = name;
+            Filter = filter;
             Refresh();
         }
 
-        public override bool Contains(int uniqueId) => !disposed && storageIndex.Contains(uniqueId);
-        public override void Dispose() => disposed = true;
+        public override bool Contains(int uniqueId) => FindIndexedItem(uniqueId) != null;
+        protected override void DisposeCore() { }
 
-        public override void Refresh()
+        protected override IEnumerable<CachedItem> ReadItems()
         {
-            if (disposed) return;
-            var index = new StorageIndex();
-            foreach (var item in data.Items)
-                index.Add(new DigitalItem(this, item));
-            ReplaceIndex(index);
+            foreach (var entry in data.Items.ToArray())
+                if (entry.Count > 0)
+                    yield return new DigitalItem(this, entry);
         }
 
-        public override IEnumerator RefreshCoroutine(Action onItemProcessed)
-        {
-            if (disposed) yield break;
-            Refresh();
-            for (int i = 0; i < Size; i++) onItemProcessed();
-        }
+        private static bool IsBlocked(GameItem item) => Blacklist.Any(rule => rule(item));
 
-        private static bool IsBlocked(GameItem item) =>
-            item is ItemDisk || Bus.IsBus(item) || Blacklist.Any(rule => rule(item));
-
-        protected override StorageInputResult InputCore(GameItem item, int amount)
+        protected override StorageInputResult InputCore(StorageOutput output, int amount)
         {
-            if (disposed || IsBlocked(item) || !GeneralHelper.IsItemOwned(item)
+            var item = output.Item;
+            if (Disposed || IsBlocked(item) || !GeneralHelper.IsItemOwned(item)
                 || (item.parentInventory != null && !item.MayRemove())
                 || GraphUtils.FindAllChildrenType<GameItem>(item).Any(IsBlocked))
                 return StorageInputResult.Empty;
@@ -92,7 +85,7 @@ namespace DigitalLogistics.Storage
                 moved = Math.Min(moved, int.MaxValue - entry.Count);
             }
 
-            if (moved <= 0 || !RemoveFromSource(item, moved)) return StorageInputResult.Empty;
+            if (moved <= 0 || !output.Consume(moved)) return StorageInputResult.Empty;
             if (existing == null) data.Items.Add(entry);
             entry.Count += moved;
             var stored = UpdateIndex(entry);
@@ -112,54 +105,28 @@ namespace DigitalLogistics.Storage
             return null;
         }
 
-        private static bool RemoveFromSource(GameItem item, int count)
-        {
-            var inventory = item.parentInventory;
-            if (count == item.unitCount)
-            {
-                if (inventory != null && !inventory.Expel(item)) return false;
-                item.unitCount = 0;
-                var drag = ItemMouseDragHandler.current;
-                if (drag == null || !drag.IsDraggingItem || !ReferenceEquals(drag.GetCurrentItem(), item))
-                    item.Destroy();
-                return true;
-            }
-
-            item.unitCount -= count;
-            item.Validate();
-            item.onChangeAmountItemFunc?.Invoke(item);
-            if (inventory != null)
-            {
-                var slot = inventory.GetIncompleteItemInventorySlot(item);
-                item.onSlotChangeAmountItemFunc?.Invoke(item, inventory, slot);
-                inventory.onSlotChangeAmountItemFunc?.Invoke(item, inventory, slot);
-                OverlayHandler.current.UpdateInventoryStateUI();
-            }
-            return true;
-        }
-
         internal StorageOutput PrepareOutput(StorageDiskData.Entry entry)
         {
             if (!Contains(entry.Id)) return null;
-            var item = ItemSerialization.Decode(entry.Item, entry.Count);
-            return new StorageOutput(item,
+            return new StorageOutput(new ItemInstanceLease(ItemSerialization.Decode(entry.Item, entry.Count), true),
                 moved =>
                 {
                     entry.Count -= moved;
                     if (entry.Count == 0) data.Items.Remove(entry);
                     UpdateIndex(entry);
-                },
-                () => { if (item.parentInventory == null) item.Destroy(); },
-                wholePlacement: true);
+                });
         }
 
         private CachedItem UpdateIndex(StorageDiskData.Entry entry)
         {
             StorageDiskStore.Set(diskId, data);
-            storageIndex.Remove(entry.Id);
-            if (entry.Count == 0) return null;
+            if (entry.Count == 0)
+            {
+                Remove(entry.Id);
+                return null;
+            }
             var stored = new DigitalItem(this, entry);
-            storageIndex.Add(stored);
+            Upsert(stored);
             return stored;
         }
     }

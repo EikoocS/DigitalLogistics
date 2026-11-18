@@ -1,3 +1,4 @@
+using DigitalLogistics.Storage.Providers;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Storage;
@@ -6,12 +7,11 @@ namespace DigitalLogistics.Item
 {
     internal abstract class InventoryBus : Bus
     {
-        private readonly HashSet<GameInventory> inventories = new();
-        protected abstract bool IsStorage { get; }
+        private readonly Dictionary<GameInventory, SharedProviderRegistry.InventoryLink> inventories = new();
         protected override bool HasLinks => inventories.Count > 0;
-        internal override IEnumerable<object> Configurations => IsStorage
-            ? inventories.Select(BusManager.GetConfiguration).Cast<object>()
-            : IOBusManager.GetConfigurations(Item).Cast<object>();
+        protected IEnumerable<SharedProviderRegistry.InventoryLink> InventoryLinks => inventories.Values;
+        protected abstract void OnConnected(SharedProviderRegistry.InventoryLink link);
+        protected abstract void OnDisconnected(SharedProviderRegistry.InventoryLink link);
 
         protected InventoryBus(string id) : base(id) { }
 
@@ -31,30 +31,31 @@ namespace DigitalLogistics.Item
                         if (InventoryStorageProvider.GetPanel(inventory)?.role != "note")
                             desired[inventory] = target;
             }
-            foreach (var inventory in inventories.ToArray())
+            foreach (var inventory in inventories.Keys.ToArray())
             {
                 if (desired.ContainsKey(inventory)) continue;
                 Release(inventory);
             }
             foreach (var entry in desired)
             {
-                if (inventories.Contains(entry.Key)) continue;
-                var link = BusManager.Acquire(entry.Key, entry.Value, IsStorage);
-                if (!IsStorage) IOBusManager.Acquire(Item, link);
-                inventories.Add(entry.Key);
+                if (inventories.ContainsKey(entry.Key)) continue;
+                var link = SharedProviderRegistry.AcquireInventory(entry.Key, entry.Value);
+                inventories.Add(entry.Key, link);
+                OnConnected(link);
             }
         }
 
         private void Release(GameInventory inventory)
         {
-            if (!IsStorage) IOBusManager.Release(Item, inventory);
-            BusManager.Release(inventory, IsStorage);
+            var link = inventories[inventory];
+            OnDisconnected(link);
+            SharedProviderRegistry.ReleaseInventory(link);
             inventories.Remove(inventory);
         }
 
         protected override void ClearLinks()
         {
-            foreach (var inventory in inventories.ToArray()) Release(inventory);
+            foreach (var inventory in inventories.Keys.ToArray()) Release(inventory);
         }
     }
 }

@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Disks
 {
     internal static class ItemSerialization
     {

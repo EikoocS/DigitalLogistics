@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Item;
-using DigitalLogistics.Storage;
 
-namespace DigitalLogistics.Controller
+namespace DigitalLogistics.Buses
 {
     internal static class BusController
     {
@@ -20,11 +19,7 @@ namespace DigitalLogistics.Controller
 
         internal static void ClearConnections()
         {
-            StorageIndexRefresh.Clear();
             foreach (var bus in connections.Values.ToArray()) bus.Disconnect();
-            IOBusManager.Clear();
-            TriggerBusManager.Clear();
-            BusManager.Clear();
         }
 
         internal static void RefreshConnections(GameItem item)

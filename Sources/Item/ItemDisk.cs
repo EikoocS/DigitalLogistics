@@ -1,6 +1,6 @@
 using System;
 using DigitalLogistics.Filtering;
-using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Disks;
 using Newtonsoft.Json.Linq;
 using static RenderHandler.ColorPalette;
 

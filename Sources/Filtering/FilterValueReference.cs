@@ -1,7 +1,7 @@
 using System;
 using System.Linq.Expressions;
-using DigitalLogistics.Storage;
-using static DigitalLogistics.Storage.StorageSort;
+using DigitalLogistics.Storage.Items;
+using static DigitalLogistics.Storage.Indexing.StorageSort;
 
 namespace DigitalLogistics.Filtering
 {

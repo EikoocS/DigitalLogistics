@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Disks
 {
     internal static class StorageDiskStore
     {

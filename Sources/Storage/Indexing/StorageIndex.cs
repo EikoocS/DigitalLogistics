@@ -1,18 +1,14 @@
-using DigitalLogistics.Collections;
 using System;
 using System.Collections.Generic;
-using static DigitalLogistics.Storage.StorageSort;
+using DigitalLogistics.Collections;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage.Items;
+using static DigitalLogistics.Storage.Indexing.StorageSort;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Indexing
 {
     public class StorageIndex
     {
-        public static readonly Comparer<CachedItem> IdentifierComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Identifier);
-        public static readonly Comparer<CachedItem> ModIdComparer = ComparerHelper.ComparedBy((CachedItem item) => item.ModId).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<CachedItem> DisplayNameComparer = ComparerHelper.ComparedBy((CachedItem item) => item.DisplayName).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<CachedItem> PriceComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Price).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<CachedItem> BasePriceComparer = ComparerHelper.ComparedBy((CachedItem item) => item.BasePrice).LinkComparer(IdentifierComparer);
-        public static readonly Comparer<CachedItem> HeatComparer = ComparerHelper.ComparedBy((CachedItem item) => item.Heat).LinkComparer(IdentifierComparer);
         private readonly Dictionary<int, CachedItem> UniqueIdIndex = new();
         private readonly Dictionary<SortBy, OrderList<CachedItem>> itemIndexs = new();
         private readonly Dictionary<SortBy, BloomFilter> indexBlooms = new();
@@ -24,7 +20,7 @@ namespace DigitalLogistics.Storage
         public StorageIndex()
         {
             foreach (SortBy sortBy in Enum.GetValues(typeof(SortBy)))
-                itemIndexs[sortBy] = OrderList<CachedItem>.BuildByGetterAndFilter(sortBy.Getter());
+                itemIndexs[sortBy] = new OrderList<CachedItem>(sortBy.Comparer(), item => sortBy.Getter()(item) != null);
             foreach (var field in (SortBy[])Enum.GetValues(typeof(SortBy)))
                 indexBlooms[field] = new ();
         }
@@ -91,15 +87,8 @@ namespace DigitalLogistics.Storage
             onChange?.Invoke();
         }
 
-        public Dictionary<SortBy, BloomFilter> GetIndexBloom()
-        {
-            return indexBlooms;
-        }
-
-        public BloomFilter GetTypeBloom()
-        {
-            return typeBloom;
-        }
+        internal bool MayMatch(StoredItemExpression expression) =>
+            StoredItemExpressionAnalyzer.MayMatch(new[] { expression }, indexBlooms, typeBloom);
 
         public IEnumerator<CachedItem> GetEnumerator(SortBy sortBy, bool reverse)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage
 {

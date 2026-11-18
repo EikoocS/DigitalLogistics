@@ -1,6 +1,7 @@
-using DigitalLogistics.Controller;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Providers;
+using DigitalLogistics.UI;
 
 namespace DigitalLogistics
 {
@@ -19,6 +20,7 @@ namespace DigitalLogistics
             Manifest = manifest;
             Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
+            DiskStorageProvider.Blacklist.Add(item => item is ItemDisk || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
         }
@@ -30,11 +32,9 @@ namespace DigitalLogistics
                 "DigitalLogistics", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
             ModHook.OnCreateTooltipLate += ItemDisk.AddTooltip;
-            ModHook.OnGameLoadedInit += BusController.ClearConnections;
-            ModHook.OnGameLoadedInit += StorageDiskStore.Clear;
-            ModHook.OnGameLoadedEarly += BusManager.Load;
-            ModHook.OnGameLoadedEarly += IOBusManager.Load;
-            ModHook.OnGameLoadedEarly += TriggerBusManager.Load;
+            ModHook.OnGameLoadedInit += LogisticsSession.Reset;
+            ModHook.OnGameLoadedEarly += LogisticsSession.LoadConfigurations;
+            StorageIndexRefresh.Completed += StorageTerminalUI.NotifyRefreshResult;
             Log.Log("Enabled.");
         }
 
@@ -45,12 +45,10 @@ namespace DigitalLogistics
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
             ModHook.OnCreateTooltipLate -= ItemDisk.AddTooltip;
-            ModHook.OnGameLoadedInit -= BusController.ClearConnections;
-            ModHook.OnGameLoadedInit -= StorageDiskStore.Clear;
-            ModHook.OnGameLoadedEarly -= BusManager.Load;
-            ModHook.OnGameLoadedEarly -= IOBusManager.Load;
-            ModHook.OnGameLoadedEarly -= TriggerBusManager.Load;
-            BusController.ClearConnections();
+            ModHook.OnGameLoadedInit -= LogisticsSession.Reset;
+            ModHook.OnGameLoadedEarly -= LogisticsSession.LoadConfigurations;
+            StorageIndexRefresh.Completed -= StorageTerminalUI.NotifyRefreshResult;
+            LogisticsSession.Stop();
             Log.Log("Disabled.");
         }
 

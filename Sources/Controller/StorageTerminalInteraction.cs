@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Items;
 using DigitalLogistics.UI;
 using UnityEngine;
 
@@ -22,8 +22,8 @@ namespace DigitalLogistics.Controller
         private readonly HashSet<(GameInventory, int, int)> paintedSlots = new();
         private StorageTerminalRowController pressedRow;
         private GameItem quickInputItem;
-        private GameItem previewItem;
-        private bool previewIsDigital;
+        private ItemInstanceLease previewLease;
+        private GameItem previewItem => previewLease?.Item;
         private GridShapeBuilder shape;
         private CancellationTokenSource movement;
         private Vector3 pressPosition;
@@ -220,18 +220,17 @@ namespace DigitalLogistics.Controller
 
         private bool Hold(CachedItem stored)
         {
-            var item = stored.GetItemInstance();
-            bool digital = stored.IsDigitalItems();
-            if (!CanOutput(item))
+            var lease = stored.AcquireInstance();
+            if (lease == null || !CanOutput(lease.Item))
             {
-                if (digital) item?.Destroy();
+                lease?.Dispose();
                 return false;
             }
-            if (previewIsDigital) previewItem.Destroy();
-            previewItem = item;
-            previewIsDigital = digital;
-            shape = new GridShapeBuilder(item.modifiedShape);
-            view.ShowPreview(item);
+            view.HidePreview();
+            previewLease?.Dispose();
+            previewLease = lease;
+            shape = new GridShapeBuilder(lease.Item.modifiedShape);
+            view.ShowPreview(lease.Item);
             return true;
         }
 
@@ -311,9 +310,7 @@ namespace DigitalLogistics.Controller
                 if (releaseAfterAttempt) ClearHeld();
                 return;
             }
-            var expression = new StoredItemExpression(Expression.Call(Expression.Constant(ids),
-                nameof(HashSet<int>.Contains), null,
-                Expression.Property(FilterExpressionBuilder.Item, nameof(CachedItem.UniqueId))))
+            var expression = StoredItemExpression.HasIds(ids)
                 .And(StoredItemExpression.DisplayName.EqualTo(items[0].DisplayName));
             var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
@@ -348,18 +345,11 @@ namespace DigitalLogistics.Controller
                 owner.Configuration.SortBy, owner.Configuration.Reverse, cancellationToken: token,
                 prioritizeOutput: pressedGroup))
             {
-                using var output = stored.PrepareOutput();
                 token.ThrowIfCancellationRequested();
-                if (output == null || !CanOutput(output.Item)) continue;
-                int uniqueId = stored.UniqueId;
-                var slot = findSlot(output.Item);
-                int moved = output.TryPlace(slot, 1);
-                output.Complete(moved);
-                if (moved == 0) continue;
-                if (stored is DigitalItem digital && digital.Provider.FindIndexedItem(uniqueId) is CachedItem remaining)
-                    owner.InsertItem(remaining);
-                else owner.RemoveItem(uniqueId);
-                placedItems.Add((slot.targetItem ?? slot.item).GetUniqueID());
+                var result = StorageTransfer.TryPlace(stored, findSlot, 1);
+                if (result.Amount == 0) continue;
+                ApplyTransfer(result);
+                placedItems.Add(result.PlacedItemId.Value);
                 return true;
             }
             return false;
@@ -368,26 +358,23 @@ namespace DigitalLogistics.Controller
         internal void InputExternal(GameItem item, int amount)
         {
             if (!CanTakeExternal(item)) return;
-            int uniqueId = item.GetUniqueID();
-            var result = DigitalLogistics.Manager.TryInput(item, amount);
-            if (result.Amount == 0) return;
-            if (!result.Items.Any(stored => stored.UniqueId == uniqueId))
-            {
-                var remaining = item.unitCount > 0 ? DigitalLogistics.Manager.Providers
-                    .Select(provider => provider.FindIndexedItem(uniqueId)).FirstOrDefault(stored => stored != null) : null;
-                if (remaining == null) owner.RemoveItem(uniqueId);
-                else owner.InsertItem(remaining);
-            }
-            foreach (var stored in result.Items) owner.InsertItem(stored);
+            var result = StorageTransfer.TryInput(item, amount);
+            if (result.Amount > 0) ApplyTransfer(result);
+        }
+
+        private void ApplyTransfer(StorageTransferResult result)
+        {
+            if (result.RemainingSource == null) owner.RemoveItem(result.SourceId);
+            else owner.InsertItem(result.RemainingSource);
+            foreach (var item in result.Items) owner.InsertItem(item);
         }
 
         private void ClearHeld()
         {
             view.ClearHighlight();
             view.HidePreview();
-            if (previewIsDigital) previewItem.Destroy();
-            previewItem = null;
-            previewIsDigital = false;
+            previewLease?.Dispose();
+            previewLease = null;
             quickInputItem = null;
             pressedRow = null;
             selection.Clear();

@@ -1,4 +1,4 @@
-﻿namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Items
 {
     public static class GameItemHelper
     {

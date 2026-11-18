@@ -1,7 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Filtering
 {

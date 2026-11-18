@@ -1,5 +1,5 @@
 using System;
-using DigitalLogistics.Storage;
+using DigitalLogistics.Buses;
 using HarmonyLib;
 
 namespace DigitalLogistics.Patch

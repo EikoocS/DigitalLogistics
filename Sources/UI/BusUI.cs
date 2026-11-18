@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using DigitalLogistics.Controller;
+using DigitalLogistics.Buses;
 using DigitalLogistics.Item;
-using DigitalLogistics.Storage;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -43,13 +42,13 @@ namespace DigitalLogistics.UI
             TriggerBus.ItemId => 192,
             _ => 148
         };
-        private int BaseRowHeight(object configuration) => configuration is TriggerBusManager.Configuration trigger
+        private int BaseRowHeight(object configuration) => configuration is TriggerBusManager.Connection trigger
             && trigger.Options.Length > 0 ? DefaultRowHeight + 44 : DefaultRowHeight;
         private int RowHeight(object configuration) => BaseRowHeight(configuration) + (configuration switch
         {
-            TriggerBusManager.Configuration trigger => trigger.Schedule.Count * 44,
-            IOBusManager.Configuration io => (IOBus.CanInput(bus) ? io.InputSchedule.Count * 44 : 0)
-                + (IOBus.CanOutput(bus) ? io.OutputSchedule.Count * 44 : 0),
+            TriggerBusManager.Connection trigger => trigger.Configuration.Schedule.Count * 44,
+            IOBusManager.Connection io => (IOBus.CanInput(bus) ? io.Configuration.InputSchedule.Count * 44 : 0)
+                + (IOBus.CanOutput(bus) ? io.Configuration.OutputSchedule.Count * 44 : 0),
             _ => 0
         });
 
@@ -157,9 +156,9 @@ namespace DigitalLogistics.UI
                 background.pixelsPerUnitMultiplier = 0.5f;
                 background.color = Color.white;
                 background.raycastTarget = false;
-                if (configuration is BusManager.Configuration storage) BuildStorageRow(root, storage);
-                else if (configuration is TriggerBusManager.Configuration trigger) BuildTriggerRow(root, trigger);
-                else BuildIORow(root, (IOBusManager.Configuration)configuration);
+                if (configuration is StorageBusManager.Connection storage) BuildStorageRow(root, storage);
+                else if (configuration is TriggerBusManager.Connection trigger) BuildTriggerRow(root, trigger);
+                else BuildIORow(root, (IOBusManager.Connection)configuration);
                 rows.Add(new Row { Configuration = configuration, Root = root });
             }
             ResizeWindow(resetScroll: !force);
@@ -209,46 +208,48 @@ namespace DigitalLogistics.UI
             catch (Superpower.ParseException) { return null; }
         }
 
-        private void BuildStorageRow(RectTransform root, BusManager.Configuration configuration)
+        private void BuildStorageRow(RectTransform root, StorageBusManager.Connection connection)
         {
+            var configuration = connection.Configuration;
             var priorityLabel = CreateLabel(root, new Vector2(-Padding - 120 - Padding, -Padding),
                 "storage_priority", anchor: 1);
             int priorityLabelWidth = FitLabel(priorityLabel);
             ((RectTransform)priorityLabel.root.transform).pivot = Vector2.one;
             BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -192 - priorityLabelWidth - Padding),
-                () => configuration.Name, () => configuration.DefaultName, value =>
+                () => configuration.Name, () => connection.DefaultName, value =>
                 {
                     configuration.Name = value;
-                    configuration.Apply();
+                    StorageBusManager.ApplyConfiguration(connection);
                 });
             BindInteger(CreateInput(root, new Vector2(-Padding, -Padding), 120, right: true),
                 () => configuration.Priority, value =>
                 {
                     configuration.Priority = value;
-                    configuration.Apply();
+                    StorageBusManager.ApplyConfiguration(connection);
                 });
             int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), "storage_configuration"));
             BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
-                () => configuration.Filter, () => BusManager.Configuration.DefaultFilter, value =>
+                () => configuration.Filter, () => StorageBusManager.Configuration.DefaultFilter, value =>
                 {
                     configuration.Filter = value;
-                    configuration.Apply();
+                    StorageBusManager.ApplyConfiguration(connection);
                 });
             BindEnabled(root, () => !configuration.Disabled, value =>
             {
                 configuration.Disabled = !value;
-                configuration.Apply();
+                StorageBusManager.ApplyConfiguration(connection);
             });
         }
 
-        private void BuildIORow(RectTransform root, IOBusManager.Configuration configuration)
+        private void BuildIORow(RectTransform root, IOBusManager.Connection connection)
         {
+            var configuration = connection.Configuration;
             const int countWidth = 120;
             var countLabel = CreateLabel(root, new Vector2(-Padding * 2 - countWidth, -Padding), "transfer_count", anchor: 1);
             int countLabelWidth = FitLabel(countLabel);
             ((RectTransform)countLabel.root.transform).pivot = Vector2.one;
             BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -Padding * 4 - 48 - countWidth - countLabelWidth),
-                () => configuration.Name, () => configuration.DefaultName, value => configuration.Name = value);
+                () => configuration.Name, () => connection.DefaultName, value => configuration.Name = value);
             BindInteger(CreateInput(root, new Vector2(-Padding, -Padding), countWidth, right: true),
                 () => configuration.RepeatCount, value => configuration.Count = Mathf.Max(1, value));
             string configurationKey = bus.identifier switch
@@ -259,10 +260,10 @@ namespace DigitalLogistics.UI
             };
             int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), configurationKey));
             BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
-                () => configuration.Filter, () => configuration.DefaultFilter, value =>
+                () => configuration.Filter, () => connection.DefaultFilter, value =>
                 {
                     configuration.Filter = value;
-                    configuration.Apply();
+                    IOBusManager.ApplyConfiguration(connection);
                 });
             int y = 96;
             if (IOBus.CanInput(bus))
@@ -272,15 +273,16 @@ namespace DigitalLogistics.UI
             BindEnabled(root, () => !configuration.Disabled, value => configuration.Disabled = !value);
         }
 
-        private void BuildTriggerRow(RectTransform root, TriggerBusManager.Configuration configuration)
+        private void BuildTriggerRow(RectTransform root, TriggerBusManager.Connection connection)
         {
+            var configuration = connection.Configuration;
             var label = CreateLabel(root, new Vector2(Padding + 48, -Padding), "");
             ((RectTransform)label.root.transform).sizeDelta = new Vector2(Width * 2 - Padding * 4 - 48, 36);
             label.text.enableWordWrapping = false;
             label.text.overflowMode = TextOverflowModes.Ellipsis;
             label.text.richText = false;
-            refreshers.Add(() => label.SetText(configuration.Name));
-            label.SetText(configuration.Name);
+            refreshers.Add(() => label.SetText(connection.Name));
+            label.SetText(connection.Name);
             var inputToggle = BindToggle(root, new Vector2(Padding, -52), () => configuration.OnInputUpdate,
                 value => configuration.OnInputUpdate = value,
                 text: StorageTerminal.Localize("ui.trigger_bus.on_input_update"));
@@ -289,11 +291,11 @@ namespace DigitalLogistics.UI
                 text: StorageTerminal.Localize("ui.trigger_bus.loop_trigger"));
             int countX = 360 + Padding + FitLabel(CreateLabel(root, new Vector2(360, -96), "trigger_count"));
             var countInput = CreateInput(root, new Vector2(countX, -96), 128, stretch: false);
-            BindInteger(countInput, () => configuration.TriggerCount, value =>
+            BindInteger(countInput, () => connection.TriggerCount, value =>
             {
                 if (!configuration.LoopTrigger) configuration.Count = Mathf.Max(0, value);
             });
-            var options = configuration.Options;
+            var options = connection.Options;
             if (options.Length > 0)
             {
                 int optionX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -140), "trigger_configuration"));

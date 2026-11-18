@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
-using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Filtering
 {
@@ -30,6 +31,11 @@ namespace DigitalLogistics.Filtering
             Tree = Expression.Lambda<Func<CachedItem, bool>>(body, FilterExpressionBuilder.Item);
             evaluate = new Lazy<Func<CachedItem, bool>>(() => Tree.Compile());
         }
+
+        internal static StoredItemExpression HasIds(IEnumerable<int> uniqueIds) => new(
+            Expression.Call(Expression.Constant(new HashSet<int>(uniqueIds)),
+                nameof(HashSet<int>.Contains), null,
+                Expression.Property(FilterExpressionBuilder.Item, nameof(CachedItem.UniqueId))));
 
         public static StoredItemExpression Constant(bool value) => new(Expression.Constant(value));
 

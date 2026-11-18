@@ -1,10 +1,12 @@
-﻿using DigitalLogistics.Filtering;
-using DigitalLogistics.Collections;
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using DigitalLogistics.Collections;
+using DigitalLogistics.Filtering;
+using DigitalLogistics.Storage.Indexing;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage
 {
@@ -15,50 +17,37 @@ namespace DigitalLogistics.Storage
         public event Action onChange;
         internal void NotifyChanged() => onChange?.Invoke();
 
-        public void registerStorageProvider(StorageProvider provider)
+        public void Register(StorageProvider provider)
         {
             if (!providers.Add(provider)) return;
-            provider.onChange += NotifyChanged;
+            provider.Changed += NotifyChanged;
             NotifyChanged();
         }
 
-        public void unregisterStorageProvider(StorageProvider provider)
-        {
-            DetachStorageProvider(provider);
-            provider.Dispose();
-        }
-
-        internal void DetachStorageProvider(StorageProvider provider)
+        public void Unregister(StorageProvider provider)
         {
             if (!providers.Remove(provider)) return;
-            provider.onChange -= NotifyChanged;
+            provider.Changed -= NotifyChanged;
             NotifyChanged();
         }
 
-        internal bool Owns(CachedItem item) => item is StoredItem stored
+        public void Clear()
+        {
+            foreach (var provider in providers) provider.Changed -= NotifyChanged;
+            providers.Clear();
+            NotifyChanged();
+        }
+
+        internal CachedItem FindItem(int uniqueId) => providers.Select(provider => provider.FindIndexedItem(uniqueId))
+            .FirstOrDefault(item => item != null);
+
+        internal bool Owns(CachedItem item) => item is IStoredItem stored
             ? providers.Contains(stored.Provider)
             : providers.Any(provider => provider.Contains(item.UniqueId));
 
         public void Refresh()
         {
             Refresh((_) => true);
-        }
-
-        public StorageInputResult TryInput(GameItem item, int amount = -1,
-            Func<StorageProvider, bool> providerFilter = null)
-        {
-            int remaining = amount < 0 ? item.unitCount : Math.Min(amount, item.unitCount);
-            int requested = remaining;
-            var items = new Dictionary<int, CachedItem>();
-            foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
-            {
-                if (remaining <= 0) break;
-                if (providerFilter != null && !providerFilter(provider)) continue;
-                var result = provider.TryInput(item, remaining);
-                remaining -= result.Amount;
-                foreach (var stored in result.Items) items[stored.UniqueId] = stored;
-            }
-            return new StorageInputResult(requested - remaining, new List<CachedItem>(items.Values));
         }
 
         internal IEnumerable<CachedItem> SearchForOutput(StoredItemExpression expression,
@@ -68,7 +57,7 @@ namespace DigitalLogistics.Storage
             {
                 if (provider == excluded) continue;
                 foreach (var item in provider.Snapshot())
-                    if (provider.filter.Evaluate(item) && expression.Evaluate(item)) yield return item;
+                    if (provider.Filter.Evaluate(item) && expression.Evaluate(item)) yield return item;
             }
         }
 
@@ -89,7 +78,7 @@ namespace DigitalLogistics.Storage
             bool prioritizeOutput = false)
         {
             var providersCopy = new List<StorageProvider>(providers);
-            var itemComparer = ComparerHelper.ComparedBy(sortBy.Getter());
+            var itemComparer = sortBy.Comparer();
             var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<CachedItem> enumerator) => enumerator.Current, itemComparer);
             var priorities = new Dictionary<IAsyncEnumerator<CachedItem>, StorageProvider>();
             if (prioritizeOutput)
@@ -105,8 +94,6 @@ namespace DigitalLogistics.Storage
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (providerFilter != null && !providerFilter(provider)) continue;
-
-                    if (!provider.PrepareSearch(expression)) continue;
 
                     pendingEnumerator = provider.SearchAsync(expression, sortBy, reverse, cancellationToken)
                         .GetAsyncEnumerator();

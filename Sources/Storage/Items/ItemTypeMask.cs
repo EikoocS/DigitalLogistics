@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Items
 {
     public sealed class ItemTypeMask : IEquatable<ItemTypeMask>
     {

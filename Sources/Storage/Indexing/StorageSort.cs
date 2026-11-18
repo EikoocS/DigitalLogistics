@@ -1,6 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using DigitalLogistics.Collections;
+using DigitalLogistics.Storage.Items;
 
-namespace DigitalLogistics.Storage
+namespace DigitalLogistics.Storage.Indexing
 {
     public static class StorageSort
     {
@@ -13,6 +16,8 @@ namespace DigitalLogistics.Storage
             BASE_PRICE,
             HEAT
         }
+
+        public static Comparer<CachedItem> Comparer(this SortBy sortBy) => ComparerHelper.ComparedBy(sortBy.Getter());
 
         public static Func<CachedItem, Object> Getter(this SortBy sortBy)
         {

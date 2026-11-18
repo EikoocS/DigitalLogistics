@@ -1,4 +1,4 @@
-using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Filtering
 {
@@ -13,11 +13,11 @@ namespace DigitalLogistics.Filtering
         public static int ReadContrabandLevel(CachedItem item) => item.ContrabandLevel;
         public static bool ReadItemType(CachedItem item, int index) => item.TypeMask[index];
 
-        public static int ReadInt(CachedItem item, string key) => item.getTag(key)?.GetInt() ?? default;
-        public static float ReadFloat(CachedItem item, string key) => item.getTag(key)?.GetFloat() ?? default;
-        public static long ReadLong(CachedItem item, string key) => item.getTag(key)?.GetLong() ?? default;
-        public static double ReadDouble(CachedItem item, string key) => item.getTag(key)?.GetDouble() ?? default;
-        public static bool ReadBool(CachedItem item, string key) => item.getTag(key)?.GetBool() ?? default;
-        public static string ReadString(CachedItem item, string key) => item.getTag(key)?.GetString();
+        public static int ReadInt(CachedItem item, string key) => item.GetTag(key)?.GetInt() ?? default;
+        public static float ReadFloat(CachedItem item, string key) => item.GetTag(key)?.GetFloat() ?? default;
+        public static long ReadLong(CachedItem item, string key) => item.GetTag(key)?.GetLong() ?? default;
+        public static double ReadDouble(CachedItem item, string key) => item.GetTag(key)?.GetDouble() ?? default;
+        public static bool ReadBool(CachedItem item, string key) => item.GetTag(key)?.GetBool() ?? default;
+        public static string ReadString(CachedItem item, string key) => item.GetTag(key)?.GetString();
     }
 }

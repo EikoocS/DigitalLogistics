@@ -1,3 +1,4 @@
+using DigitalLogistics.Storage.Items;
 using DigitalLogistics.Storage;
 using DigitalLogistics.UI;
 
