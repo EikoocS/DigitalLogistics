@@ -32,6 +32,7 @@ namespace DigitalLogistics.Storage
 
         public abstract void Dispose();
         public abstract bool Contains(int uniqueId);
+        internal CachedItem FindIndexedItem(int uniqueId) => storageIndex.Find(uniqueId);
         public abstract void Refresh();
         public abstract IEnumerator RefreshCoroutine(Action onItemProcessed);
 

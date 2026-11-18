@@ -30,6 +30,7 @@ namespace DigitalLogistics.Storage
         }
 
         public bool Contains(int uniqueId) => UniqueIdIndex.ContainsKey(uniqueId);
+        internal CachedItem Find(int uniqueId) => UniqueIdIndex.TryGetValue(uniqueId, out var item) ? item : null;
 
         public bool Add(CachedItem item)
         {

@@ -5,6 +5,7 @@ using System.Linq;
 using DigitalLogistics.Controller;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Item;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DigitalLogistics.Storage
@@ -96,14 +97,14 @@ namespace DigitalLogistics.Storage
         {
             string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
+            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
         }
 
         internal static void Save()
         {
             var data = new SaveData { Configurations = active.Values.SelectMany(links => links).ToList() };
-            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
+            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonConvert.SerializeObject(data));
         }
 
         internal static void Clear()
@@ -171,24 +172,19 @@ namespace DigitalLogistics.Storage
                 : DigitalLogistics.Manager.SearchForOutput(expression, provider);
             foreach (var stored in candidates)
             {
-                if (!CanMove(stored)) continue;
                 using var output = stored.PrepareOutput();
-                if (output == null) continue;
+                if (output == null || !CanMove(output.Item, stored.IsDigitalItems())) continue;
                 int amount = output.Item.MaxNumRemove();
-                var result = input
-                    ? DigitalLogistics.Manager.TryInput(output.Item, amount, target => target != provider)
-                    : provider.InputFromSystem(output.Item, amount);
-                output.Complete(result.Amount);
-                if (result.Amount > 0 && --remaining == 0) break;
+                int moved = input
+                    ? DigitalLogistics.Manager.TryInput(output.Item, amount, target => target != provider).Amount
+                    : stored.IsDigitalItems() ? provider.InputFromSystem(output, amount)
+                        : provider.InputFromSystem(output.Item, amount).Amount;
+                output.Complete(moved);
+                if (moved > 0 && --remaining == 0) break;
             }
         }
 
-        private static bool CanMove(CachedItem stored)
-        {
-            if (!stored.VerifyValidity()) return false;
-            var item = stored.GetItemInstance();
-            return !Bus.IsBus(item)
-                && GeneralHelper.IsItemOwned(item) && item.MayRemove() && item.MaxNumRemove() > 0;
-        }
+        private static bool CanMove(GameItem item, bool digital) => !Bus.IsBus(item)
+            && GeneralHelper.IsItemOwned(item) && (digital || item.MayRemove()) && item.MaxNumRemove() > 0;
     }
 }

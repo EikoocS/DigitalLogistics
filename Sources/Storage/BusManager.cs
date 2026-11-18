@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Filtering;
-using UnityEngine;
+using DigitalLogistics.Item;
+using Newtonsoft.Json;
 
 namespace DigitalLogistics.Storage
 {
@@ -54,6 +55,7 @@ namespace DigitalLogistics.Storage
 
         private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameInventory, Link> inventories = new();
+        private static readonly Dictionary<Guid, (DiskStorageProvider Provider, int References)> disks = new();
         internal static IEnumerable<StorageProvider> Providers => inventories.Values.Select(link => link.Provider);
 
         internal static Configuration GetConfiguration(GameInventory inventory) => inventories[inventory].Configuration;
@@ -62,7 +64,7 @@ namespace DigitalLogistics.Storage
         {
             string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
+            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
         }
 
@@ -72,11 +74,14 @@ namespace DigitalLogistics.Storage
             {
                 Configurations = configurations.Values.Where(config => config.References > 0).ToList()
             };
-            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonUtility.ToJson(data));
+            ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey, JsonConvert.SerializeObject(data));
         }
 
         internal static void Clear()
         {
+            foreach (var disk in disks.Values)
+                DigitalLogistics.Manager.unregisterStorageProvider(disk.Provider);
+            disks.Clear();
             foreach (var link in inventories.Values)
             {
                 DigitalLogistics.Manager.DetachStorageProvider(link.Provider);
@@ -84,6 +89,33 @@ namespace DigitalLogistics.Storage
             }
             inventories.Clear();
             configurations.Clear();
+        }
+
+        internal static Guid? AcquireDisk(ItemDisk disk)
+        {
+            var data = disk.GetStorage();
+            if (data == null) return null;
+            Guid id = disk.DiskId.Value;
+            if (disks.TryGetValue(id, out var link))
+                disks[id] = (link.Provider, link.References + 1);
+            else
+            {
+                var provider = new DiskStorageProvider(disk, data);
+                disks.Add(id, (provider, 1));
+                DigitalLogistics.Manager.registerStorageProvider(provider);
+            }
+            return id;
+        }
+
+        internal static void ReleaseDisk(Guid id)
+        {
+            var link = disks[id];
+            if (link.References > 1) disks[id] = (link.Provider, link.References - 1);
+            else
+            {
+                disks.Remove(id);
+                DigitalLogistics.Manager.unregisterStorageProvider(link.Provider);
+            }
         }
 
         internal static Link Acquire(GameInventory inventory, GameItem owner, bool storage)

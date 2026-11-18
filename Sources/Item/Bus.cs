@@ -93,7 +93,7 @@ namespace DigitalLogistics.Item
 
         private void Connect(GameInventory inventory)
         {
-            if (!DigitalLogistics.Instance.Enabled) return;
+            if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding) return;
             Disconnect();
             Parent = inventory;
             BusController.Attach(this);
@@ -118,6 +118,7 @@ namespace DigitalLogistics.Item
 
         internal void Refresh()
         {
+            if (SaveManager.IsDecoding) return;
             UpdateLinks(GetTargets().ToArray());
             RefreshWindowState();
             BusUI.RefreshConnections(Item);
@@ -142,7 +143,7 @@ namespace DigitalLogistics.Item
             var shape = Item.modifiedShape;
             foreach (var target in Parent.childItems)
             {
-                if (ReferenceEquals(target, Item) || target.contentWindow == null) continue;
+                if (ReferenceEquals(target, Item) || !CanTargetExternal(target)) continue;
                 for (int column = 0; column < shape.width; column++)
                 {
                     var (x, y) = shape.ForwardTransform(column, -1);
@@ -154,6 +155,7 @@ namespace DigitalLogistics.Item
         }
 
         private void OnInventoryChanged(GameItem item, GameInventory inventory, SlotMarker slot) => Refresh();
+        protected virtual bool CanTargetExternal(GameItem target) => target.contentWindow != null;
         protected virtual void OnMoved() { }
         protected abstract void UpdateLinks(IEnumerable<GameItem> targets);
         protected abstract void ClearLinks();

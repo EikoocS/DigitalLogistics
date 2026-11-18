@@ -1,6 +1,9 @@
 item.storage_terminal.name,Storage Terminal
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
+item.item_disk.name,{0} Item Disk
+item.item_disk.desc,
+item.item_disk.flavor,
 ui.storage_terminal.search_placeholder,
 ui.storage_terminal.refreshing,
 ui.storage_terminal.refresh_result,Refreshed {0:N0} items / {1:N0} ms

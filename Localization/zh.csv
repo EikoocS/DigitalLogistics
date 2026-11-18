@@ -1,6 +1,9 @@
 item.storage_terminal.name,存储终端
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
+item.item_disk.name,{0} 物品磁盘
+item.item_disk.desc,
+item.item_disk.flavor,
 ui.storage_terminal.search_placeholder,
 ui.storage_terminal.refreshing,正在刷新
 ui.storage_terminal.refresh_result,刷新 {0:N0} 件 / {1:N0} ms

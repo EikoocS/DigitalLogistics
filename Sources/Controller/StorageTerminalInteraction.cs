@@ -23,6 +23,7 @@ namespace DigitalLogistics.Controller
         private StorageTerminalRowController pressedRow;
         private GameItem quickInputItem;
         private GameItem previewItem;
+        private bool previewIsDigital;
         private GridShapeBuilder shape;
         private CancellationTokenSource movement;
         private Vector3 pressPosition;
@@ -189,7 +190,7 @@ namespace DigitalLogistics.Controller
             return true;
         }
 
-        private static bool CanTakeExternal(GameItem item) => item is GameItemElement
+        private static bool CanTakeExternal(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
             && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove() && item.MaxNumRemove() > 0;
 
         private static bool CanOutput(GameItem item) => item is GameItemElement && item.unitCount > 0
@@ -212,15 +213,23 @@ namespace DigitalLogistics.Controller
             foreach (var stored in owner.GetCurrentItems(selection))
             {
                 if (placedItems.Contains(stored.UniqueId)) continue;
-                if (Hold(stored.GetItemInstance())) return true;
+                if (Hold(stored)) return true;
             }
             return false;
         }
 
-        private bool Hold(GameItem item)
+        private bool Hold(CachedItem stored)
         {
-            if (!CanOutput(item)) return false;
+            var item = stored.GetItemInstance();
+            bool digital = stored.IsDigitalItems();
+            if (!CanOutput(item))
+            {
+                if (digital) item?.Destroy();
+                return false;
+            }
+            if (previewIsDigital) previewItem.Destroy();
             previewItem = item;
+            previewIsDigital = digital;
             shape = new GridShapeBuilder(item.modifiedShape);
             view.ShowPreview(item);
             return true;
@@ -342,12 +351,14 @@ namespace DigitalLogistics.Controller
                 using var output = stored.PrepareOutput();
                 token.ThrowIfCancellationRequested();
                 if (output == null || !CanOutput(output.Item)) continue;
-                int uniqueId = output.Item.GetUniqueID();
+                int uniqueId = stored.UniqueId;
                 var slot = findSlot(output.Item);
-                int moved = slot?.TryAcceptOnce(1) ?? 0;
+                int moved = output.TryPlace(slot, 1);
                 output.Complete(moved);
                 if (moved == 0) continue;
-                owner.RemoveItem(uniqueId);
+                if (stored is DigitalItem digital && digital.Provider.FindIndexedItem(uniqueId) is CachedItem remaining)
+                    owner.InsertItem(remaining);
+                else owner.RemoveItem(uniqueId);
                 placedItems.Add((slot.targetItem ?? slot.item).GetUniqueID());
                 return true;
             }
@@ -360,7 +371,13 @@ namespace DigitalLogistics.Controller
             int uniqueId = item.GetUniqueID();
             var result = DigitalLogistics.Manager.TryInput(item, amount);
             if (result.Amount == 0) return;
-            if (!result.Items.Any(stored => stored.UniqueId == uniqueId)) owner.RemoveItem(uniqueId);
+            if (!result.Items.Any(stored => stored.UniqueId == uniqueId))
+            {
+                var remaining = item.unitCount > 0 ? DigitalLogistics.Manager.Providers
+                    .Select(provider => provider.FindIndexedItem(uniqueId)).FirstOrDefault(stored => stored != null) : null;
+                if (remaining == null) owner.RemoveItem(uniqueId);
+                else owner.InsertItem(remaining);
+            }
             foreach (var stored in result.Items) owner.InsertItem(stored);
         }
 
@@ -368,7 +385,9 @@ namespace DigitalLogistics.Controller
         {
             view.ClearHighlight();
             view.HidePreview();
+            if (previewIsDigital) previewItem.Destroy();
             previewItem = null;
+            previewIsDigital = false;
             quickInputItem = null;
             pressedRow = null;
             selection.Clear();

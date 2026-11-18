@@ -29,7 +29,9 @@ namespace DigitalLogistics
             ModHelper.AddDebugFunction(Manifest.ID, CustomUIDebugPanel.CATEGORY_SPECIAL,
                 "DigitalLogistics", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
+            ModHook.OnCreateTooltipLate += ItemDisk.AddTooltip;
             ModHook.OnGameLoadedInit += BusController.ClearConnections;
+            ModHook.OnGameLoadedInit += StorageDiskStore.Clear;
             ModHook.OnGameLoadedEarly += BusManager.Load;
             ModHook.OnGameLoadedEarly += IOBusManager.Load;
             ModHook.OnGameLoadedEarly += TriggerBusManager.Load;
@@ -42,7 +44,9 @@ namespace DigitalLogistics
             ModHelper.RemoveDebugFunctions(Manifest.ID);
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
+            ModHook.OnCreateTooltipLate -= ItemDisk.AddTooltip;
             ModHook.OnGameLoadedInit -= BusController.ClearConnections;
+            ModHook.OnGameLoadedInit -= StorageDiskStore.Clear;
             ModHook.OnGameLoadedEarly -= BusManager.Load;
             ModHook.OnGameLoadedEarly -= IOBusManager.Load;
             ModHook.OnGameLoadedEarly -= TriggerBusManager.Load;
@@ -53,6 +57,7 @@ namespace DigitalLogistics
         private void RegisterItems(ModItemDirectory directory)
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
+            directory.Add(ItemDisk.ItemId, ItemDisk.Create);
             directory.Add(StorageBus.ItemId, StorageBus.Create);
             directory.Add(TriggerBus.ItemId, TriggerBus.Create);
             directory.Add(IOBus.InputId, () => IOBus.Create(IOBus.InputId));

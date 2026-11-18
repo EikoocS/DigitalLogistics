@@ -13,6 +13,19 @@
         public int? Heat { get; protected set; } = null;
         public int ContrabandLevel { get; protected set; } = 0;
 
+        protected void CacheProperties(GameItem item)
+        {
+            UniqueId = item.GetUniqueID();
+            Identifier = item.identifier;
+            ModId = item.GetModId() ?? string.Empty;
+            DisplayName = item.GetDisplayName(preferCustomName: true);
+            TypeMask.SetBitByTags(item.GetGameItemType());
+            Price = item.GetCurrentValue();
+            BasePrice = item.GetBaseValue();
+            Heat = StolenHelper.IsStolenItem(item) ? StolenHelper.GetFoundChance(item) : null;
+            ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
+        }
+
         // Does GetItemInstance return the item in the inventory or the virtualized item
         public abstract bool IsDigitalItems();
 
@@ -27,7 +40,6 @@
         // obtaining ToolTip, Maybe temporary deserialization
         public abstract RichText GetTooltip();
 
-        // At the time of writing this code, this functionality had no actual impact.
         public abstract RichText GetTooltipAdvanced();
 
         // Get Item Tag, Return a clone

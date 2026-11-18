@@ -7,15 +7,7 @@ namespace DigitalLogistics.Storage
         public PhysicalItem(GameItem item)
         {
             this.item = item;
-            UniqueId = item.GetUniqueID();
-            Identifier = item.identifier;
-            ModId = item.GetModId() ?? string.Empty;
-            DisplayName = item.GetDisplayName(preferCustomName: true);
-            TypeMask.SetBitByTags(item.GetGameItemType());
-            Price = item.GetCurrentValue();
-            BasePrice = item.GetBaseValue();
-            Heat = StolenHelper.IsStolenItem(item) ? StolenHelper.GetFoundChance(item) : null;
-            ContrabandLevel = ContrabandHelper.GetContrabandLevel(item);
+            CacheProperties(item);
         }
 
         public override bool IsDigitalItems() => false;

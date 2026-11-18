@@ -7,7 +7,11 @@ namespace DigitalLogistics.Patch
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.ResetData))]
     internal static class StorageSessionReset
     {
-        private static void Prefix() => BusController.ClearConnections();
+        private static void Prefix()
+        {
+            BusController.ClearConnections();
+            StorageDiskStore.Clear();
+        }
     }
 
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.SaveGame))]
@@ -15,6 +19,7 @@ namespace DigitalLogistics.Patch
     {
         private static void Prefix()
         {
+            StorageDiskStore.Save();
             if (!DigitalLogistics.Instance.Enabled) return;
             BusManager.Save();
             IOBusManager.Save();

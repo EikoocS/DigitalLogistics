@@ -14,6 +14,8 @@ namespace DigitalLogistics.Storage
         public bool Disposed { get; private set; } = false;
 
         internal StorageInputResult InputFromSystem(GameItem item, int amount) => InputCore(item, amount);
+        internal int InputFromSystem(StorageOutput output, int amount) =>
+            Disposed ? 0 : output.TryPlace(FindInputSlot(output.Item, amount), amount);
 
         internal static MachineryPanel GetPanel(GameInventory inventory) =>
             (inventory as PixelElement)?.handler?.FindParentElement<MachineryPanel>();

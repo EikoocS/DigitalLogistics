@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Item;
 using DigitalLogistics.Controller;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DigitalLogistics.Storage
@@ -149,12 +150,12 @@ namespace DigitalLogistics.Storage
         {
             string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
             if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonUtility.FromJson<SaveData>(json).Configurations)
+            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
                 configurations.Add(configuration.Key, configuration);
         }
 
         internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
-            JsonUtility.ToJson(new SaveData { Configurations = configurations.Values.ToList() }));
+            JsonConvert.SerializeObject(new SaveData { Configurations = configurations.Values.ToList() }));
 
         internal static void Clear()
         {
