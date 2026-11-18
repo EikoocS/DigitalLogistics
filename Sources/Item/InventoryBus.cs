@@ -2,6 +2,7 @@ using DigitalLogistics.Storage.Providers;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Item
 {
@@ -18,7 +19,7 @@ namespace DigitalLogistics.Item
         protected override void UpdateLinks(IEnumerable<GameItem> targets)
         {
             var desired = new Dictionary<GameInventory, GameItem>();
-            if (!Disabled && Parent != null && IsInternal)
+            if (!Disabled && Parent != null && IsInternal && !BusAccess.IsBlocked(Item))
             {
                 var owner = targets.FirstOrDefault();
                 if (InventoryStorageProvider.GetPanel(Parent)?.role != "note")

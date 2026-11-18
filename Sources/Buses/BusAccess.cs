@@ -1,0 +1,14 @@
+namespace DigitalLogistics.Buses
+{
+    internal static class BusAccess
+    {
+        internal static bool IsBlocked(GameItem item)
+        {
+            for (var current = item; current != null; current = current.parentInventory?.GetParentItem())
+                if (!GeneralHelper.IsItemOwned(current) || GeneralHelper.IsItemLocked(current)
+                    || current.contentWindow?.isLocked == true)
+                    return true;
+            return false;
+        }
+    }
+}

@@ -25,7 +25,7 @@ namespace DigitalLogistics.Storage.Providers
         private readonly int capacity;
 
         internal DiskStorageProvider(Guid diskId, StorageDiskData data, int capacity, string name,
-            StoredItemExpression filter)
+            StoredItemExpression filter, Func<bool> canAccess) : base(canAccess)
         {
             this.diskId = diskId;
             this.data = data;
@@ -40,9 +40,13 @@ namespace DigitalLogistics.Storage.Providers
 
         protected override IEnumerable<CachedItem> ReadItems()
         {
+            if (!Available) yield break;
             foreach (var entry in data.Items.ToArray())
+            {
+                if (!Available) yield break;
                 if (entry.Count > 0)
                     yield return new DigitalItem(this, entry);
+            }
         }
 
         private static bool IsBlocked(GameItem item) => Blacklist.Any(rule => rule(item));

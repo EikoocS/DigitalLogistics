@@ -28,7 +28,7 @@ namespace DigitalLogistics.Item
             var desired = targets.OfType<ItemDisk>().ToHashSet();
             foreach (var disk in disks.Keys.Where(disk => !desired.Contains(disk)).ToArray())
             {
-                StorageBusManager.DisconnectDisk(disks[disk]);
+                StorageBusManager.DisconnectDisk(disks[disk], disk);
                 disks.Remove(disk);
             }
             foreach (var disk in desired)
@@ -38,7 +38,7 @@ namespace DigitalLogistics.Item
 
         protected override void ClearLinks()
         {
-            foreach (var id in disks.Values) StorageBusManager.DisconnectDisk(id);
+            foreach (var entry in disks) StorageBusManager.DisconnectDisk(entry.Value, entry.Key);
             disks.Clear();
             base.ClearLinks();
         }

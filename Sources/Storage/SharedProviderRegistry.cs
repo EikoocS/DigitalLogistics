@@ -4,6 +4,7 @@ using System.Linq;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage.Disks;
 using DigitalLogistics.Storage.Providers;
+using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Storage
 {
@@ -18,8 +19,14 @@ namespace DigitalLogistics.Storage
             internal int References;
         }
 
+        private sealed class DiskLink
+        {
+            internal DiskStorageProvider Provider;
+            internal readonly List<GameItem> Owners = new();
+        }
+
         private static readonly Dictionary<GameInventory, InventoryLink> inventories = new();
-        private static readonly Dictionary<Guid, (DiskStorageProvider Provider, int References)> disks = new();
+        private static readonly Dictionary<Guid, DiskLink> disks = new();
         internal static IEnumerable<StorageProvider> Providers => inventories.Values.Select(link => (StorageProvider)link.Provider)
             .Concat(disks.Values.Select(link => link.Provider));
 
@@ -48,26 +55,26 @@ namespace DigitalLogistics.Storage
         }
 
         internal static DiskStorageProvider AcquireDisk(Guid id, StorageDiskData data, int capacity,
-            string name, StoredItemExpression filter)
+            string name, StoredItemExpression filter, GameItem owner)
         {
             if (disks.TryGetValue(id, out var link))
             {
-                disks[id] = (link.Provider, link.References + 1);
+                link.Owners.Add(owner);
                 return link.Provider;
             }
-            var provider = new DiskStorageProvider(id, data, capacity, name, filter);
-            disks.Add(id, (provider, 1));
-            return provider;
+            link = new DiskLink();
+            link.Owners.Add(owner);
+            link.Provider = new DiskStorageProvider(id, data, capacity, name, filter,
+                () => link.Owners.Any(item => !BusAccess.IsBlocked(item)));
+            disks.Add(id, link);
+            return link.Provider;
         }
 
-        internal static DiskStorageProvider ReleaseDisk(Guid id)
+        internal static DiskStorageProvider ReleaseDisk(Guid id, GameItem owner)
         {
             var link = disks[id];
-            if (link.References > 1)
-            {
-                disks[id] = (link.Provider, link.References - 1);
-                return null;
-            }
+            link.Owners.Remove(owner);
+            if (link.Owners.Count > 0) return null;
             disks.Remove(id);
             link.Provider.Dispose();
             return link.Provider;

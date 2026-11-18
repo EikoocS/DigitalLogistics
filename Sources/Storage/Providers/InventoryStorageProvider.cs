@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Items;
+using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Storage.Providers
 {
@@ -14,6 +15,7 @@ namespace DigitalLogistics.Storage.Providers
             (inventory as PixelElement)?.handler?.FindParentElement<MachineryPanel>();
 
         public InventoryStorageProvider(GameInventory inventory, string name = "Unnamed")
+            : base(() => !BusAccess.IsBlocked(inventory.GetParentItem()))
         {
             this.inventory = inventory;
             Name = name;
@@ -40,6 +42,7 @@ namespace DigitalLogistics.Storage.Providers
 
         private void OnItemChanged(GameItem item, GameInventory inventory, SlotMarker slot)
         {
+            if (!Available) return;
             if (item.parentInventory != this.inventory || item.unitCount <= 0)
             {
                 OnItemRemoved(item, inventory, slot);
@@ -50,7 +53,7 @@ namespace DigitalLogistics.Storage.Providers
             if (inputItems != null) inputItems[item.uniqueId] = stored;
         }
 
-        public override bool Contains(int uniqueId) => !Disposed
+        public override bool Contains(int uniqueId) => Available
             && inventory.childItems.Any(item => item.uniqueId == uniqueId);
 
         protected override StorageInputResult InputCore(StorageOutput output, int amount)
@@ -96,9 +99,13 @@ namespace DigitalLogistics.Storage.Providers
 
         protected override IEnumerable<CachedItem> ReadItems()
         {
+            if (!Available) yield break;
             foreach (var item in inventory.childItems.ToArray())
+            {
+                if (!Available) yield break;
                 if (item.parentInventory == inventory && item.unitCount > 0)
                     yield return new StoredPhysicalItem(item, this);
+            }
         }
     }
 }

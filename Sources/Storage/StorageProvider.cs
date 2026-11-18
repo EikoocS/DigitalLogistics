@@ -18,11 +18,19 @@ namespace DigitalLogistics.Storage
         public StoredItemExpression Filter { get; set; } = StoredItemExpression.Constant(true);
         private StorageIndex storageIndex = new();
         private StorageIndex rebuildingIndex;
-        public int Size => storageIndex.Size;
+        private readonly Func<bool> canAccess;
+        internal bool Available => !Disposed && (canAccess?.Invoke() ?? true);
+        public int Size => Available ? storageIndex.Size : 0;
         public bool Disposed { get; private set; }
         public event Action Changed;
 
-        protected StorageProvider() => storageIndex.onChange += NotifyChanged;
+        protected StorageProvider() : this(null) { }
+
+        protected StorageProvider(Func<bool> canAccess)
+        {
+            this.canAccess = canAccess;
+            storageIndex.onChange += NotifyChanged;
+        }
         protected void NotifyChanged() => Changed?.Invoke();
 
         protected void Upsert(CachedItem item)
@@ -56,7 +64,7 @@ namespace DigitalLogistics.Storage
 
         protected abstract void DisposeCore();
         public abstract bool Contains(int uniqueId);
-        internal CachedItem FindIndexedItem(int uniqueId) => Disposed ? null : storageIndex.Find(uniqueId);
+        internal CachedItem FindIndexedItem(int uniqueId) => Available ? storageIndex.Find(uniqueId) : null;
         protected abstract IEnumerable<CachedItem> ReadItems();
 
         public void Refresh()
@@ -68,26 +76,26 @@ namespace DigitalLogistics.Storage
 
         public IEnumerator RefreshCoroutine(Action onItemProcessed)
         {
-            if (Disposed) yield break;
+            if (!Available) yield break;
             rebuildingIndex = new StorageIndex();
             try
             {
                 foreach (var item in ReadItems())
                 {
-                    if (Disposed) yield break;
+                    if (!Available) yield break;
                     rebuildingIndex.Remove(item.UniqueId);
                     rebuildingIndex.Add(item);
                     onItemProcessed?.Invoke();
                     yield return null;
                 }
-                if (!Disposed) ReplaceIndex(rebuildingIndex);
+                if (Available) ReplaceIndex(rebuildingIndex);
             }
             finally { rebuildingIndex = null; }
         }
 
         internal StorageInputResult TryInput(StorageOutput output, int amount, bool applyFilter)
         {
-            if (Disposed || applyFilter && !Filter.Evaluate(new PhysicalItem(output.Item)))
+            if (!Available || applyFilter && !Filter.Evaluate(new PhysicalItem(output.Item)))
                 return StorageInputResult.Empty;
             amount = Math.Min(amount, output.Item.MaxNumRemove());
             return amount > 0 ? InputCore(output, amount) : StorageInputResult.Empty;
@@ -98,6 +106,7 @@ namespace DigitalLogistics.Storage
         internal IReadOnlyList<CachedItem> Snapshot()
         {
             var items = new List<CachedItem>();
+            if (!Available) return items;
             using var enumerator = storageIndex.GetEnumerator(StorageSort.SortBy.IDENTIFIER, false);
             while (enumerator.MoveNext()) items.Add(enumerator.Current);
             return items;
@@ -111,11 +120,12 @@ namespace DigitalLogistics.Storage
         {
             cancellationToken.ThrowIfCancellationRequested();
             var filteredExpression = expression.And(Filter);
-            if (Disposed || !storageIndex.MayMatch(filteredExpression)) yield break;
+            if (!Available || !storageIndex.MayMatch(filteredExpression)) yield break;
             var timer = Stopwatch.StartNew();
             using var enumerator = storageIndex.GetEnumerator(sortBy, reverse);
             while (enumerator.MoveNext())
             {
+                if (!Available) yield break;
                 cancellationToken.ThrowIfCancellationRequested();
                 var item = enumerator.Current;
                 if (filteredExpression.Evaluate(item))

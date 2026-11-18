@@ -164,6 +164,7 @@ namespace DigitalLogistics.Buses
             var configuration = connection.Configuration;
             if (configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)) return;
             var provider = connection.Link.Provider;
+            if (!provider.Available) return;
             var expression = entry?.Expression ?? (input && connection.Bus.identifier == IOBus.InputOutputId
                 ? connection.Expression.Not() : connection.Expression);
             int remaining = entry?.RepeatCount ?? configuration.RepeatCount;
@@ -172,7 +173,7 @@ namespace DigitalLogistics.Buses
             foreach (var stored in candidates)
             {
                 using (var lease = stored.AcquireInstance())
-                    if (lease == null || Bus.IsBus(lease.Item) || !GeneralHelper.IsItemOwned(lease.Item)) continue;
+                    if (lease == null || Bus.IsBus(lease.Item) || BusAccess.IsBlocked(lease.Item)) continue;
                 var result = input
                     ? StorageTransfer.TryInput(stored, providerFilter: target => target != provider)
                     : StorageTransfer.TryInput(stored, provider);

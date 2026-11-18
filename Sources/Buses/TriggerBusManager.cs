@@ -93,7 +93,8 @@ namespace DigitalLogistics.Buses
         {
             var configuration = connection.Configuration;
             if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding || configuration.Disabled
-                || !configuration.OnInputUpdate || executing.Contains(connection)) return;
+                || !configuration.OnInputUpdate || executing.Contains(connection)
+                || BusAccess.IsBlocked(connection.Machine)) return;
             pending.Add(connection);
             if (scheduled == null)
                 scheduled = ModHelper.StartCoroutine(DigitalLogistics.Instance.Manifest.ID, RunPending());
@@ -134,7 +135,7 @@ namespace DigitalLogistics.Buses
                 for (int i = 0; i < limit; i++)
                 {
                     if (connection.Configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)
-                        || !GeneralHelper.IsItemOwned(connection.Machine)
+                        || BusAccess.IsBlocked(connection.Machine)
                         || connection.Machine.contentWindow == null
                         || !connection.Action.CanTrigger(connection.Machine, connection.Configuration.OptionId)) break;
                     connection.Action.Trigger(connection.Machine, connection.Configuration.OptionId);

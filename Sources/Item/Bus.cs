@@ -15,7 +15,7 @@ namespace DigitalLogistics.Item
         protected GameInventory Parent { get; private set; }
         protected bool IsInternal => Item.IsTag(InternalTag);
         internal bool Disabled => Item.IsTag(DisabledTag);
-        internal bool CanExecute => !Disabled && HasLinks && GeneralHelper.IsItemOwned(Item);
+        internal bool CanExecute => !Disabled && HasLinks && !BusAccess.IsBlocked(Item);
         protected abstract bool HasLinks { get; }
         internal abstract IEnumerable<object> Configurations { get; }
 
@@ -132,18 +132,18 @@ namespace DigitalLogistics.Item
 
         private IEnumerable<GameItem> GetTargets()
         {
-            if (Disabled || Parent == null) yield break;
+            if (Disabled || Parent == null || BusAccess.IsBlocked(Item)) yield break;
             if (IsInternal)
             {
                 var owner = GraphUtils.FindParentType<GameItem>(Parent);
-                if (owner != null) yield return owner;
+                if (owner != null && !BusAccess.IsBlocked(owner)) yield return owner;
                 yield break;
             }
             if (!(Parent is GameGridInventory) && !(Parent is GameGridScrollableInventory)) yield break;
             var shape = Item.modifiedShape;
             foreach (var target in Parent.childItems)
             {
-                if (ReferenceEquals(target, Item) || !CanTargetExternal(target)) continue;
+                if (ReferenceEquals(target, Item) || BusAccess.IsBlocked(target) || !CanTargetExternal(target)) continue;
                 for (int column = 0; column < shape.width; column++)
                 {
                     var (x, y) = shape.ForwardTransform(column, -1);
