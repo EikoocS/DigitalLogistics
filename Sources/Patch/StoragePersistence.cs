@@ -5,13 +5,13 @@ using HarmonyLib;
 namespace DigitalLogistics.Patch
 {
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.ResetData))]
-    internal static class StorageBusSession
+    internal static class StorageSessionReset
     {
         private static void Prefix() => BusController.ClearConnections();
     }
 
     [HarmonyPatch(typeof(PlayerStore), nameof(PlayerStore.SaveGame))]
-    internal static class StorageBusSave
+    internal static class StorageSave
     {
         private static void Prefix()
         {

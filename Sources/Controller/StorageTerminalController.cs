@@ -12,6 +12,8 @@ namespace DigitalLogistics.Controller
 {
     internal sealed class StorageTerminalController : MonoBehaviour
     {
+        private static int activeTerminals;
+        internal static bool HasActiveTerminal => activeTerminals > 0;
         private static double RefreshBudgetSeconds => DigitalLogistics.Instance.Settings.TerminalBudgetMilliseconds.Value / 1000d;
 
         private sealed class GroupState
@@ -462,12 +464,14 @@ namespace DigitalLogistics.Controller
 
         private void OnDisable()
         {
+            activeTerminals--;
             Unsubscribe();
             StopSearch();
         }
 
         private void OnEnable()
         {
+            activeTerminals++;
             if (view != null) Subscribe();
         }
 
