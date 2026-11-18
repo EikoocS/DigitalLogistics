@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Superpower;
 using Superpower.Model;
 
@@ -7,7 +8,7 @@ namespace DigitalLogistics.Filtering
 {
     internal enum FilterToken
     {
-        Word, String, Property, TagValue, ItemType,
+        Word, String, Property, TagValue, ItemType, Percentage, Alias,
         LeftParenthesis, RightParenthesis,
         Plus, Minus, Multiply, Divide,
         Greater, Less, Equal, GreaterOrEqual, LessOrEqual, In, Match,
@@ -79,8 +80,12 @@ namespace DigitalLogistics.Filtering
                         }
                         if (end == source.Length) throw Error(span, "Expected ']'.");
                         end++;
-                        if (end == source.Length || source[end++] != '.')
-                            throw Error(span, "Expected a type suffix after '[key]'.");
+                        if (end == source.Length || source[end] != '.')
+                        {
+                            kind = FilterToken.Alias;
+                            break;
+                        }
+                        end++;
                         int typeStart = end;
                         while (end < source.Length && char.IsLetter(source[end])) end++;
                         if (end == typeStart) throw Error(span, "Expected a type name after '.'.");
@@ -89,7 +94,11 @@ namespace DigitalLogistics.Filtering
                     default:
                         end = ReadWord(source, start, span);
                         if (end == start) throw Error(span, "Unexpected character '" + ch + "'.");
-                        kind = source.Substring(start, end - start).ToUpperInvariant() switch
+                        string word = source.Substring(start, end - start);
+                        kind = (char.IsDigit(ch) || ch == '.') && word.EndsWith("%", StringComparison.Ordinal)
+                            && double.TryParse(word.Substring(0, word.Length - 1), NumberStyles.Float,
+                                CultureInfo.InvariantCulture, out _)
+                            ? FilterToken.Percentage : word.ToUpperInvariant() switch
                         {
                             "AND" => FilterToken.And,
                             "OR" => FilterToken.Or,

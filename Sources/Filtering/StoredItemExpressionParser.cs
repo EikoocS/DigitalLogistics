@@ -45,7 +45,7 @@ namespace DigitalLogistics.Filtering
             TokenListParser<FilterToken, Expression> unary = null;
 
             var value = Operator(FilterToken.Word, FilterToken.String, FilterToken.Property,
-                    FilterToken.TagValue, FilterToken.ItemType)
+                    FilterToken.TagValue, FilterToken.ItemType, FilterToken.Percentage, FilterToken.Alias)
                 .Select(ParseValue);
 
             var parentheses =
@@ -81,6 +81,14 @@ namespace DigitalLogistics.Filtering
             string text = token.ToStringValue();
             switch (token.Kind)
             {
+                case FilterToken.Percentage:
+                    double percentage = double.Parse(text.Substring(0, text.Length - 1),
+                        NumberStyles.Float, CultureInfo.InvariantCulture);
+                    return FilterPercentages.Create(percentage);
+
+                case FilterToken.Alias:
+                    return AtToken(token, () => FilterAliases.Resolve(Decode(text.Substring(1, text.Length - 2))));
+
                 case FilterToken.Property:
                     string name = Decode(text.Substring(1));
                     if (!PropertyGetters.TryGetValue(name, out string propertyGetter))

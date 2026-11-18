@@ -29,6 +29,10 @@ namespace DigitalLogistics.Filtering
 
         public static Expression Binary(ExpressionType op, Expression left, Expression right)
         {
+            if (op == ExpressionType.Equal || op == ExpressionType.GreaterThan || op == ExpressionType.GreaterThanOrEqual
+                || op == ExpressionType.LessThan || op == ExpressionType.LessThanOrEqual)
+                FilterPercentages.Bind(ref left, ref right);
+
             switch (op)
             {
                 case ExpressionType.AndAlso:
