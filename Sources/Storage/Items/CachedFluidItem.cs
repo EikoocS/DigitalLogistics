@@ -11,8 +11,9 @@ namespace DigitalLogistics.Storage.Items
         }
 
         public override TagState GetTag(string key) => provider.ReadTag(key);
-        public override int LiquidVolume => provider.VolumeUL;
-        public override int FreeLiquidVolume => provider.FreeCapacityUL;
+        public override long LiquidVolume => provider.VolumeUL;
+        public override long FreeLiquidVolume => provider.FreeCapacityUL;
+        internal override long ReadLiquidAmount(string key) => provider.ReadVolumeTag(key);
         public override bool VerifyValidity() => provider.Available;
         public override ItemInstanceLease AcquireInstance() => null;
     }

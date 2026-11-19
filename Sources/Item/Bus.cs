@@ -22,7 +22,7 @@ namespace DigitalLogistics.Item
         protected Bus(string id)
         {
             Item = ItemDirectory.CreateEmptyItem(id)
-                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, SpriteId(id))
+                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, id)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
             Item.SetContentWindow(BusUI.Create(Item));
             RefreshWindowState();
@@ -55,7 +55,7 @@ namespace DigitalLogistics.Item
             };
             Item.getItemSpriteModifierForItemFunc = self => new List<ItemSpriteModifier>
             {
-                new(((GameItemElement)self).ResolveSpriteByName($"{SpriteId(self.identifier)}_{Mode}"), Vector2.zero)
+                new(((GameItemElement)self).ResolveSpriteByName(GetStatusSpriteId()), Vector2.zero)
             };
             UpdateAppearance();
         }
@@ -69,20 +69,17 @@ namespace DigitalLogistics.Item
             if (IsBus(item)) activate = false;
         }
 
-        private static string SpriteId(string id) => id switch
+        private string GetStatusSpriteId()
         {
-            FluidStorageBus.ItemId => StorageBus.ItemId,
-            FluidIOBus.InputId => IOBus.InputId,
-            FluidIOBus.OutputId => IOBus.OutputId,
-            FluidIOBus.InputOutputId => IOBus.InputOutputId,
-            _ => id
-        };
+            string family = FluidIOBus.IsIO(Item) || Item.identifier == FluidStorageBus.ItemId ? "fluid_bus" : "bus";
+            return $"{family}_status_{Mode}";
+        }
 
         private string Mode => Disabled ? "disabled" : IsInternal ? "internal" : "external";
 
         private void UpdateAppearance()
         {
-            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, SpriteId(Item.identifier));
+            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, Item.identifier);
             Item.name = DigitalLogistics.Localize($"item.{Item.identifier}.{Mode}.name");
             Item.contentWindow.SetTitle(Item.GetDisplayName(preferCustomName: true));
             Item.Validate();

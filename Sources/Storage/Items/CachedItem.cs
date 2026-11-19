@@ -41,9 +41,10 @@ namespace DigitalLogistics.Storage.Items
         public virtual TagState GetTag(string key) => ReadItem(item =>
             item.modifiedState.dict.TryGetValue(key, out var tag) ? tag?.Clone() : null);
 
-        public virtual int LiquidVolume => ReadItem(WaterHelper.GetTotalVolume);
-        public virtual int FreeLiquidVolume => ReadItem(item =>
-            item.GetTagReadonly(WaterHelper.LIQUID_CONTAINER_CAPACITY).GetInt() - WaterHelper.GetTotalVolume(item));
+        public virtual long LiquidVolume => ReadItem(WaterHelper.GetTotalVolume);
+        public virtual long FreeLiquidVolume => ReadItem(item =>
+            (long)item.GetTagReadonly(WaterHelper.LIQUID_CONTAINER_CAPACITY).GetInt() - WaterHelper.GetTotalVolume(item));
+        internal virtual long ReadLiquidAmount(string key) => GetTag(key)?.GetInt() ?? 0;
 
         private T ReadItem<T>(Func<GameItem, T> read)
         {

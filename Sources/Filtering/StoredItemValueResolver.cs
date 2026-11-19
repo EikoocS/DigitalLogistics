@@ -13,8 +13,9 @@ namespace DigitalLogistics.Filtering
         public static int ReadContrabandLevel(CachedItem item) => item.ContrabandLevel;
         public static bool ReadItemType(CachedItem item, int index) => item.TypeMask[index];
 
-        public static int ReadLiquidVolume(CachedItem item) => item.LiquidVolume;
-        public static int ReadFreeLiquidVolume(CachedItem item) => item.FreeLiquidVolume;
+        public static long ReadLiquidVolume(CachedItem item) => item.LiquidVolume;
+        public static long ReadFreeLiquidVolume(CachedItem item) => item.FreeLiquidVolume;
+        public static long ReadLiquidAmount(CachedItem item, string key) => item.ReadLiquidAmount(key);
 
         public static bool ReadEnabled(CachedItem item, string key) => item.GetTag(key)?.IsEnabled() ?? false;
 

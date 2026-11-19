@@ -77,7 +77,7 @@ config.terminal_budget_ms,Terminal list time budget per frame (ms)
 config.index_refresh_budget_ms,Index refresh time budget per frame (ms)
 config.max_continuous_triggers,Maximum consecutive triggers per execution
 
-item.fluid_disk.name,
+item.fluid_disk.name,{0} Fluid Disk
 item.fluid_disk.desc,
 item.fluid_disk.flavor,
 item.fluid_storage_bus.external.name,

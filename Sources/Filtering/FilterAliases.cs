@@ -11,7 +11,7 @@ namespace DigitalLogistics.Filtering
             {
                 ["volume"] = (Read(nameof(StoredItemValueResolver.ReadLiquidVolume)), LiquidCapacity()),
                 ["free_volume"] = (Read(nameof(StoredItemValueResolver.ReadFreeLiquidVolume)), LiquidCapacity()),
-                ["capacity"] = Tag(nameof(StoredItemValueResolver.ReadInt), WaterHelper.LIQUID_CONTAINER_CAPACITY),
+                ["capacity"] = (LiquidCapacity(), null),
                 ["power"] = Tag(nameof(StoredItemValueResolver.ReadInt), PowerHelper.POWER_SOURCE_ITEM_ENERGY,
                     Int(PowerHelper.POWER_SOURCE_ITEM_MAX_ENERGY)),
                 ["power_max"] = Tag(nameof(StoredItemValueResolver.ReadInt), PowerHelper.POWER_SOURCE_ITEM_MAX_ENERGY),
@@ -40,7 +40,7 @@ namespace DigitalLogistics.Filtering
             if (aliases.TryGetValue(name, out var alias)) return alias.Value;
             foreach (var liquid in Liquid.Liquids)
                 if (string.Equals(name, liquid.identifier, StringComparison.OrdinalIgnoreCase))
-                    return Int(liquid.currentPart);
+                    return LiquidAmount(liquid.currentPart);
             throw new ArgumentException("Unknown alias '[" + name + "]'.");
         }
 
@@ -48,7 +48,7 @@ namespace DigitalLogistics.Filtering
         {
             foreach (var alias in aliases.Values)
                 if (FilterExpressionComparer.Instance.Equals(value, alias.Value)) return alias.PercentageBase;
-            if (value.Method.Name == nameof(StoredItemValueResolver.ReadInt)
+            if ((value.Method.Name is nameof(StoredItemValueResolver.ReadLiquidAmount) or nameof(StoredItemValueResolver.ReadInt))
                 && value.Arguments.Count == 2 && value.Arguments[1] is ConstantExpression key)
                 foreach (var liquid in Liquid.Liquids)
                     if (Equals(key.Value, liquid.currentPart))
@@ -62,6 +62,7 @@ namespace DigitalLogistics.Filtering
 
         private static Expression Read(string getter) => FilterExpressionBuilder.Read(getter);
         private static Expression Int(string key) => Tag(nameof(StoredItemValueResolver.ReadInt), key).Value;
-        private static Expression LiquidCapacity() => Int(WaterHelper.LIQUID_CONTAINER_CAPACITY);
+        private static Expression LiquidAmount(string key) => Tag(nameof(StoredItemValueResolver.ReadLiquidAmount), key).Value;
+        private static Expression LiquidCapacity() => LiquidAmount(WaterHelper.LIQUID_CONTAINER_CAPACITY);
     }
 }

@@ -20,9 +20,9 @@ namespace DigitalLogistics.Storage.Providers
         }
 
         public override TagState ReadTag(string key) => container.GetTagReadonly(key);
-        public override int[] ReadParts() => WaterHelper.GetLiquidParts(container);
-        internal override void SetPart(int index, int volumeUL) => container.ModifyTag(
-            Liquid.Liquids[index].currentPart, tag => tag.Enable().SetInt(volumeUL), skipValidate: true);
+        public override long[] ReadParts() => System.Array.ConvertAll(WaterHelper.GetLiquidParts(container), part => (long)part);
+        internal override void SetPart(int index, long volumeUL) => container.ModifyTag(
+            Liquid.Liquids[index].currentPart, tag => tag.Enable().SetInt((int)volumeUL), skipValidate: true);
         internal override void ReceiveTemperature(int volumeUL, double temperature) =>
             ChemicalHelper.HandleReceiveLiquidTemp(container, volumeUL, temperature);
         internal override void Synchronize() => container.SyncModifiedState();

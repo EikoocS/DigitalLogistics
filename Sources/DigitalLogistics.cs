@@ -57,11 +57,9 @@ namespace DigitalLogistics
         private void RegisterItems(ModItemDirectory directory)
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
-            directory.Add(ItemDisk.ItemId, ItemDisk.Create);
-            directory.Add(FluidDisk.ItemId, FluidDisk.Create);
-            directory.Add(StorageDrive.SimpleId, () => StorageDrive.Create(StorageDrive.SimpleId, 2, 4, 4));
-            directory.Add(StorageDrive.ItemId, () => StorageDrive.Create(StorageDrive.ItemId, 3, 4, 8));
-            directory.Add(StorageDrive.ExpandedId, () => StorageDrive.Create(StorageDrive.ExpandedId, 4, 8, 8));
+            StorageDisk.RegisterTiers(directory, ItemDisk.FamilyId, ItemDisk.Create);
+            StorageDisk.RegisterTiers(directory, FluidDisk.FamilyId, FluidDisk.Create);
+            StorageDrive.RegisterVariants(directory);
             directory.Add(FluidStorageBus.ItemId, FluidStorageBus.Create);
             directory.Add(FluidIOBus.InputId, () => FluidIOBus.Create(FluidIOBus.InputId));
             directory.Add(FluidIOBus.OutputId, () => FluidIOBus.Create(FluidIOBus.OutputId));
