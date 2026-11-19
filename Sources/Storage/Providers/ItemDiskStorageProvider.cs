@@ -8,7 +8,7 @@ using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage.Providers
 {
-    public sealed class DiskStorageProvider : StorageProvider
+    public sealed class ItemDiskStorageProvider : ItemStorageProvider
     {
         public static IList<Predicate<GameItem>> Blacklist { get; } = new List<Predicate<GameItem>>
         {
@@ -24,8 +24,8 @@ namespace DigitalLogistics.Storage.Providers
         private readonly Guid diskId;
         private readonly int capacity;
 
-        internal DiskStorageProvider(Guid diskId, StorageDiskData data, int capacity, string name,
-            StoredItemExpression filter, Func<bool> canAccess) : base(canAccess)
+        internal ItemDiskStorageProvider(Guid diskId, StorageDiskData data, int capacity, string name,
+            CachedItemExpression filter, Func<bool> canAccess) : base(canAccess)
         {
             this.diskId = diskId;
             this.data = data;
@@ -36,7 +36,7 @@ namespace DigitalLogistics.Storage.Providers
         }
 
         public override bool Contains(int uniqueId) => FindIndexedItem(uniqueId) != null;
-        protected override void DisposeCore() { }
+        protected override void DisposeItems() { }
 
         protected override IEnumerable<CachedItem> ReadItems()
         {

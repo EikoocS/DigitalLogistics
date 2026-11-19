@@ -70,7 +70,7 @@ namespace DigitalLogistics.Buses
             provider.Name = string.IsNullOrEmpty(configuration.Name) ? connection.DefaultName : configuration.Name;
             provider.Priority = configuration.Priority;
             provider.Filter = string.IsNullOrWhiteSpace(configuration.Filter)
-                ? StoredItemExpression.Constant(true) : StoredItemExpressionParser.Parse(configuration.Filter);
+                ? CachedItemExpression.Constant(true) : CachedItemExpressionParser.Parse(configuration.Filter);
             if (configuration.Disabled) DigitalLogistics.Manager.Unregister(provider);
             else DigitalLogistics.Manager.Register(provider);
             DigitalLogistics.Manager.NotifyChanged();

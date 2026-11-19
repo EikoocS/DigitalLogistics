@@ -28,7 +28,7 @@ namespace DigitalLogistics.Controller
         private readonly StorageTerminalController owner;
         private readonly StorageTerminalList List;
         private readonly StorageSort.SortBy sortBy;
-        private readonly StoredItemExpression searchExpression;
+        private readonly CachedItemExpression searchExpression;
         private readonly IComparer<CachedItem> itemComparer;
         private readonly IComparer<GroupState> groupComparer;
         private readonly Dictionary<string, GroupState> groups = new();
@@ -42,7 +42,7 @@ namespace DigitalLogistics.Controller
         internal bool HasPendingChildren => pendingChildren.Count > 0;
 
         internal StorageTerminalResults(StorageTerminalController owner, StorageTerminalList list,
-            StoredItemExpression expression, StorageSort.SortBy sortBy, bool reverse, IEnumerable<string> expanded)
+            CachedItemExpression expression, StorageSort.SortBy sortBy, bool reverse, IEnumerable<string> expanded)
         {
             this.owner = owner;
             List = list;

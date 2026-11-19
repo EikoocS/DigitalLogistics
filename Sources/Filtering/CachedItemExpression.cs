@@ -5,7 +5,7 @@ using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Filtering
 {
-    public sealed class StoredItemExpression
+    public sealed class CachedItemExpression
     {
         private readonly Lazy<Func<CachedItem, bool>> evaluate;
 
@@ -26,20 +26,20 @@ namespace DigitalLogistics.Filtering
         public static StoredItemNumber<int> ContrabandLevel { get; } = new(
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadContrabandLevel)));
 
-        internal StoredItemExpression(Expression body)
+        internal CachedItemExpression(Expression body)
         {
             Tree = Expression.Lambda<Func<CachedItem, bool>>(body, FilterExpressionBuilder.Item);
             evaluate = new Lazy<Func<CachedItem, bool>>(() => Tree.Compile());
         }
 
-        internal static StoredItemExpression HasIds(IEnumerable<int> uniqueIds) => new(
+        internal static CachedItemExpression HasIds(IEnumerable<int> uniqueIds) => new(
             Expression.Call(Expression.Constant(new HashSet<int>(uniqueIds)),
                 nameof(HashSet<int>.Contains), null,
                 Expression.Property(FilterExpressionBuilder.Item, nameof(CachedItem.UniqueId))));
 
-        public static StoredItemExpression Constant(bool value) => new(Expression.Constant(value));
+        public static CachedItemExpression Constant(bool value) => new(Expression.Constant(value));
 
-        public static StoredItemExpression ItemType(int index) => new(
+        public static CachedItemExpression ItemType(int index) => new(
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadItemType), Expression.Constant(index)));
 
         public static StoredItemNumber<int> TagInt(string key) => new(
@@ -50,18 +50,18 @@ namespace DigitalLogistics.Filtering
             ReadTag(nameof(StoredItemValueResolver.ReadFloat), key));
         public static StoredItemNumber<double> TagDouble(string key) => new(
             ReadTag(nameof(StoredItemValueResolver.ReadDouble), key));
-        public static StoredItemExpression TagBool(string key) => new(
+        public static CachedItemExpression TagBool(string key) => new(
             ReadTag(nameof(StoredItemValueResolver.ReadBool), key));
         public static StoredItemString TagString(string key) => new(
             ReadTag(nameof(StoredItemValueResolver.ReadString), key));
 
-        public StoredItemExpression And(StoredItemExpression other) => new(
+        public CachedItemExpression And(CachedItemExpression other) => new(
             FilterExpressionBuilder.Binary(ExpressionType.AndAlso, Tree.Body, other.Tree.Body));
-        public StoredItemExpression Or(StoredItemExpression other) => new(
+        public CachedItemExpression Or(CachedItemExpression other) => new(
             FilterExpressionBuilder.Binary(ExpressionType.OrElse, Tree.Body, other.Tree.Body));
-        public StoredItemExpression Xor(StoredItemExpression other) => new(
+        public CachedItemExpression Xor(CachedItemExpression other) => new(
             FilterExpressionBuilder.Binary(ExpressionType.ExclusiveOr, Tree.Body, other.Tree.Body));
-        public StoredItemExpression Not() => new(
+        public CachedItemExpression Not() => new(
             FilterExpressionBuilder.Unary(ExpressionType.Not, Tree.Body));
 
         public bool Evaluate(CachedItem item) => evaluate.Value(item);

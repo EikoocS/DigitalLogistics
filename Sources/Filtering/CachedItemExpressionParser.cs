@@ -10,7 +10,7 @@ using Superpower.Parsers;
 
 namespace DigitalLogistics.Filtering
 {
-    public static class StoredItemExpressionParser
+    public static class CachedItemExpressionParser
     {
         private static readonly Dictionary<string, string> PropertyGetters = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -27,16 +27,16 @@ namespace DigitalLogistics.Filtering
             ["level"] = nameof(StoredItemValueResolver.ReadContrabandLevel)
         };
 
-        private static readonly StoredItemExpressionTokenizer Tokenizer = new();
+        private static readonly CachedItemExpressionTokenizer Tokenizer = new();
         private static readonly TokenListParser<FilterToken, Expression> Parser = BuildParser();
 
-        public static StoredItemExpression Parse(string input)
+        public static CachedItemExpression Parse(string input)
         {
             var tokens = Tokenizer.Tokenize(input);
             var root = Parser.Parse(tokens);
             if (root.Type != typeof(bool))
                 throw new ParseException("A filter expression must return bool.", new TextSpan(input).Position);
-            return new StoredItemExpression(root);
+            return new CachedItemExpression(root);
         }
 
         private static TokenListParser<FilterToken, Expression> BuildParser()

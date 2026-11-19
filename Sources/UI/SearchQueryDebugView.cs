@@ -13,11 +13,11 @@ namespace DigitalLogistics.UI
     internal sealed class SearchQueryDebugView
     {
         private readonly CustomUIBuilder output;
-        private StoredItemExpression expression = StoredItemExpression.Constant(true);
+        private CachedItemExpression expression = CachedItemExpression.Constant(true);
         private string parseError;
         private GameItem sample;
 
-        internal SearchQueryDebugView(CustomUIBuilder builder, Func<string, StoredItemExpression> parse, string inputLabel)
+        internal SearchQueryDebugView(CustomUIBuilder builder, Func<string, CachedItemExpression> parse, string inputLabel)
         {
             builder.BeginRow(alignment: TextAnchor.MiddleLeft);
             builder.AddButton("", Refresh);

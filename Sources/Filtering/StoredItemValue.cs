@@ -9,13 +9,13 @@ namespace DigitalLogistics.Filtering
 
         internal StoredItemValue(Expression body) => Body = body;
 
-        public StoredItemExpression EqualTo(T value) =>
+        public CachedItemExpression EqualTo(T value) =>
             Compare(ExpressionType.Equal, Expression.Constant(value, typeof(T)));
 
-        public StoredItemExpression EqualTo(StoredItemValue<T> other) =>
+        public CachedItemExpression EqualTo(StoredItemValue<T> other) =>
             Compare(ExpressionType.Equal, other.Body);
 
-        private protected StoredItemExpression Compare(ExpressionType op, Expression other) =>
+        private protected CachedItemExpression Compare(ExpressionType op, Expression other) =>
             new(FilterExpressionBuilder.Binary(op, Body, other));
     }
 
@@ -23,24 +23,24 @@ namespace DigitalLogistics.Filtering
     {
         internal StoredItemNumber(Expression body) : base(body) { }
 
-        public StoredItemExpression GreaterThan(T value) =>
+        public CachedItemExpression GreaterThan(T value) =>
             Compare(ExpressionType.GreaterThan, Expression.Constant(value, typeof(T)));
-        public StoredItemExpression GreaterThan(StoredItemNumber<T> other) =>
+        public CachedItemExpression GreaterThan(StoredItemNumber<T> other) =>
             Compare(ExpressionType.GreaterThan, other.Body);
 
-        public StoredItemExpression GreaterThanOrEqual(T value) =>
+        public CachedItemExpression GreaterThanOrEqual(T value) =>
             Compare(ExpressionType.GreaterThanOrEqual, Expression.Constant(value, typeof(T)));
-        public StoredItemExpression GreaterThanOrEqual(StoredItemNumber<T> other) =>
+        public CachedItemExpression GreaterThanOrEqual(StoredItemNumber<T> other) =>
             Compare(ExpressionType.GreaterThanOrEqual, other.Body);
 
-        public StoredItemExpression LessThan(T value) =>
+        public CachedItemExpression LessThan(T value) =>
             Compare(ExpressionType.LessThan, Expression.Constant(value, typeof(T)));
-        public StoredItemExpression LessThan(StoredItemNumber<T> other) =>
+        public CachedItemExpression LessThan(StoredItemNumber<T> other) =>
             Compare(ExpressionType.LessThan, other.Body);
 
-        public StoredItemExpression LessThanOrEqual(T value) =>
+        public CachedItemExpression LessThanOrEqual(T value) =>
             Compare(ExpressionType.LessThanOrEqual, Expression.Constant(value, typeof(T)));
-        public StoredItemExpression LessThanOrEqual(StoredItemNumber<T> other) =>
+        public CachedItemExpression LessThanOrEqual(StoredItemNumber<T> other) =>
             Compare(ExpressionType.LessThanOrEqual, other.Body);
     }
 
@@ -48,13 +48,13 @@ namespace DigitalLogistics.Filtering
     {
         internal StoredItemString(Expression body) : base(body) { }
 
-        public StoredItemExpression Contains(string value) => new(
+        public CachedItemExpression Contains(string value) => new(
             FilterExpressionBuilder.Contains(Body, Expression.Constant(value, typeof(string))));
 
-        public StoredItemExpression Contains(string value, StringComparison comparison) => new(
+        public CachedItemExpression Contains(string value, StringComparison comparison) => new(
             FilterExpressionBuilder.Contains(Body, Expression.Constant(value, typeof(string)), comparison));
 
-        public StoredItemExpression Matches(string pattern) => new(
+        public CachedItemExpression Matches(string pattern) => new(
             FilterExpressionBuilder.Matches(Body, Expression.Constant(pattern, typeof(string))));
     }
 }

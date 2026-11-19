@@ -75,7 +75,7 @@ namespace DigitalLogistics
         private static void OpenExpression()
         {
             var builder = CreateWindow(ExpressionWindowId, "Parse expression", WindowId);
-            _ = new SearchQueryDebugView(builder, StoredItemExpressionParser.Parse, "Expression");
+            _ = new SearchQueryDebugView(builder, CachedItemExpressionParser.Parse, "Expression");
             CustomUIDebugPanel.SetBackgroundAlpha(builder.Show(), 0.8f);
         }
 

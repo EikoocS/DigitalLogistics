@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace DigitalLogistics.Storage.Disks
 {
@@ -23,6 +24,16 @@ namespace DigitalLogistics.Storage.Disks
 
         [JsonProperty("items")]
         internal List<Entry> Items { get; private set; } = new();
+        private TagSystem fluid;
+        internal TagSystem Fluid => fluid ??= new TagSystem();
+
+        [JsonProperty("fluid", NullValueHandling = NullValueHandling.Ignore)]
+        private string EncodedFluid
+        {
+            get => fluid == null ? null : JsonUtility.ToJson(new SaveItemNode { itemState = fluid });
+            set => fluid = value == null ? null : JsonUtility.FromJson<SaveItemNode>(value).itemState;
+        }
+
         internal int UsedCells => Items.Sum(item => item.Cells);
 
         internal string Encode()

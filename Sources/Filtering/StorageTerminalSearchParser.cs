@@ -6,25 +6,25 @@ namespace DigitalLogistics.Filtering
 {
     internal static class StorageTerminalSearchParser
     {
-        internal static StoredItemExpression Parse(string input)
+        internal static CachedItemExpression Parse(string input)
         {
-            var expression = StoredItemExpression.Constant(true);
+            var expression = CachedItemExpression.Constant(true);
             foreach (var token in Tokenize(input))
                 expression = expression.And(ParseToken(token.Prefix, token.Text, token.Separator));
             return expression;
         }
 
-        private static StoredItemExpression ParseToken(char prefix, string text, int separator)
+        private static CachedItemExpression ParseToken(char prefix, string text, int separator)
         {
             if (prefix == '#')
             {
-                var types = StoredItemExpression.Constant(false);
+                var types = CachedItemExpression.Constant(false);
                 for (int i = 0; i < TypeHelper.ALL_TYPES_LIST.Count; i++)
                 {
                     string tag = TypeHelper.ALL_TYPES_LIST[i];
                     if (tag.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0
                         || TypeHelper.GetTypeDisplayName(tag).IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-                        types = types.Or(StoredItemExpression.ItemType(i));
+                        types = types.Or(CachedItemExpression.ItemType(i));
                 }
                 return types;
             }
@@ -32,12 +32,12 @@ namespace DigitalLogistics.Filtering
             if (prefix == '@')
             {
                 if (separator < 0)
-                    return StoredItemExpression.ModId.Contains(text, StringComparison.OrdinalIgnoreCase);
-                return StoredItemExpression.ModId.Contains(text.Substring(0, separator), StringComparison.OrdinalIgnoreCase)
-                    .And(StoredItemExpression.Identifier.Contains(text.Substring(separator + 1), StringComparison.OrdinalIgnoreCase));
+                    return CachedItemExpression.ModId.Contains(text, StringComparison.OrdinalIgnoreCase);
+                return CachedItemExpression.ModId.Contains(text.Substring(0, separator), StringComparison.OrdinalIgnoreCase)
+                    .And(CachedItemExpression.Identifier.Contains(text.Substring(separator + 1), StringComparison.OrdinalIgnoreCase));
             }
 
-            return StoredItemExpression.DisplayName.Contains(text, StringComparison.OrdinalIgnoreCase);
+            return CachedItemExpression.DisplayName.Contains(text, StringComparison.OrdinalIgnoreCase);
         }
 
         private static IEnumerable<(char Prefix, string Text, int Separator)> Tokenize(string input)

@@ -33,17 +33,17 @@ namespace DigitalLogistics.Storage
         }
 
         public static StorageTransferResult TryInput(GameItem item, int amount = -1,
-            Func<StorageProvider, bool> providerFilter = null) => TryInput(new PhysicalItem(item), amount, providerFilter);
+            Func<ItemStorageProvider, bool> providerFilter = null) => TryInput(new PhysicalItem(item), amount, providerFilter);
 
         public static StorageTransferResult TryInput(CachedItem source, int amount = -1,
-            Func<StorageProvider, bool> providerFilter = null) => Input(source,
-                DigitalLogistics.Manager.Providers.Where(provider => providerFilter == null || providerFilter(provider))
+            Func<ItemStorageProvider, bool> providerFilter = null) => Input(source,
+                DigitalLogistics.Manager.ItemProviders.Where(provider => providerFilter == null || providerFilter(provider))
                     .OrderByDescending(provider => provider.Priority).ToArray(), amount, true);
 
-        internal static StorageTransferResult TryInput(CachedItem source, StorageProvider target, int amount = -1) =>
+        internal static StorageTransferResult TryInput(CachedItem source, ItemStorageProvider target, int amount = -1) =>
             Input(source, new[] { target }, amount, false);
 
-        private static StorageTransferResult Input(CachedItem source, IEnumerable<StorageProvider> providers,
+        private static StorageTransferResult Input(CachedItem source, IEnumerable<ItemStorageProvider> providers,
             int amount, bool applyFilter)
         {
             int remaining;

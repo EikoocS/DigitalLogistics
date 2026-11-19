@@ -6,11 +6,11 @@ namespace DigitalLogistics.Storage.Items
 {
     public sealed class DigitalItem : CachedItem, IStoredItem
     {
-        private readonly DiskStorageProvider provider;
+        private readonly ItemDiskStorageProvider provider;
         private readonly StorageDiskData.Entry entry;
-        public StorageProvider Provider => provider;
+        public ItemStorageProvider Provider => provider;
 
-        internal DigitalItem(DiskStorageProvider provider, StorageDiskData.Entry entry)
+        internal DigitalItem(ItemDiskStorageProvider provider, StorageDiskData.Entry entry)
         {
             this.provider = provider;
             this.entry = entry;

@@ -6,7 +6,7 @@ using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Storage.Providers
 {
-    public sealed class InventoryStorageProvider : StorageProvider
+    public sealed class InventoryStorageProvider : ItemStorageProvider
     {
         private readonly GameInventory inventory;
         private Dictionary<int, CachedItem> inputItems;
@@ -26,7 +26,7 @@ namespace DigitalLogistics.Storage.Providers
             Refresh();
         }
 
-        protected override void DisposeCore()
+        protected override void DisposeItems()
         {
             inventory.onSlotAddItemEndFunc -= OnItemChanged;
             inventory.onSlotRemoveItemEndFunc -= OnItemRemoved;

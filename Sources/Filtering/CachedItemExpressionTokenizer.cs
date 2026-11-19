@@ -15,7 +15,7 @@ namespace DigitalLogistics.Filtering
         And, Or, Not, Xor
     }
 
-    internal sealed class StoredItemExpressionTokenizer : Tokenizer<FilterToken>
+    internal sealed class CachedItemExpressionTokenizer : Tokenizer<FilterToken>
     {
         protected override IEnumerable<Result<FilterToken>> Tokenize(TextSpan span)
         {

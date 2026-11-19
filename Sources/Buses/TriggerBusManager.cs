@@ -16,7 +16,7 @@ namespace DigitalLogistics.Buses
         {
             public string Key;
             public bool Disabled = true;
-            public List<BusScheduleEntry> Schedule = new();
+            public List<CountedBusScheduleEntry> Schedule = new();
             public int Count = 1;
             public bool LoopTrigger;
             public bool OnInputUpdate;
@@ -122,7 +122,7 @@ namespace DigitalLogistics.Buses
             }
         }
 
-        private static BusOperation CreateOperation(Connection connection, BusScheduleEntry entry = null) =>
+        private static BusOperation CreateOperation(Connection connection, CountedBusScheduleEntry entry = null) =>
             new(entry?.Order ?? 6, entry?.Priority ?? 0, BusOperationKind.Trigger,
                 () => Trigger(connection, entry?.RepeatCount ?? connection.TriggerCount));
 

@@ -14,6 +14,8 @@ namespace DigitalLogistics.Storage
     {
         private readonly HashSet<StorageProvider> providers = new HashSet<StorageProvider>();
         public IEnumerable<StorageProvider> Providers => providers;
+        public IEnumerable<ItemStorageProvider> ItemProviders => providers.OfType<ItemStorageProvider>();
+        public IEnumerable<FluidStorageProvider> FluidProviders => providers.OfType<FluidStorageProvider>();
         public event Action onChange;
         internal void NotifyChanged() => onChange?.Invoke();
 
@@ -38,22 +40,22 @@ namespace DigitalLogistics.Storage
             NotifyChanged();
         }
 
-        internal CachedItem FindItem(int uniqueId) => providers.Select(provider => provider.FindIndexedItem(uniqueId))
+        internal CachedItem FindItem(int uniqueId) => ItemProviders.Select(provider => provider.FindIndexedItem(uniqueId))
             .FirstOrDefault(item => item != null);
 
         internal bool Owns(CachedItem item) => item is IStoredItem stored
             ? providers.Contains(stored.Provider)
-            : providers.Any(provider => provider.Contains(item.UniqueId));
+            : ItemProviders.Any(provider => provider.Contains(item.UniqueId));
 
         public void Refresh()
         {
             Refresh((_) => true);
         }
 
-        internal IEnumerable<CachedItem> SearchForOutput(StoredItemExpression expression,
-            StorageProvider excluded)
+        internal IEnumerable<CachedItem> SearchForOutput(CachedItemExpression expression,
+            ItemStorageProvider excluded)
         {
-            foreach (var provider in providers.OrderByDescending(provider => provider.Priority).ToArray())
+            foreach (var provider in ItemProviders.OrderByDescending(provider => provider.Priority).ToArray())
             {
                 if (provider == excluded) continue;
                 foreach (var item in provider.Snapshot())
@@ -63,21 +65,21 @@ namespace DigitalLogistics.Storage
 
         public void Refresh(Func<StorageProvider, bool> providerFilter)
         {
-            foreach (var provider in providers) 
+            foreach (var provider in ItemProviders) 
             { 
                 if (providerFilter(provider)) provider.Refresh();
             }
         }
 
         public async IAsyncEnumerable<CachedItem> SearchAsync(
-            StoredItemExpression expression,
+            CachedItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,
             Func<StorageProvider, bool> providerFilter = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default,
             bool prioritizeOutput = false)
         {
-            var providersCopy = new List<StorageProvider>(providers);
+            var providersCopy = new List<ItemStorageProvider>(ItemProviders);
             var itemComparer = sortBy.Comparer();
             var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<CachedItem> enumerator) => enumerator.Current, itemComparer);
             var priorities = new Dictionary<IAsyncEnumerator<CachedItem>, StorageProvider>();

@@ -4,7 +4,7 @@ namespace DigitalLogistics.Storage.Items
 {
     public interface IStoredItem
     {
-        StorageProvider Provider { get; }
+        ItemStorageProvider Provider { get; }
         StorageOutput PrepareOutput();
     }
 }

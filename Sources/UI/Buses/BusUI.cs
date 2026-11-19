@@ -31,12 +31,12 @@ namespace DigitalLogistics.UI.Buses
         private GameObject emptyState;
         private readonly List<Row> rows = new();
         private readonly List<Action> globalRefreshers = new();
-        private bool IsIO => IOBus.IsIO(bus);
+        private bool IsIO => IOBus.IsIO(bus) || FluidIOBus.IsIO(bus);
         private int EmptyRowHeight => bus.identifier switch
         {
-            StorageBus.ItemId => StorageBusRow.DefaultHeight,
+            StorageBus.ItemId or FluidStorageBus.ItemId => StorageBusRow.DefaultHeight,
             TriggerBus.ItemId => TriggerBusRow.DefaultHeight,
-            _ => IOBusRow.GetBaseHeight(bus)
+            _ => FluidIOBus.IsIO(bus) ? FluidIOBusRow.GetBaseHeight(bus) : IOBusRow.GetBaseHeight(bus)
         };
 
         internal static PixelWindow Create(GameItem bus)
@@ -63,7 +63,7 @@ namespace DigitalLogistics.UI.Buses
             PixelElement content = host;
             if (ui.IsIO)
             {
-                var onAdd = ui.CreateToggle("ui.io_bus.on_add", IOBusManager.OnAddTag);
+                var onAdd = ui.CreateToggle(FluidIOBus.IsIO(bus) ? "ui.fluid_bus.on_add" : "ui.io_bus.on_add", IOBusManager.OnAddTag);
                 var onMove = ui.CreateToggle("ui.io_bus.on_move", IOBusManager.OnMoveTag);
                 content = MachineryStack.Vertical(onAdd, onMove, host)
                     .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
@@ -124,6 +124,8 @@ namespace DigitalLogistics.UI.Buses
                 IBusConfigurationRow editor = connection switch
                 {
                     StorageBusManager.Connection storage => new StorageBusRow(storage),
+                    FluidStorageBusManager.Connection storage => new StorageBusRow(storage),
+                    FluidIOBusManager.Connection fluid => new FluidIOBusRow(fluid),
                     TriggerBusManager.Connection trigger => new TriggerBusRow(trigger),
                     _ => new IOBusRow((IOBusManager.Connection)connection)
                 };

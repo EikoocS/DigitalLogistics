@@ -7,31 +7,31 @@ using static DigitalLogistics.Storage.Indexing.StorageSort;
 
 namespace DigitalLogistics.Filtering
 {
-    public static class StoredItemExpressionAnalyzer
+    public static class CachedItemExpressionAnalyzer
     {
         /// <summary>False proves that the filters cannot match the same item; true also includes unknown cases.</summary>
-        public static bool MayOverlap(StoredItemExpression first, StoredItemExpression second) =>
+        public static bool MayOverlap(CachedItemExpression first, CachedItemExpression second) =>
             MayMatch(first, second, null);
 
         /// <summary>False proves absence; true also includes cases that the analyzer cannot decide.</summary>
         /// <param name="mayContainString">Receives Identifier, ModId or DisplayName and an exact value. Return true for unindexed fields, false only for definite absence.</param>
-        public static bool MayMatch(StoredItemExpression expression, Func<string, string, bool> mayContainString) =>
+        public static bool MayMatch(CachedItemExpression expression, Func<string, string, bool> mayContainString) =>
             Satisfy(expression.Tree.Body, true, new FilterConstraints())
                 .Any(constraints => constraints.MayMatch(mayContainString));
 
         /// <summary>Analyzes both filters together before checking their surviving string constraints against the index.</summary>
         /// <param name="mayContainString">Receives Identifier, ModId or DisplayName and an exact value. Return true for unindexed fields, false only for definite absence.</param>
-        public static bool MayMatch(StoredItemExpression providerFilter, StoredItemExpression searchFilter,
+        public static bool MayMatch(CachedItemExpression providerFilter, CachedItemExpression searchFilter,
             Func<string, string, bool> mayContainString) =>
             Both(providerFilter.Tree.Body, true, searchFilter.Tree.Body, true, new FilterConstraints())
                 .Any(constraints => constraints.MayMatch(mayContainString));
 
-        internal static bool MayMatch(IReadOnlyList<StoredItemExpression> expressions,
+        internal static bool MayMatch(IReadOnlyList<CachedItemExpression> expressions,
             IReadOnlyDictionary<SortBy, BloomFilter> blooms, BloomFilter typeBloom) =>
             SatisfyAll(expressions, 0, new FilterConstraints())
                 .Any(constraints => constraints.MayMatch(blooms, typeBloom));
 
-        private static IEnumerable<FilterConstraints> SatisfyAll(IReadOnlyList<StoredItemExpression> expressions,
+        private static IEnumerable<FilterConstraints> SatisfyAll(IReadOnlyList<CachedItemExpression> expressions,
             int index, FilterConstraints constraints)
         {
             if (index == expressions.Count)

@@ -38,8 +38,12 @@ namespace DigitalLogistics.Storage.Items
             item is TooltipListener listener && listener.HasTooltip()
                 ? listener.GetTooltipAdvanced() : new RichTextBuilder().Build());
 
-        public TagState GetTag(string key) => ReadItem(item =>
+        public virtual TagState GetTag(string key) => ReadItem(item =>
             item.modifiedState.dict.TryGetValue(key, out var tag) ? tag?.Clone() : null);
+
+        public virtual int LiquidVolume => ReadItem(WaterHelper.GetTotalVolume);
+        public virtual int FreeLiquidVolume => ReadItem(item =>
+            item.GetTagReadonly(WaterHelper.LIQUID_CONTAINER_CAPACITY).GetInt() - WaterHelper.GetTotalVolume(item));
 
         private T ReadItem<T>(Func<GameItem, T> read)
         {

@@ -6,7 +6,7 @@ namespace DigitalLogistics.Storage.Items
     internal class StoredPhysicalItem : PhysicalItem, IStoredItem
     {
         private readonly InventoryStorageProvider provider;
-        public StorageProvider Provider => provider;
+        public ItemStorageProvider Provider => provider;
 
         public StoredPhysicalItem(GameItem item, InventoryStorageProvider provider) : base(item)
         {

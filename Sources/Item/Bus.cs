@@ -22,7 +22,7 @@ namespace DigitalLogistics.Item
         protected Bus(string id)
         {
             Item = ItemDirectory.CreateEmptyItem(id)
-                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, id)
+                .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, SpriteId(id))
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
             Item.SetContentWindow(BusUI.Create(Item));
             RefreshWindowState();
@@ -55,24 +55,34 @@ namespace DigitalLogistics.Item
             };
             Item.getItemSpriteModifierForItemFunc = self => new List<ItemSpriteModifier>
             {
-                new(((GameItemElement)self).ResolveSpriteByName($"{self.identifier}_{Mode}"), Vector2.zero)
+                new(((GameItemElement)self).ResolveSpriteByName($"{SpriteId(self.identifier)}_{Mode}"), Vector2.zero)
             };
             UpdateAppearance();
         }
 
         internal static bool IsBus(GameItem item) => item?.identifier is StorageBus.ItemId
-            or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId or TriggerBus.ItemId;
+            or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId or TriggerBus.ItemId
+            or FluidStorageBus.ItemId or FluidIOBus.InputId or FluidIOBus.OutputId or FluidIOBus.InputOutputId;
 
         internal static void SuppressClickActivation(GameItem item, ref bool activate)
         {
             if (IsBus(item)) activate = false;
         }
 
+        private static string SpriteId(string id) => id switch
+        {
+            FluidStorageBus.ItemId => StorageBus.ItemId,
+            FluidIOBus.InputId => IOBus.InputId,
+            FluidIOBus.OutputId => IOBus.OutputId,
+            FluidIOBus.InputOutputId => IOBus.InputOutputId,
+            _ => id
+        };
+
         private string Mode => Disabled ? "disabled" : IsInternal ? "internal" : "external";
 
         private void UpdateAppearance()
         {
-            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, Item.identifier);
+            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, SpriteId(Item.identifier));
             Item.name = DigitalLogistics.Localize($"item.{Item.identifier}.{Mode}.name");
             Item.contentWindow.SetTitle(Item.GetDisplayName(preferCustomName: true));
             Item.Validate();

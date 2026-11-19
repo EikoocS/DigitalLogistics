@@ -6,7 +6,7 @@ namespace DigitalLogistics.Buses
 {
     internal sealed class TriggerBusInputWatcher : IDisposable
     {
-        private static readonly Dictionary<GameItem, Action> liquidListeners = new();
+        private readonly Action<bool> liquidChanged;
         private readonly GameInventory[] inventories;
         private readonly GameItem liquidOwner;
         private readonly Action changed;
@@ -17,6 +17,7 @@ namespace DigitalLogistics.Buses
             this.inventories = inventories.Distinct().ToArray();
             this.liquidOwner = liquidOwner;
             this.changed = changed;
+            liquidChanged = _ => changed();
             foreach (var inventory in this.inventories)
             {
                 inventory.onSlotAddItemEndFunc += OnInventoryChanged;
@@ -40,25 +41,14 @@ namespace DigitalLogistics.Buses
             foreach (var item in desired)
             {
                 if (!items.Add(item)) continue;
-                liquidListeners.TryGetValue(item, out var listeners);
-                liquidListeners[item] = listeners + changed;
+                LiquidChangeEvents.Subscribe(item, liquidChanged);
             }
         }
 
         private void Unwatch(GameItem item)
         {
-            var listeners = liquidListeners[item] - changed;
-            if (listeners == null) liquidListeners.Remove(item);
-            else liquidListeners[item] = listeners;
+            LiquidChangeEvents.Unsubscribe(item, liquidChanged);
             items.Remove(item);
-        }
-
-        internal static bool IsWatchedLiquidPart(GameItem item, string tag) =>
-            liquidListeners.ContainsKey(item) && Liquid.Liquids.Any(liquid => liquid.currentPart == tag);
-
-        internal static void NotifyLiquidChanged(GameItem item)
-        {
-            if (liquidListeners.TryGetValue(item, out var listeners)) listeners();
         }
 
         public void Dispose()

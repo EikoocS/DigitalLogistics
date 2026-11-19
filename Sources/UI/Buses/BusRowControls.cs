@@ -16,6 +16,7 @@ namespace DigitalLogistics.UI.Buses
 
         private readonly TreeNodeRender handler;
         private readonly List<Action> refreshers = new();
+        private readonly List<Action> lateRefreshers = new();
         internal RectTransform Root { get; }
         internal Action Rebuild { get; }
 
@@ -39,14 +40,22 @@ namespace DigitalLogistics.UI.Buses
 
         internal void AddRefresh(Action refresh) => refreshers.Add(refresh);
 
+        internal void AddLateRefresh(Action refresh)
+        {
+            lateRefreshers.Add(refresh);
+            refresh();
+        }
+
         internal void Refresh()
         {
             foreach (var refresh in refreshers) refresh();
+            foreach (var refresh in lateRefreshers) refresh();
         }
 
         internal void Destroy()
         {
             refreshers.Clear();
+            lateRefreshers.Clear();
             Root.gameObject.SetActive(false);
             UnityEngine.Object.Destroy(Root.gameObject);
         }
@@ -132,9 +141,9 @@ namespace DigitalLogistics.UI.Buses
             Refresh();
         }
 
-        internal static StoredItemExpression ParseFilter(string text)
+        internal static CachedItemExpression ParseFilter(string text)
         {
-            try { return StoredItemExpressionParser.Parse(text); }
+            try { return CachedItemExpressionParser.Parse(text); }
             catch (Superpower.ParseException) { return null; }
         }
     }

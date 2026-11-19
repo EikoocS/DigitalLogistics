@@ -26,6 +26,7 @@ namespace DigitalLogistics.Buses
             public List<IOBusScheduleEntry> OutputSchedule = new();
             public string Filter = string.Empty;
             public int Count = 1;
+            public bool UnlimitedTransfer;
             internal int RepeatCount => Math.Max(1, Count);
         }
 
@@ -34,7 +35,7 @@ namespace DigitalLogistics.Buses
             internal Configuration Configuration;
             internal GameItem Bus;
             internal SharedProviderRegistry.InventoryLink Link;
-            internal StoredItemExpression Expression;
+            internal CachedItemExpression Expression;
             internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
             internal string DefaultName => Link.Name;
             internal string DefaultFilter => Bus.identifier == IOBus.InputId ? "True" : "False";
@@ -57,7 +58,7 @@ namespace DigitalLogistics.Buses
             active.TryGetValue(bus, out var links) ? links : Enumerable.Empty<Connection>();
 
         internal static void ApplyConfiguration(Connection connection) => connection.Expression =
-            StoredItemExpressionParser.Parse(string.IsNullOrWhiteSpace(connection.Configuration.Filter)
+            CachedItemExpressionParser.Parse(string.IsNullOrWhiteSpace(connection.Configuration.Filter)
                 ? connection.DefaultFilter : connection.Configuration.Filter);
 
         internal static void Acquire(GameItem bus, SharedProviderRegistry.InventoryLink link)
@@ -167,17 +168,22 @@ namespace DigitalLogistics.Buses
             if (!provider.Available) return;
             var expression = entry?.Expression ?? (input && connection.Bus.identifier == IOBus.InputOutputId
                 ? connection.Expression.Not() : connection.Expression);
-            int remaining = entry?.RepeatCount ?? configuration.RepeatCount;
+            bool unlimited = entry?.UnlimitedTransfer ?? configuration.UnlimitedTransfer;
+            int remaining = unlimited ? DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value : entry?.RepeatCount ?? configuration.RepeatCount;
+            if (remaining <= 0) return;
             var candidates = input ? provider.Snapshot().Where(expression.Evaluate)
                 : DigitalLogistics.Manager.SearchForOutput(expression, provider);
             foreach (var stored in candidates)
             {
                 using (var lease = stored.AcquireInstance())
                     if (lease == null || Bus.IsBus(lease.Item) || BusAccess.IsBlocked(lease.Item)) continue;
+                int amount = unlimited ? remaining : -1;
                 var result = input
-                    ? StorageTransfer.TryInput(stored, providerFilter: target => target != provider)
-                    : StorageTransfer.TryInput(stored, provider);
-                if (result.Amount > 0 && --remaining == 0) break;
+                    ? StorageTransfer.TryInput(stored, amount, providerFilter: target => target != provider)
+                    : StorageTransfer.TryInput(stored, provider, amount);
+                if (result.Amount <= 0) continue;
+                remaining -= unlimited ? result.Amount : 1;
+                if (remaining == 0) break;
             }
         }
     }

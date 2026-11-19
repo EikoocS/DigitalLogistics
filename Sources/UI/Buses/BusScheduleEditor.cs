@@ -15,11 +15,17 @@ namespace DigitalLogistics.UI.Buses
         internal const int EntryHeight = 44;
 
         internal static int Build<T>(BusRowControls controls, int y, string direction, List<T> schedule, Action rebuild,
-            Action<RectTransform, T> bindFilter = null) where T : BusScheduleEntry, new()
+            Action<RectTransform, T> bindFilter = null, Action<RectTransform, T> bindAmount = null,
+            string amountHeader = "schedule_count", Action<RectTransform, T, RectTransform> bindUnlimited = null)
+            where T : BusScheduleEntry, new()
         {
             var root = controls.Root;
             const int edge = 64;
-            var divisions = bindFilter == null ? new[] { 0f, 1f / 3, 2f / 3, 1f }
+            var divisions = bindUnlimited != null
+                ? bindAmount != null ? new[] { 0f, 0.14f, 0.28f, 0.40f, 0.76f, 1f }
+                    : new[] { 0f, 0.18f, 0.36f, 0.48f, 0.64f, 1f }
+                : bindAmount != null ? new[] { 0f, 0.15f, 0.30f, 0.65f, 1f }
+                : bindFilter == null ? new[] { 0f, 1f / 3, 2f / 3, 1f }
                 : new[] { 0f, 0.22f, 0.44f, 0.62f, 1f };
             var boundaries = new List<(float Anchor, float Offset)> { (0, 0) };
             boundaries.AddRange(divisions.Select(part => (part, edge * (1 - 2 * part))));
@@ -50,8 +56,10 @@ namespace DigitalLogistics.UI.Buses
             }
             Header(1, direction + "_order");
             Header(2, direction + "_priority");
-            Header(3, "schedule_count");
-            if (bindFilter != null) Header(4, "schedule_filter");
+            int amountColumn = bindUnlimited == null ? 3 : 4;
+            if (bindUnlimited != null) Header(3, "schedule_unlimited");
+            Header(amountColumn, amountHeader);
+            if (bindFilter != null) Header(amountColumn + 1, "schedule_filter");
             CreateButton(Cell(0, lastColumn), new Vector2(-Padding, -4), new Vector2(48, 36), "+", () =>
             {
                 schedule.Add(new T());
@@ -65,9 +73,16 @@ namespace DigitalLogistics.UI.Buses
                     () => entry.Order, value => entry.Order = Mathf.Clamp(value, 1, 15));
                 controls.BindInteger(CreateInput(Cell(row, 2), new Vector2(4, -4), -8),
                     () => entry.Priority, value => entry.Priority = value);
-                controls.BindInteger(CreateInput(Cell(row, 3), new Vector2(4, -4), -8),
-                    () => entry.RepeatCount, value => entry.Count = Mathf.Max(1, value));
-                if (bindFilter != null) bindFilter(Cell(row, 4), entry);
+                var amountCell = Cell(row, amountColumn);
+                if (bindAmount != null) bindAmount(amountCell, entry);
+                else
+                {
+                    var counted = (CountedBusScheduleEntry)(BusScheduleEntry)entry;
+                    controls.BindInteger(CreateInput(amountCell, new Vector2(4, -4), -8),
+                        () => counted.RepeatCount, value => counted.Count = Mathf.Max(1, value));
+                }
+                if (bindFilter != null) bindFilter(Cell(row, amountColumn + 1), entry);
+                if (bindUnlimited != null) bindUnlimited(Cell(row, 3), entry, amountCell);
                 CreateButton(Cell(row, lastColumn), new Vector2(-Padding, -4), new Vector2(48, 36), "×", () =>
                 {
                     schedule.Remove(entry);

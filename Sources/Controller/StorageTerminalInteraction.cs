@@ -352,8 +352,8 @@ namespace DigitalLogistics.Controller
                 if (releaseAfterAttempt) ClearHeld();
                 return;
             }
-            var expression = StoredItemExpression.HasIds(ids)
-                .And(StoredItemExpression.DisplayName.EqualTo(items[0].DisplayName));
+            var expression = CachedItemExpression.HasIds(ids)
+                .And(CachedItemExpression.DisplayName.EqualTo(items[0].DisplayName));
             var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             movement = cancellation;
@@ -380,7 +380,7 @@ namespace DigitalLogistics.Controller
             }
         }
 
-        private async Task<bool> TryMoveOutput(StoredItemExpression expression,
+        private async Task<bool> TryMoveOutput(CachedItemExpression expression,
             Func<GameItem, SlotMarker> findSlot, CancellationToken token)
         {
             await foreach (var stored in DigitalLogistics.Manager.SearchAsync(expression,

@@ -10,6 +10,8 @@ namespace DigitalLogistics
         {
             StorageBusManager.Load();
             IOBusManager.Load();
+            FluidStorageBusManager.Load();
+            FluidIOBusManager.Load();
             TriggerBusManager.Load();
         }
 
@@ -18,10 +20,13 @@ namespace DigitalLogistics
             StorageIndexRefresh.Clear();
             BusController.ClearConnections();
             IOBusManager.Clear();
+            FluidIOBusManager.Clear();
             TriggerBusManager.Clear();
             StorageBusManager.Clear();
+            FluidStorageBusManager.Clear();
             DigitalLogistics.Manager.Clear();
             SharedProviderRegistry.Clear();
+            FluidProviderRegistry.Clear();
         }
 
         internal static void Reset()
@@ -36,6 +41,8 @@ namespace DigitalLogistics
             if (!DigitalLogistics.Instance.Enabled) return;
             StorageBusManager.Save();
             IOBusManager.Save();
+            FluidStorageBusManager.Save();
+            FluidIOBusManager.Save();
             TriggerBusManager.Save();
         }
     }

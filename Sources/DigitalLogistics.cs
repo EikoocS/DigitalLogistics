@@ -22,7 +22,7 @@ namespace DigitalLogistics
             Manifest = manifest;
             Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
-            DiskStorageProvider.Blacklist.Add(item => item is ItemDisk || Bus.IsBus(item));
+            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
         }
@@ -33,7 +33,7 @@ namespace DigitalLogistics
             ModHelper.AddDebugFunction(Manifest.ID, CustomUIDebugPanel.CATEGORY_SPECIAL,
                 "DigitalLogistics", DebugMenu.Open, tall: true);
             ModHook.OnModItemDirectoryInit += RegisterItems;
-            ModHook.OnCreateTooltipLate += ItemDisk.AddTooltip;
+            ModHook.OnCreateTooltipLate += StorageDisk.AddTooltip;
             ModHook.OnGameLoadedInit += LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly += LogisticsSession.LoadConfigurations;
             StorageIndexRefresh.Completed += StorageTerminalUI.NotifyRefreshResult;
@@ -46,7 +46,7 @@ namespace DigitalLogistics
             ModHelper.RemoveDebugFunctions(Manifest.ID);
             DebugMenu.Close();
             ModHook.OnModItemDirectoryInit -= RegisterItems;
-            ModHook.OnCreateTooltipLate -= ItemDisk.AddTooltip;
+            ModHook.OnCreateTooltipLate -= StorageDisk.AddTooltip;
             ModHook.OnGameLoadedInit -= LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly -= LogisticsSession.LoadConfigurations;
             StorageIndexRefresh.Completed -= StorageTerminalUI.NotifyRefreshResult;
@@ -58,6 +58,11 @@ namespace DigitalLogistics
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
             directory.Add(ItemDisk.ItemId, ItemDisk.Create);
+            directory.Add(FluidDisk.ItemId, FluidDisk.Create);
+            directory.Add(FluidStorageBus.ItemId, FluidStorageBus.Create);
+            directory.Add(FluidIOBus.InputId, () => FluidIOBus.Create(FluidIOBus.InputId));
+            directory.Add(FluidIOBus.OutputId, () => FluidIOBus.Create(FluidIOBus.OutputId));
+            directory.Add(FluidIOBus.InputOutputId, () => FluidIOBus.Create(FluidIOBus.InputOutputId));
             directory.Add(StorageBus.ItemId, StorageBus.Create);
             directory.Add(TriggerBus.ItemId, TriggerBus.Create);
             directory.Add(IOBus.InputId, () => IOBus.Create(IOBus.InputId));

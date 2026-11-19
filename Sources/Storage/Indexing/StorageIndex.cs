@@ -87,8 +87,8 @@ namespace DigitalLogistics.Storage.Indexing
             onChange?.Invoke();
         }
 
-        internal bool MayMatch(StoredItemExpression expression) =>
-            StoredItemExpressionAnalyzer.MayMatch(new[] { expression }, indexBlooms, typeBloom);
+        internal bool MayMatch(CachedItemExpression expression) =>
+            CachedItemExpressionAnalyzer.MayMatch(new[] { expression }, indexBlooms, typeBloom);
 
         public IEnumerator<CachedItem> GetEnumerator(SortBy sortBy, bool reverse)
         {

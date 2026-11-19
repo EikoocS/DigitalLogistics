@@ -21,13 +21,13 @@ namespace DigitalLogistics.Storage
 
         private sealed class DiskLink
         {
-            internal DiskStorageProvider Provider;
+            internal ItemDiskStorageProvider Provider;
             internal readonly List<GameItem> Owners = new();
         }
 
         private static readonly Dictionary<GameInventory, InventoryLink> inventories = new();
         private static readonly Dictionary<Guid, DiskLink> disks = new();
-        internal static IEnumerable<StorageProvider> Providers => inventories.Values.Select(link => (StorageProvider)link.Provider)
+        internal static IEnumerable<ItemStorageProvider> Providers => inventories.Values.Select(link => (ItemStorageProvider)link.Provider)
             .Concat(disks.Values.Select(link => link.Provider));
 
         internal static InventoryLink AcquireInventory(GameInventory inventory, GameItem owner)
@@ -54,8 +54,8 @@ namespace DigitalLogistics.Storage
             link.Provider.Dispose();
         }
 
-        internal static DiskStorageProvider AcquireDisk(Guid id, StorageDiskData data, int capacity,
-            string name, StoredItemExpression filter, GameItem owner)
+        internal static ItemDiskStorageProvider AcquireDisk(Guid id, StorageDiskData data, int capacity,
+            string name, CachedItemExpression filter, GameItem owner)
         {
             if (disks.TryGetValue(id, out var link))
             {
@@ -64,13 +64,13 @@ namespace DigitalLogistics.Storage
             }
             link = new DiskLink();
             link.Owners.Add(owner);
-            link.Provider = new DiskStorageProvider(id, data, capacity, name, filter,
+            link.Provider = new ItemDiskStorageProvider(id, data, capacity, name, filter,
                 () => link.Owners.Any(item => !BusAccess.IsBlocked(item)));
             disks.Add(id, link);
             return link.Provider;
         }
 
-        internal static DiskStorageProvider ReleaseDisk(Guid id, GameItem owner)
+        internal static ItemDiskStorageProvider ReleaseDisk(Guid id, GameItem owner)
         {
             var link = disks[id];
             link.Owners.Remove(owner);
@@ -87,7 +87,7 @@ namespace DigitalLogistics.Storage
             disks.Clear();
         }
 
-        private static string GetKey(GameInventory inventory, GameItem owner)
+        internal static string GetKey(GameInventory inventory, GameItem owner)
         {
             var entry = EmporiumEntry.Instance;
             foreach (var field in typeof(EmporiumEntry).GetFields())
@@ -112,7 +112,7 @@ namespace DigitalLogistics.Storage
             throw new InvalidOperationException("Inventory is not part of its owner's content window.");
         }
 
-        private static string GetName(GameInventory inventory, GameItem owner)
+        internal static string GetName(GameInventory inventory, GameItem owner)
         {
             var panel = InventoryStorageProvider.GetPanel(inventory);
             string slotName = panel?.label?.GetText();

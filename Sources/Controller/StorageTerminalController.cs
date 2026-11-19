@@ -105,13 +105,13 @@ namespace DigitalLogistics.Controller
             Search(true);
         }
 
-        private StoredItemExpression BuildSearchExpression()
+        private CachedItemExpression BuildSearchExpression()
         {
             var expression = StorageTerminalSearchParser.Parse(view.SearchText);
             if (Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.All) return expression;
 
-            var unsafeItems = StoredItemExpression.ContrabandLevel.EqualTo(0).Not()
-                .Or(StoredItemExpression.Heat.EqualTo(0).Not());
+            var unsafeItems = CachedItemExpression.ContrabandLevel.EqualTo(0).Not()
+                .Or(CachedItemExpression.Heat.EqualTo(0).Not());
             return expression.And(Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.Legal
                 ? unsafeItems.Not() : unsafeItems);
         }

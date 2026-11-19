@@ -76,3 +76,34 @@ config.search_budget_ms,Item search time budget (ms)
 config.terminal_budget_ms,Terminal list time budget per frame (ms)
 config.index_refresh_budget_ms,Index refresh time budget per frame (ms)
 config.max_continuous_triggers,Maximum consecutive triggers per execution
+
+item.fluid_disk.name,
+item.fluid_disk.desc,
+item.fluid_disk.flavor,
+item.fluid_storage_bus.external.name,
+item.fluid_storage_bus.internal.name,
+item.fluid_storage_bus.disabled.name,
+item.fluid_storage_bus.desc,
+item.fluid_storage_bus.flavor,
+item.fluid_input_bus.external.name,
+item.fluid_input_bus.internal.name,
+item.fluid_input_bus.disabled.name,
+item.fluid_input_bus.desc,
+item.fluid_input_bus.flavor,
+item.fluid_output_bus.external.name,
+item.fluid_output_bus.internal.name,
+item.fluid_output_bus.disabled.name,
+item.fluid_output_bus.desc,
+item.fluid_output_bus.flavor,
+item.fluid_input_output_bus.external.name,
+item.fluid_input_output_bus.internal.name,
+item.fluid_input_output_bus.disabled.name,
+item.fluid_input_output_bus.desc,
+item.fluid_input_output_bus.flavor,
+ui.fluid_bus.transfer_volume,Transfer volume:
+ui.fluid_bus.on_add,Run when a container or fluid is added
+ui.io_bus.schedule_volume,Volume
+ui.io_bus.unlimited_transfer,Transfer without a limit when executing
+ui.io_bus.schedule_unlimited,Unlimited
+config.max_continuous_item_transfers,Maximum items transferred per execution
+config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (ul)

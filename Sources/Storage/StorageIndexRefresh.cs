@@ -48,7 +48,7 @@ namespace DigitalLogistics.Storage
             var jobs = new List<IEnumerator>();
             try
             {
-                foreach (var provider in SharedProviderRegistry.Providers.Concat(DigitalLogistics.Manager.Providers).Distinct().ToArray())
+                foreach (var provider in SharedProviderRegistry.Providers.Concat(DigitalLogistics.Manager.ItemProviders).Distinct().ToArray())
                     jobs.Add(provider.RefreshCoroutine(() => ProcessedItems++));
                 yield return null;
                 int index = 0;

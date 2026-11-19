@@ -21,6 +21,8 @@ namespace DigitalLogistics
         internal readonly ConfigEntry<float> TerminalBudgetMilliseconds;
         internal readonly ConfigEntry<float> IndexRefreshBudgetMilliseconds;
         internal readonly ConfigEntry<int> MaxContinuousTriggers;
+        internal readonly ConfigEntry<int> MaxContinuousItemTransfers;
+        internal readonly ConfigEntry<int> MaxContinuousFluidVolumeUL;
 
         internal ModConfiguration(string modId)
         {
@@ -39,6 +41,10 @@ namespace DigitalLogistics
                 () => Localize("index_refresh_budget_ms"));
             MaxContinuousTriggers = config.Define("max_continuous_triggers", 999, "Digital Logistics",
                 () => Localize("max_continuous_triggers"));
+            MaxContinuousItemTransfers = config.Define("max_continuous_item_transfers", 999, "Digital Logistics",
+                () => Localize("max_continuous_item_transfers"));
+            MaxContinuousFluidVolumeUL = config.Define("max_continuous_fluid_volume_ul", 999_000_000, "Digital Logistics",
+                () => Localize("max_continuous_fluid_volume_ul"));
 
             string Localize(string key) => ModHelper.GetLocalized(modId, "config." + key);
         }
