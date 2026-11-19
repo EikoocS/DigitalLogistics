@@ -42,7 +42,7 @@ namespace DigitalLogistics.Storage
             link.Provider = disk == null
                 ? new ContainerStorageProvider(item, link.Name)
                 : new FluidDiskStorageProvider(disk.DiskId.Value, data, disk,
-                    () => link.Owners.Any(owner => !BusAccess.IsBlocked(owner)));
+                    () => link.Owners.Any(owner => !BusAccess.IsPinnedOrBlocked(owner)));
             links.Add(identity, link);
             return link;
         }

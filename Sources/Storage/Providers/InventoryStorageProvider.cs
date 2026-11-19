@@ -43,7 +43,7 @@ namespace DigitalLogistics.Storage.Providers
         private void OnItemChanged(GameItem item, GameInventory inventory, SlotMarker slot)
         {
             if (!Available) return;
-            if (item.parentInventory != this.inventory || item.unitCount <= 0)
+            if (item.parentInventory != this.inventory || item.unitCount <= 0 || ItemPinHelper.IsPinned(item))
             {
                 OnItemRemoved(item, inventory, slot);
                 return;
@@ -54,7 +54,9 @@ namespace DigitalLogistics.Storage.Providers
         }
 
         public override bool Contains(int uniqueId) => Available
-            && inventory.childItems.Any(item => item.uniqueId == uniqueId);
+            && inventory.childItems.Any(item => item.uniqueId == uniqueId && !ItemPinHelper.IsPinned(item));
+
+        internal void OnPinChanged(GameItem item) => OnItemChanged(item, inventory, null);
 
         protected override StorageInputResult InputCore(StorageOutput output, int amount)
         {
@@ -70,10 +72,13 @@ namespace DigitalLogistics.Storage.Providers
 
         private SlotMarker FindInputSlot(GameItem item, int amount)
         {
+            if (!inventory.childItems.Any(ItemPinHelper.IsPinned))
+                MachineFeedDispenser.FlushPendingAutoBlend(inventory);
             if (!inventory.MayHaveValidInventorySlot(item)) return null;
 
             foreach (var target in inventory.childItems)
             {
+                if (ItemPinHelper.IsPinned(target)) continue;
                 var slot = target.GetStackSlot(item);
                 if (slot?.numTransfer > 0) return slot;
             }
@@ -92,7 +97,7 @@ namespace DigitalLogistics.Storage.Providers
                         {
                             shape.SetTransform(x, y, flip != 0, 4 - rotation);
                             var slot = inventory.TryInventorySlot(item, amount, shape);
-                            if (slot.numTransfer > 0) return slot;
+                            if (slot.numTransfer > 0 && !ItemPinHelper.IsPinned(slot.targetItem)) return slot;
                         }
             return null;
         }
@@ -103,7 +108,7 @@ namespace DigitalLogistics.Storage.Providers
             foreach (var item in inventory.childItems.ToArray())
             {
                 if (!Available) yield break;
-                if (item.parentInventory == inventory && item.unitCount > 0)
+                if (item.parentInventory == inventory && item.unitCount > 0 && !ItemPinHelper.IsPinned(item))
                     yield return new StoredPhysicalItem(item, this);
             }
         }

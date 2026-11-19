@@ -231,7 +231,7 @@ namespace DigitalLogistics.Controller
         }
 
         private static bool CanTakeExternal(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
-            && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove() && item.MaxNumRemove() > 0;
+            && !ItemPinHelper.IsPinned(item) && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove() && item.MaxNumRemove() > 0;
 
         private static bool CanOutput(GameItem item) => item is GameItemElement && item.unitCount > 0
             && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;

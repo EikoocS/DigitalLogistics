@@ -16,7 +16,7 @@ namespace DigitalLogistics.Storage
         }
 
         private static bool CanMove(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
-            && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;
+            && !ItemPinHelper.IsPinned(item) && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;
 
         public static StorageTransferResult TryPlace(CachedItem source, Func<GameItem, SlotMarker> findSlot, int amount)
         {
@@ -26,7 +26,7 @@ namespace DigitalLogistics.Storage
             if (output != null && CanMove(output.Item))
             {
                 var slot = findSlot(output.Item);
-                moved = output.TryPlace(slot, amount);
+                if (!ItemPinHelper.IsPinned(slot?.targetItem)) moved = output.TryPlace(slot, amount);
                 if (moved > 0) placedId = (slot.targetItem ?? slot.item).GetUniqueID();
             }
             return CreateResult(moved, source, Array.Empty<CachedItem>(), placedId);

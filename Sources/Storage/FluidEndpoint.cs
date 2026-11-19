@@ -14,7 +14,7 @@ namespace DigitalLogistics.Storage
         private readonly Action<bool> liquidChanged;
         internal string Key { get; }
         internal string Name { get; }
-        internal bool Available => !BusAccess.IsBlocked(owner);
+        internal bool Available => !BusAccess.IsPinnedOrBlocked(owner);
         internal IEnumerable<FluidStorageProvider> Providers => containers.Values.Select(link => link.Provider);
         internal event Action Added;
 
@@ -33,7 +33,7 @@ namespace DigitalLogistics.Storage
             Key = inventory == null ? "fluid:" + owner.GetUniqueID() : SharedProviderRegistry.GetKey(inventory, owner);
             Name = inventory == null ? owner.GetDisplayName(preferCustomName: true)
                 : SharedProviderRegistry.GetName(inventory, owner);
-            liquidChanged = increased => { if (increased) Added?.Invoke(); };
+            liquidChanged = increased => { if (increased && Available) Added?.Invoke(); };
             if (inventory != null)
             {
                 inventory.onSlotAddItemEndFunc += OnAdded;
@@ -61,7 +61,7 @@ namespace DigitalLogistics.Storage
         private void OnAdded(GameItem item, GameInventory _, SlotMarker __)
         {
             Refresh();
-            if (IsContainer(item)) Added?.Invoke();
+            if (IsContainer(item) && !ItemPinHelper.IsPinned(item)) Added?.Invoke();
         }
         private void OnRemoved(GameItem _, GameInventory __, SlotMarker ___) => Refresh();
 

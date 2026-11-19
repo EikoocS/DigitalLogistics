@@ -30,6 +30,12 @@ namespace DigitalLogistics.Storage
         internal static IEnumerable<ItemStorageProvider> Providers => inventories.Values.Select(link => (ItemStorageProvider)link.Provider)
             .Concat(disks.Values.Select(link => link.Provider));
 
+        internal static void OnPinChanged(GameItem item)
+        {
+            if (item.parentInventory is { } inventory && inventories.TryGetValue(inventory, out var link))
+                link.Provider.OnPinChanged(item);
+        }
+
         internal static InventoryLink AcquireInventory(GameInventory inventory, GameItem owner)
         {
             if (!inventories.TryGetValue(inventory, out var link))
@@ -65,7 +71,7 @@ namespace DigitalLogistics.Storage
             link = new DiskLink();
             link.Owners.Add(owner);
             link.Provider = new ItemDiskStorageProvider(id, data, capacity, name, filter,
-                () => link.Owners.Any(item => !BusAccess.IsBlocked(item)));
+                () => link.Owners.Any(item => !BusAccess.IsPinnedOrBlocked(item)));
             disks.Add(id, link);
             return link.Provider;
         }

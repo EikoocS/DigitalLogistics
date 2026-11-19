@@ -11,7 +11,7 @@ namespace DigitalLogistics.Storage.Providers
         public override CachedItem Content => new PhysicalItem(container);
 
         public ContainerStorageProvider(GameItem container, string name = "Unnamed")
-            : base(() => FluidEndpoint.IsContainer(container) && !BusAccess.IsBlocked(container))
+            : base(() => FluidEndpoint.IsContainer(container) && !BusAccess.IsPinnedOrBlocked(container))
         {
             this.container = container;
             Name = name;

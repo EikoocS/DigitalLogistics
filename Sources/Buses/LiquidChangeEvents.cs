@@ -22,7 +22,8 @@ namespace DigitalLogistics.Buses
         }
 
         internal static bool IsWatchedPart(GameItem item, string tag) =>
-            listeners.ContainsKey(item) && Liquid.Liquids.Any(liquid => liquid.currentPart == tag);
+            listeners.ContainsKey(item) && !ItemPinHelper.IsPinned(item)
+                && Liquid.Liquids.Any(liquid => liquid.currentPart == tag);
 
         internal static void Notify(GameItem item, bool increased)
         {
