@@ -12,7 +12,6 @@ namespace DigitalLogistics.Item
         private const string CapacityLabel = "1k";
         private const int StorageCapacity = 1024;
         private static readonly CachedItemExpression AllowAll = CachedItemExpression.Constant(true);
-        private bool advancedTooltip;
 
         protected abstract string StorageType { get; }
         protected abstract double GetUsedCapacity(StorageDiskData data);
@@ -65,13 +64,6 @@ namespace DigitalLogistics.Item
             return string.IsNullOrWhiteSpace(customName) || customName == GetDisplayName() ? null : customName;
         }
 
-        public override RichText GetTooltipAdvanced()
-        {
-            advancedTooltip = true;
-            try { return base.GetTooltipAdvanced(); }
-            finally { advancedTooltip = false; }
-        }
-
         internal static void AddTooltip(RichTextBuilder builder, GameItem item)
         {
             if (item is not StorageDisk disk || disk.DiskId is not Guid id) return;
@@ -79,10 +71,6 @@ namespace DigitalLogistics.Item
             var data = StorageDiskStore.Get(id);
             string customName = disk.CustomDiskName(data);
             if (customName != null) builder.AddLine(customName);
-            string uuid = id.ToString("D");
-            int middle = uuid.Length / 2;
-            builder.AddLine(uuid[..middle]);
-            if (disk.advancedTooltip) builder.AddLine(uuid[middle..]);
 
             double used = disk.GetUsedCapacity(data);
             double ratio = (double)used / disk.Capacity;
