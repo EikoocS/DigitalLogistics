@@ -28,6 +28,7 @@ namespace DigitalLogistics
             }
 
             var builder = CreateWindow(WindowId, "DigitalLogistics", CustomUIDebugPanel.WINDOW_ID);
+            AddMenuButton(builder, "Mod save data", () => ModDataDebugView.Open(WindowId));
             AddMenuButton(builder, "View storage providers", OpenProviders);
             AddMenuButton(builder, "Parse search query", OpenSearchQuery);
             AddMenuButton(builder, "Parse expression", OpenExpression);
@@ -90,6 +91,7 @@ namespace DigitalLogistics
 
         internal static void Close()
         {
+            ModDataDebugView.Close();
             CustomUIManager.Instance?.CloseWindow(PerformanceWindowId);
             CustomUIManager.Instance?.CloseWindow(ExpressionWindowId);
             CustomUIManager.Instance?.CloseWindow(SearchQueryWindowId);
@@ -97,7 +99,7 @@ namespace DigitalLogistics
             CustomUIManager.Instance?.CloseWindow(WindowId);
         }
 
-        private static CustomUIBuilder CreateWindow(string id, string title, string parentId)
+        internal static CustomUIBuilder CreateWindow(string id, string title, string parentId)
         {
             var manager = CustomUIManager.Instance;
             var builder = manager.CreateWindow(id, title, "rear")
