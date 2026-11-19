@@ -8,13 +8,10 @@ namespace DigitalLogistics.Item
 {
     internal abstract class Bus
     {
-        internal const string InternalTag = "DIGITAL_LOGISTICS_BUS_INTERNAL_TAG";
-        internal const string DisabledTag = "DIGITAL_LOGISTICS_BUS_DISABLED_TAG";
-
         internal GameItem Item { get; }
         protected GameInventory Parent { get; private set; }
-        protected bool IsInternal => Item.IsTag(InternalTag);
-        internal bool Disabled => Item.IsTag(DisabledTag);
+        protected bool IsInternal => GetMode(Item) == BusMode.Internal;
+        internal bool Disabled => GetMode(Item) == BusMode.Disabled;
         internal bool CanExecute => !Disabled && HasLinks && !BusAccess.IsBlocked(Item);
         protected abstract bool HasLinks { get; }
         internal abstract IEnumerable<object> Configurations { get; }
@@ -66,7 +63,7 @@ namespace DigitalLogistics.Item
 
         internal static bool ContainsEnabledBus(GameItem item)
         {
-            static bool IsEnabledBus(GameItem candidate) => IsBus(candidate) && !candidate.IsTag(DisabledTag);
+            static bool IsEnabledBus(GameItem candidate) => IsBus(candidate) && GetMode(candidate) != BusMode.Disabled;
 
             return IsEnabledBus(item) || GraphUtils.FindChildType<GameItem>(item, IsEnabledBus, _ => true) != null;
         }
@@ -82,7 +79,14 @@ namespace DigitalLogistics.Item
             return $"{family}_status_{Mode}";
         }
 
-        private string Mode => Disabled ? "disabled" : IsInternal ? "internal" : "external";
+        private static BusMode GetMode(GameItem item) => BusConfigurationStore.FindGlobal(item)?.Mode ?? BusMode.External;
+
+        private string Mode => GetMode(Item) switch
+        {
+            BusMode.Disabled => "disabled",
+            BusMode.Internal => "internal",
+            _ => "external"
+        };
 
         private void UpdateAppearance()
         {
@@ -94,13 +98,13 @@ namespace DigitalLogistics.Item
 
         private void Toggle()
         {
-            if (Disabled) Item.DisableTag(DisabledTag);
-            else if (IsInternal)
+            var settings = BusConfigurationStore.GetGlobal(Item);
+            settings.Mode = settings.Mode switch
             {
-                Item.DisableTag(InternalTag);
-                Item.EnableTag(DisabledTag);
-            }
-            else Item.EnableTag(InternalTag);
+                BusMode.External => BusMode.Internal,
+                BusMode.Internal => BusMode.Disabled,
+                _ => BusMode.External
+            };
             UpdateAppearance();
             Refresh();
         }
@@ -133,8 +137,8 @@ namespace DigitalLogistics.Item
         internal void Refresh()
         {
             if (SaveManager.IsDecoding) return;
-            UpdateLinks(GetTargets().ToArray());
             RefreshWindowState();
+            UpdateLinks(GetTargets().ToArray());
             BusUI.RefreshConnections(Item);
         }
 

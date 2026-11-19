@@ -60,13 +60,27 @@ namespace DigitalLogistics.Buses
                 var ordered = operations.OrderBy(entry => entry.Operation.Order)
                     .ThenByDescending(entry => entry.Operation.SubOrder)
                     .ThenBy(entry => entry.Operation.Kind).ToArray();
+                var executed = new HashSet<(BusTargetConfiguration, BusScheduleEntry, BusOperationKind)>();
+                var planBudgets = new Dictionary<(BusTargetConfiguration, BusScheduleEntry), int>();
                 running = true;
                 foreach (var entry in ordered)
                 {
-                    if (!entry.Bus.CanExecute) continue;
-                    currentKind = entry.Operation.Kind;
+                    var operation = entry.Operation;
+                    if (!entry.Bus.CanExecute || !operation.CanExecute()) continue;
+                    if (source != BusRunSource.Manual && !executed.Add((operation.Target, operation.Plan, operation.Kind)))
+                        continue;
+                    var planKey = (operation.Target, operation.Plan);
+                    bool limited = operation.Plan?.Limit == true;
+                    int remaining = limited && planBudgets.TryGetValue(planKey, out int budget)
+                        ? budget : operation.Limit;
+                    if (remaining <= 0) continue;
+                    currentKind = operation.Kind;
                     var operationTimer = new TraceTimer(trace != null);
-                    try { entry.Operation.Execute(); }
+                    try
+                    {
+                        operation.Execute(ref remaining);
+                        if (limited) planBudgets[planKey] = remaining;
+                    }
                     finally
                     {
                         trace?.RecordOperation(entry.Bus.Item.identifier, entry.Operation.Kind,

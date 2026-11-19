@@ -9,14 +9,7 @@ namespace DigitalLogistics
 {
     internal static class LogisticsSession
     {
-        internal static void LoadConfigurations()
-        {
-            StorageBusManager.Load();
-            IOBusManager.Load();
-            FluidStorageBusManager.Load();
-            FluidIOBusManager.Load();
-            TriggerBusManager.Load();
-        }
+        internal static void LoadConfigurations() => BusConfigurationStore.Load();
 
         internal static void Stop()
         {
@@ -32,6 +25,7 @@ namespace DigitalLogistics
             DigitalLogistics.Manager.Clear();
             SharedProviderRegistry.Clear();
             FluidProviderRegistry.Clear();
+            BusConfigurationStore.Clear();
         }
 
         internal static void Reset()
@@ -45,14 +39,7 @@ namespace DigitalLogistics
         internal static void Save()
         {
             StorageDiskStore.Save();
-            if (DigitalLogistics.Instance.Enabled)
-            {
-                StorageBusManager.Save();
-                IOBusManager.Save();
-                FluidStorageBusManager.Save();
-                FluidIOBusManager.Save();
-                TriggerBusManager.Save();
-            }
+            if (DigitalLogistics.Instance.Enabled) BusConfigurationStore.Save();
             ModDataDebugEdits.WriteToSave();
         }
     }

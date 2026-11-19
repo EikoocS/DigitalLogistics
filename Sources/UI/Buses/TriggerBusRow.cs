@@ -15,7 +15,8 @@ namespace DigitalLogistics.UI.Buses
         internal const int DefaultHeight = Padding * 2 + Line + BusScheduleEditor.HeaderHeight;
         public int BaseHeight => DefaultHeight + (connection.Options.Length > 0 ? Line : 0)
             + (connection.Action.SubscribeInputs != null ? Line : 0);
-        public int Height => BaseHeight + connection.Configuration.Schedule.Count * BusScheduleEditor.TriggerEntryHeight;
+        public int Height => BaseHeight + BusPlanStore.GetPlans(connection.Configuration).Count()
+            * BusScheduleEditor.TriggerEntryHeight;
 
         internal TriggerBusRow(TriggerBusManager.Connection connection) => this.connection = connection;
 
@@ -49,7 +50,7 @@ namespace DigitalLogistics.UI.Buses
                 y += Line;
             }
             controls.BindEnabled(IsEnabled, value => configuration.Disabled = !value);
-            BusScheduleEditor.Build(controls, y, configuration.Schedule, IsEnabled,
+            BusScheduleEditor.Build(controls, y, configuration, IsEnabled,
                 "ui.trigger_bus.limit_count", "ui.trigger_bus.at_most", 112, (amount, entry) =>
                     controls.BindInteger(CreateInput(amount, Vector2.zero, 0),
                         () => entry.Count, value => entry.Count = Mathf.Max(1, value)));

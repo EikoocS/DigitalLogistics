@@ -2,62 +2,39 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Filtering;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Tracing;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DigitalLogistics.Buses
 {
     internal static class IOBusManager
     {
-        private const string DataKey = "io_bus_configuration";
-        internal const string OnAddTag = "DIGITAL_LOGISTICS_IO_BUS_ON_ADD";
-        internal const string OnMoveTag = "DIGITAL_LOGISTICS_IO_BUS_ON_MOVE";
-
-        [Serializable]
-        internal sealed class Configuration : TransferBusConfiguration<IOBusScheduleEntry> { }
-
         internal sealed class Connection
         {
-            internal Configuration Configuration;
+            internal TransferBusConfiguration<IOBusScheduleEntry> Configuration;
             internal GameItem Bus;
             internal SharedProviderRegistry.InventoryLink Link;
-            internal CachedItemExpression Expression;
             internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
             internal string DefaultName => Link.Name;
             internal string DefaultFilter => Bus.identifier == IOBus.InputId ? "True" : "False";
         }
 
-        [Serializable]
-        private sealed class SaveData
-        {
-            public List<Configuration> Configurations = new();
-        }
-
-        private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameItem, List<Connection>> active = new();
         private static readonly HashSet<GameItem> pending = new();
         private static Coroutine scheduled;
 
-        internal static bool IsOnAdd(GameItem bus) => bus.GetTagReadonly(OnAddTag).GetBool();
-        internal static bool IsOnMove(GameItem bus) => bus.GetTagReadonly(OnMoveTag).GetBool();
+        internal static bool IsOnAdd(GameItem bus) => BusConfigurationStore.FindGlobal(bus)?.OnAdd == true;
+        internal static bool IsOnMove(GameItem bus) => BusConfigurationStore.FindGlobal(bus)?.OnMove == true;
         internal static IEnumerable<Connection> GetConfigurations(GameItem bus) =>
             active.TryGetValue(bus, out var links) ? links : Enumerable.Empty<Connection>();
 
-        internal static void ApplyConfiguration(Connection connection) => connection.Expression =
-            CachedItemExpressionParser.Parse(string.IsNullOrWhiteSpace(connection.Configuration.Filter)
-                ? connection.DefaultFilter : connection.Configuration.Filter);
-
         internal static void Acquire(GameItem bus, SharedProviderRegistry.InventoryLink link)
         {
-            string key = bus.GetUniqueID() + ":" + link.Key;
-            if (!configurations.TryGetValue(key, out var configuration))
-                configurations.Add(key, configuration = new Configuration { Key = key });
+            var configuration = BusConfigurationStore.GetTarget<TransferBusConfiguration<IOBusScheduleEntry>>(
+                link.Key, BusActions.ForTransfer(bus));
             var connection = new Connection { Configuration = configuration, Bus = bus, Link = link };
-            ApplyConfiguration(connection);
             connection.OnAdded = (item, _, _) =>
             {
                 if (!configuration.Disabled && !SaveManager.IsDecoding && !Bus.IsBus(item) && IsOnAdd(bus)) Schedule(bus);
@@ -82,20 +59,6 @@ namespace DigitalLogistics.Buses
             DigitalLogistics.Manager.NotifyChanged();
         }
 
-        internal static void Load()
-        {
-            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
-            if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
-                configurations.Add(configuration.Key, configuration);
-        }
-
-        internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
-            JsonConvert.SerializeObject(new SaveData
-            {
-                Configurations = active.Values.SelectMany(links => links).Select(row => row.Configuration).ToList()
-            }));
-
         internal static void Clear()
         {
             if (scheduled != null) ModHelper.StopCoroutine(DigitalLogistics.Instance.Manifest.ID, scheduled);
@@ -103,7 +66,6 @@ namespace DigitalLogistics.Buses
             pending.Clear();
             foreach (var bus in active.Keys.ToArray())
                 foreach (var connection in active[bus].ToArray()) Release(bus, connection.Link.Inventory);
-            configurations.Clear();
         }
 
         internal static void Schedule(GameItem bus)
@@ -127,10 +89,12 @@ namespace DigitalLogistics.Buses
         {
             foreach (var connection in GetConfigurations(bus))
             {
-                if (connection.Configuration.Disabled) continue;
-                foreach (var operation in BusOperation.ForTransfers(IOBus.CanInput(bus), IOBus.CanOutput(bus),
-                    nightly ? connection.Configuration.Schedule : null,
+                var configuration = connection.Configuration;
+                if (configuration.Disabled) continue;
+                foreach (var operation in BusOperation.ForTransfers(configuration, IOBus.CanInput(bus), IOBus.CanOutput(bus),
+                    nightly ? BusPlanStore.GetPlans(configuration) : null,
                     DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value, entry => entry.Count,
+                    () => !configuration.Disabled && GetConfigurations(bus).Contains(connection) && connection.Link.Provider.Available,
                     (bool input, IOBusScheduleEntry entry, ref int remaining) => Transfer(connection, input, entry, ref remaining)))
                     yield return operation;
             }
@@ -138,12 +102,8 @@ namespace DigitalLogistics.Buses
 
         private static void Transfer(Connection connection, bool input, IOBusScheduleEntry entry, ref int remaining)
         {
-            if (remaining <= 0) return;
-            var configuration = connection.Configuration;
-            if (configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)) return;
             var provider = connection.Link.Provider;
-            if (!provider.Available) return;
-            var expression = entry?.Expression ?? connection.Expression;
+            var expression = entry?.Expression ?? connection.Configuration.GetExpression(connection.DefaultFilter);
             if (input && connection.Bus.identifier == IOBus.InputOutputId) expression = expression.Not();
             var candidates = input ? provider.Snapshot().Where(expression.Evaluate)
                 : DigitalLogistics.Manager.SearchForOutput(expression, provider);

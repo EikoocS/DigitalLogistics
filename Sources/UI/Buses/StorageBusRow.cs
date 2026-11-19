@@ -7,7 +7,7 @@ namespace DigitalLogistics.UI.Buses
 {
     internal sealed class StorageBusRow : IBusConfigurationRow
     {
-        private readonly StorageBusManager.Configuration configuration;
+        private readonly StorageBusConfiguration configuration;
         private readonly System.Func<string> defaultName;
         private readonly System.Action apply;
         public object Connection { get; }
@@ -23,7 +23,7 @@ namespace DigitalLogistics.UI.Buses
             : this(connection, connection.Configuration, () => connection.DefaultName,
                 () => FluidStorageBusManager.ApplyConfiguration(connection)) { }
 
-        private StorageBusRow(object connection, StorageBusManager.Configuration configuration,
+        private StorageBusRow(object connection, StorageBusConfiguration configuration,
             System.Func<string> defaultName, System.Action apply)
         {
             Connection = connection;
@@ -53,7 +53,7 @@ namespace DigitalLogistics.UI.Buses
                 });
             int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), DigitalLogistics.Localize("ui.io_bus.storage_configuration")));
             controls.BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
-                () => configuration.Filter, () => StorageBusManager.Configuration.DefaultFilter, value =>
+                () => configuration.Filter, () => StorageBusConfiguration.DefaultFilter, value =>
                 {
                     configuration.Filter = value;
                     apply();

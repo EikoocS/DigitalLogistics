@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using DigitalLogistics.Buses;
 using TMPro;
 using UnityEngine;
@@ -14,7 +13,7 @@ namespace DigitalLogistics.UI.Buses
         internal const int TransferEntryHeight = Line * 3 + RowGap;
         internal const int TriggerEntryHeight = Line * 2 + RowGap;
 
-        internal static void Build<T>(BusRowControls controls, int y, List<T> schedule, Func<bool> enabled,
+        internal static void Build<T>(BusRowControls controls, int y, ScheduledBusConfiguration<T> configuration, Func<bool> enabled,
             string limitKey, string amountKey, int amountWidth, Action<RectTransform, T> bindAmount)
             where T : BusScheduleEntry, new()
         {
@@ -22,12 +21,12 @@ namespace DigitalLogistics.UI.Buses
             LabelWidth(root, Padding, y, "ui.bus.schedule");
             CreateButton(root, new Vector2(-Padding, -y), new Vector2(48, 36), "+", () =>
             {
-                schedule.Add(new T());
+                BusPlanStore.Add(configuration, new T());
                 controls.Rebuild();
             });
 
             y += HeaderHeight;
-            foreach (var entry in schedule)
+            foreach (var entry in BusPlanStore.GetPlans(configuration))
             {
                 var filter = entry as FilteredBusScheduleEntry;
                 int height = filter == null ? TriggerEntryHeight : TransferEntryHeight;
@@ -45,7 +44,7 @@ namespace DigitalLogistics.UI.Buses
                     () => entry.SubOrder, value => entry.SubOrder = value);
                 CreateButton(card, new Vector2(-Padding, -Padding), new Vector2(48, 36), "×", () =>
                 {
-                    schedule.Remove(entry);
+                    BusPlanStore.Remove(configuration, entry);
                     controls.Rebuild();
                 });
 

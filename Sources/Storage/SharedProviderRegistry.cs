@@ -120,7 +120,7 @@ namespace DigitalLogistics.Storage
             {
                 var node = queue.Dequeue();
                 if (node is GameItem || !visited.Add(node)) continue;
-                if (ReferenceEquals(node, inventory)) return owner.GetUniqueID() + ":" + index;
+                if (ReferenceEquals(node, inventory)) return $"inventory:{owner.GetUniqueID()}:{index}";
                 if (node is GameInventory) index++;
                 foreach (var child in node.children) queue.Enqueue(child);
             }

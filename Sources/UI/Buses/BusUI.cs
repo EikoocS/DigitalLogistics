@@ -29,6 +29,7 @@ namespace DigitalLogistics.UI.Buses
         private MachineryPanel panel;
         private PixelWindow window;
         private GameObject emptyState;
+        private int planRevision;
         private readonly List<Row> rows = new();
         private readonly List<Action> globalRefreshers = new();
         private bool IsIO => IOBus.IsIO(bus) || FluidIOBus.IsIO(bus);
@@ -63,8 +64,10 @@ namespace DigitalLogistics.UI.Buses
             PixelElement content = host;
             if (ui.IsIO)
             {
-                var onAdd = ui.CreateToggle(FluidIOBus.IsIO(bus) ? "ui.fluid_bus.on_add" : "ui.io_bus.on_add", IOBusManager.OnAddTag);
-                var onMove = ui.CreateToggle("ui.io_bus.on_move", IOBusManager.OnMoveTag);
+                var onAdd = ui.CreateToggle(FluidIOBus.IsIO(bus) ? "ui.fluid_bus.on_add" : "ui.io_bus.on_add",
+                    () => IOBusManager.IsOnAdd(bus), value => BusConfigurationStore.GetGlobal(bus).OnAdd = value);
+                var onMove = ui.CreateToggle("ui.io_bus.on_move",
+                    () => IOBusManager.IsOnMove(bus), value => BusConfigurationStore.GetGlobal(bus).OnMove = value);
                 content = MachineryStack.Vertical(onAdd, onMove, host)
                     .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
             }
@@ -78,6 +81,7 @@ namespace DigitalLogistics.UI.Buses
 
         private void Update()
         {
+            if (planRevision != BusPlanStore.Revision) Rebuild(force: true);
             foreach (var refresh in globalRefreshers) refresh();
             foreach (var row in rows) row.Controls.Refresh();
         }
@@ -100,12 +104,10 @@ namespace DigitalLogistics.UI.Buses
             return root;
         }
 
-        private MachineryRadioButton CreateToggle(string key, string tag)
+        private MachineryRadioButton CreateToggle(string key, Func<bool> get, Action<bool> set)
         {
-            var toggle = new MachineryRadioButton(DigitalLogistics.Localize(key),
-                bus.GetTagReadonly(tag).GetBool(), value =>
-                    bus.ModifyTag(tag, state => state.Enable().SetBool(value)));
-            globalRefreshers.Add(() => toggle.SetOn(bus.GetTagReadonly(tag).GetBool()));
+            var toggle = new MachineryRadioButton(DigitalLogistics.Localize(key), get(), set);
+            globalRefreshers.Add(() => toggle.SetOn(get()));
             return toggle;
         }
 
@@ -114,6 +116,8 @@ namespace DigitalLogistics.UI.Buses
 
         private void Rebuild(bool force = false)
         {
+            force |= planRevision != BusPlanStore.Revision;
+            planRevision = BusPlanStore.Revision;
             var connections = BusController.GetConfigurations(bus).ToArray();
             if (!force && rows.Select(row => row.Editor.Connection).SequenceEqual(connections)) return;
             foreach (var row in rows) row.Controls.Destroy();
@@ -126,11 +130,11 @@ namespace DigitalLogistics.UI.Buses
                     StorageBusManager.Connection storage => new StorageBusRow(storage),
                     FluidStorageBusManager.Connection storage => new StorageBusRow(storage),
                     FluidIOBusManager.Connection fluid => new IOBusRow<FluidBusScheduleEntry>(fluid, fluid.Configuration,
-                        () => fluid.DefaultName, fluid.DefaultFilter, () => FluidIOBusManager.ApplyConfiguration(fluid),
+                        () => fluid.DefaultName, fluid.DefaultFilter,
                         FluidIOBus.CanOutput(fluid.Bus) ? fluid.Configuration : null),
                     TriggerBusManager.Connection trigger => new TriggerBusRow(trigger),
                     IOBusManager.Connection item => new IOBusRow<IOBusScheduleEntry>(item, item.Configuration,
-                        () => item.DefaultName, item.DefaultFilter, () => IOBusManager.ApplyConfiguration(item)),
+                        () => item.DefaultName, item.DefaultFilter),
                     _ => throw new InvalidOperationException()
                 };
                 var rowControls = new BusRowControls(scroll.content, host.handler, y, editor.Height,

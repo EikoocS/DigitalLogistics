@@ -12,53 +12,52 @@ namespace DigitalLogistics.Buses
 
     internal readonly struct BusOperation
     {
-        internal int Order { get; }
-        internal int SubOrder { get; }
+        internal BusTargetConfiguration Target { get; }
+        internal BusScheduleEntry Plan { get; }
+        internal int Order => Plan?.Order ?? 6;
+        internal int SubOrder => Plan?.SubOrder ?? 0;
         internal BusOperationKind Kind { get; }
-        internal Action Execute { get; }
+        internal int Limit { get; }
+        internal Func<bool> CanExecute { get; }
+        internal Run Execute { get; }
 
-        internal BusOperation(BusScheduleEntry entry, BusOperationKind kind, Action execute)
+        internal delegate void Run(ref int remaining);
+
+        internal BusOperation(BusTargetConfiguration target, BusScheduleEntry plan, BusOperationKind kind,
+            int limit, Func<bool> canExecute, Run execute)
         {
-            Order = entry?.Order ?? 6;
-            SubOrder = entry?.SubOrder ?? 0;
+            Target = target;
+            Plan = plan;
             Kind = kind;
+            Limit = limit;
+            CanExecute = canExecute;
             Execute = execute;
         }
 
         internal delegate void TransferStep<T>(bool input, T entry, ref int remaining) where T : BusScheduleEntry;
 
-        internal static IEnumerable<BusOperation> ForTransfers<T>(bool canInput, bool canOutput,
-            IEnumerable<T> schedule, int continuousLimit, Func<T, int> getLimit, TransferStep<T> transfer)
+        internal static IEnumerable<BusOperation> ForTransfers<T>(BusTargetConfiguration target,
+            bool canInput, bool canOutput, IEnumerable<T> schedule, int continuousLimit, Func<T, int> getLimit,
+            Func<bool> canExecute, TransferStep<T> transfer)
             where T : BusScheduleEntry
         {
             if (schedule == null)
             {
-                if (canOutput) yield return Create(null, false);
-                if (canInput) yield return Create(null, true);
+                if (canOutput) yield return Create(null, false, continuousLimit);
+                if (canInput) yield return Create(null, true, continuousLimit);
                 yield break;
             }
             foreach (var entry in schedule)
             {
                 if (!entry.Enabled) continue;
-                if (!entry.Limit)
-                {
-                    if (canOutput) yield return Create(entry, false);
-                    if (canInput) yield return Create(entry, true);
-                    continue;
-                }
-                int remaining = getLimit(entry);
-                if (canOutput) yield return new BusOperation(entry, BusOperationKind.Output,
-                    () => transfer(false, entry, ref remaining));
-                if (canInput) yield return new BusOperation(entry, BusOperationKind.Input,
-                    () => transfer(true, entry, ref remaining));
+                int limit = entry.Limit ? getLimit(entry) : continuousLimit;
+                if (canOutput) yield return Create(entry, false, limit);
+                if (canInput) yield return Create(entry, true, limit);
             }
 
-            BusOperation Create(T entry, bool input) => new(entry, input ? BusOperationKind.Input : BusOperationKind.Output,
-                () =>
-                {
-                    int remaining = continuousLimit;
-                    transfer(input, entry, ref remaining);
-                });
+            BusOperation Create(T entry, bool input, int limit) =>
+                new(target, entry, input ? BusOperationKind.Input : BusOperationKind.Output, limit, canExecute,
+                    (ref int remaining) => transfer(input, entry, ref remaining));
         }
     }
 }

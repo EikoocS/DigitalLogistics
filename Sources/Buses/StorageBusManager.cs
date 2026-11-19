@@ -1,42 +1,19 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage;
-using Newtonsoft.Json;
 
 namespace DigitalLogistics.Buses
 {
     internal static class StorageBusManager
     {
-        private const string DataKey = "storage_bus_configuration";
-
-        [Serializable]
-        internal sealed class Configuration
-        {
-            public string Key;
-            public string Name = string.Empty;
-            public bool Disabled;
-            public int Priority;
-            public string Filter = string.Empty;
-            internal const string DefaultFilter = "True";
-        }
-
         internal sealed class Connection
         {
-            internal Configuration Configuration;
+            internal StorageBusConfiguration Configuration;
             internal SharedProviderRegistry.InventoryLink Link;
             internal int References;
             internal string DefaultName => Link.Name;
         }
 
-        [Serializable]
-        private sealed class SaveData
-        {
-            public List<Configuration> Configurations = new();
-        }
-
-        private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameInventory, Connection> active = new();
 
         internal static Connection GetConfiguration(GameInventory inventory) => active[inventory];
@@ -45,8 +22,7 @@ namespace DigitalLogistics.Buses
         {
             if (!active.TryGetValue(link.Inventory, out var connection))
             {
-                if (!configurations.TryGetValue(link.Key, out var configuration))
-                    configurations.Add(link.Key, configuration = new Configuration { Key = link.Key });
+                var configuration = BusConfigurationStore.GetTarget<StorageBusConfiguration>(link.Key, BusActions.ItemStorage);
                 connection = new Connection { Configuration = configuration, Link = link };
                 active.Add(link.Inventory, connection);
                 ApplyConfiguration(connection);
@@ -75,25 +51,10 @@ namespace DigitalLogistics.Buses
             DigitalLogistics.Manager.NotifyChanged();
         }
 
-        internal static void Load()
-        {
-            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
-            if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
-                configurations.Add(configuration.Key, configuration);
-        }
-
-        internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
-            JsonConvert.SerializeObject(new SaveData
-            {
-                Configurations = active.Values.Select(connection => connection.Configuration).ToList()
-            }));
-
         internal static void Clear()
         {
             foreach (var connection in active.Values) DigitalLogistics.Manager.Unregister(connection.Link.Provider);
             active.Clear();
-            configurations.Clear();
         }
     }
 }

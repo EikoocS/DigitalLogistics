@@ -2,28 +2,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DigitalLogistics.Buses
 {
     internal static class TriggerBusManager
     {
-        private const string DataKey = "trigger_bus_configuration";
-
-        [Serializable]
-        internal sealed class Configuration
-        {
-            public string Key;
-            public bool Disabled = true;
-            public List<TriggerBusScheduleEntry> Schedule = new();
-            public bool OnInputUpdate;
-            public string OptionId;
-        }
-
         internal sealed class Connection
         {
-            internal Configuration Configuration;
+            internal TriggerBusConfiguration Configuration;
             internal GameItem Bus;
             internal GameItem Machine;
             internal TriggerBusAction Action;
@@ -33,16 +20,9 @@ namespace DigitalLogistics.Buses
             internal string Name => Machine.GetDisplayName(preferCustomName: true);
         }
 
-        [Serializable]
-        private sealed class SaveData
-        {
-            public List<Configuration> Configurations = new();
-        }
-
-        private static readonly Dictionary<string, Configuration> configurations = new();
         private static readonly Dictionary<GameItem, List<Connection>> active = new();
         private static readonly HashSet<Connection> pending = new();
-        private static readonly HashSet<Connection> executing = new();
+        private static readonly HashSet<TriggerBusConfiguration> executing = new();
         private static Coroutine scheduled;
 
         internal static IEnumerable<Connection> GetConfigurations(GameItem bus) =>
@@ -55,12 +35,9 @@ namespace DigitalLogistics.Buses
             foreach (var machine in targets.Where(item => item != null && item.contentWindow != null).Distinct())
             {
                 if (!TriggerBusActions.Actions.TryGetValue(machine.identifier, out var action)) continue;
-                string key = bus.GetUniqueID() + ":" + machine.GetUniqueID();
-                if (!configurations.TryGetValue(key, out var configuration))
-                {
-                    configuration = new Configuration { Key = key, OptionId = action.GetOptions?.Invoke().First().Id };
-                    configurations.Add(key, configuration);
-                }
+                var configuration = BusConfigurationStore.GetTarget<TriggerBusConfiguration>(
+                    $"machine:{machine.GetUniqueID()}", BusActions.Trigger);
+                configuration.OptionId ??= action.GetOptions?.Invoke().First().Id;
                 var connection = previous.FirstOrDefault(row => row.Configuration == configuration)
                     ?? new Connection { Configuration = configuration, Bus = bus, Machine = machine, Action = action };
                 rows.Add(connection);
@@ -88,9 +65,8 @@ namespace DigitalLogistics.Buses
         private static void Schedule(Connection connection)
         {
             var configuration = connection.Configuration;
-            if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding || configuration.Disabled
-                || !configuration.OnInputUpdate || executing.Contains(connection)
-                || BusAccess.IsBlocked(connection.Machine)) return;
+            if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding || !configuration.OnInputUpdate
+                || executing.Contains(configuration) || !CanTrigger(connection)) return;
             pending.Add(connection);
             if (scheduled == null)
                 scheduled = ModHelper.StartCoroutine(DigitalLogistics.Instance.Manifest.ID, RunPending());
@@ -103,7 +79,7 @@ namespace DigitalLogistics.Buses
             var connections = pending.ToArray();
             pending.Clear();
             BusController.Run(connections.Where(connection => connection.Configuration.OnInputUpdate)
-                .Select(connection => (connection.Bus, CreateOperation(connection))));
+                .Select(connection => (connection.Bus, CreateOperation(connection, automatic: true))));
         }
 
         internal static IEnumerable<BusOperation> GetOperations(GameItem bus, bool nightly)
@@ -113,47 +89,42 @@ namespace DigitalLogistics.Buses
                 if (connection.Configuration.Disabled) continue;
                 if (!nightly) yield return CreateOperation(connection);
                 else
-                    foreach (var entry in connection.Configuration.Schedule)
+                    foreach (var entry in BusPlanStore.GetPlans(connection.Configuration))
                         if (entry.Enabled) yield return CreateOperation(connection, entry);
             }
         }
 
-        private static BusOperation CreateOperation(Connection connection, TriggerBusScheduleEntry entry = null) =>
-            new(entry, BusOperationKind.Trigger, () => Trigger(connection,
-                entry?.Limit == true ? entry.Count : DigitalLogistics.Instance.Settings.MaxContinuousTriggers.Value));
+        private static BusOperation CreateOperation(Connection connection, TriggerBusScheduleEntry entry = null,
+            bool automatic = false) =>
+            new(connection.Configuration, entry, BusOperationKind.Trigger,
+                entry?.Limit == true ? entry.Count : DigitalLogistics.Instance.Settings.MaxContinuousTriggers.Value,
+                () => (!automatic || connection.Configuration.OnInputUpdate) && CanTrigger(connection),
+                (ref int remaining) => Trigger(connection, remaining));
+
+        private static bool CanTrigger(Connection connection) => !connection.Configuration.Disabled
+            && GetConfigurations(connection.Bus).Contains(connection) && !BusAccess.IsBlocked(connection.Machine)
+            && connection.Machine.contentWindow != null;
 
         private static void Trigger(Connection connection, int limit)
         {
-            if (!executing.Add(connection)) return;
-            pending.Remove(connection);
+            var configuration = connection.Configuration;
+            if (!executing.Add(configuration)) return;
+            pending.RemoveWhere(candidate => ReferenceEquals(candidate.Configuration, configuration));
             try
             {
                 for (int i = 0; i < limit; i++)
                 {
-                    if (connection.Configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)
-                        || BusAccess.IsBlocked(connection.Machine)
-                        || connection.Machine.contentWindow == null
-                        || !connection.Action.CanTrigger(connection.Machine, connection.Configuration.OptionId)) break;
-                    connection.Action.Trigger(connection.Machine, connection.Configuration.OptionId);
+                    if (!CanTrigger(connection) || !connection.Action.CanTrigger(connection.Machine, configuration.OptionId))
+                        break;
+                    connection.Action.Trigger(connection.Machine, configuration.OptionId);
                 }
             }
             finally
             {
-                executing.Remove(connection);
+                executing.Remove(configuration);
                 BusController.RefreshConnections(connection.Bus);
             }
         }
-
-        internal static void Load()
-        {
-            string json = ModHelper.GetModData(DigitalLogistics.Instance.Manifest.ID, DataKey);
-            if (string.IsNullOrEmpty(json)) return;
-            foreach (var configuration in JsonConvert.DeserializeObject<SaveData>(json).Configurations)
-                configurations.Add(configuration.Key, configuration);
-        }
-
-        internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
-            JsonConvert.SerializeObject(new SaveData { Configurations = configurations.Values.ToList() }));
 
         internal static void Clear()
         {
@@ -163,7 +134,6 @@ namespace DigitalLogistics.Buses
             pending.Clear();
             executing.Clear();
             active.Clear();
-            configurations.Clear();
         }
     }
 }

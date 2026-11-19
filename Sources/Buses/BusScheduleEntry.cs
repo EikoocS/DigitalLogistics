@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using DigitalLogistics.Filtering;
 
 namespace DigitalLogistics.Buses
@@ -38,15 +37,5 @@ namespace DigitalLogistics.Buses
     internal sealed class IOBusScheduleEntry : FilteredBusScheduleEntry
     {
         public int Count = 1;
-    }
-
-    [Serializable]
-    internal class TransferBusConfiguration<T> where T : FilteredBusScheduleEntry
-    {
-        public string Key;
-        public string Name = string.Empty;
-        public bool Disabled = true;
-        public string Filter = string.Empty;
-        public List<T> Schedule = new();
     }
 }
