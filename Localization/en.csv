@@ -44,31 +44,15 @@ item.input_output_bus.desc,
 item.input_output_bus.flavor,
 ui.io_bus.on_add,
 ui.io_bus.on_move,
-ui.io_bus.input_order,Input order
-ui.io_bus.output_order,Output order
-ui.io_bus.input_priority,Input priority
-ui.io_bus.output_priority,Output priority
 item.trigger_bus.external.name,
 item.trigger_bus.internal.name,
 item.trigger_bus.disabled.name,
 item.trigger_bus.desc,
 item.trigger_bus.flavor,
-ui.io_bus.trigger_order,Execution order
-ui.io_bus.trigger_priority,Execution priority
-ui.io_bus.trigger_count,Trigger count:
-ui.io_bus.trigger_configuration,Trigger configuration:
 ui.io_bus.storage_configuration,Storage filter:
 ui.io_bus.storage_priority,Priority:
-ui.io_bus.input_configuration,Input filter:
-ui.io_bus.output_configuration,Output filter:
-ui.io_bus.filter_configuration,Input/output filter:
-ui.io_bus.transfer_count,Transfer count:
-ui.io_bus.schedule_count,Count
-ui.io_bus.schedule_filter,Filter
 ui.io_bus.inherit_filter,Use global filter
 ui.bus.no_connections,No valid connected targets
-ui.trigger_bus.on_input_update,Execute on input updates
-ui.trigger_bus.loop_trigger,Loop when executing
 config.search_delay_ms,Search input delay (ms)
 config.refresh_hold_ms,Refresh button hold duration (ms)
 config.terminal_refresh_mode,Terminal refresh mode
@@ -100,11 +84,7 @@ item.fluid_input_output_bus.internal.name,
 item.fluid_input_output_bus.disabled.name,
 item.fluid_input_output_bus.desc,
 item.fluid_input_output_bus.flavor,
-ui.fluid_bus.transfer_volume,Transfer volume:
 ui.fluid_bus.on_add,Run when a container or fluid is added
-ui.io_bus.schedule_volume,Volume
-ui.io_bus.unlimited_transfer,Transfer without a limit when executing
-ui.io_bus.schedule_unlimited,Unlimited
 config.max_continuous_item_transfers,Maximum items transferred per execution
 config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (ul)
 item.storage_drive_simple.name,
@@ -116,3 +96,15 @@ item.storage_drive.flavor,
 item.storage_drive_expanded.name,
 item.storage_drive_expanded.desc,
 item.storage_drive_expanded.flavor,
+ui.bus.filter,Filter:
+ui.bus.schedule,Night schedule:
+ui.bus.run_order,Run order:
+ui.bus.run_sub_order,Run sub-order:
+ui.bus.limit_quantity,Limit transfer quantity
+ui.bus.limit_volume,Limit transfer volume
+ui.bus.at_most,Transfer at most:
+ui.fluid_bus.avoid_mixing,Avoid mixing liquids
+ui.trigger_bus.on_input_update,Trigger when inputs change
+ui.trigger_bus.configuration,Trigger action:
+ui.trigger_bus.limit_count,Limit trigger count
+ui.trigger_bus.at_most,Trigger at most:

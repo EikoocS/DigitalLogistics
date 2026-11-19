@@ -7,16 +7,9 @@ namespace DigitalLogistics.UI.Buses
 {
     internal static class FluidVolumeControls
     {
-        internal static RectTransform Bind(BusRowControls controls, RectTransform parent, Vector2 position,
-            int width, FluidVolume amount, bool right = false, bool stretch = false)
+        internal static void Bind(BusRowControls controls, RectTransform group, FluidVolume amount)
         {
             const int unitWidth = 76;
-            var group = new GameObject("FluidVolume", typeof(RectTransform)).GetComponent<RectTransform>();
-            group.SetParent(parent, false);
-            group.anchorMin = group.pivot = new Vector2(right ? 1 : 0, 1);
-            group.anchorMax = stretch ? Vector2.one : group.anchorMin;
-            group.anchoredPosition = position;
-            group.sizeDelta = new Vector2(width, 36);
             var input = CreateInput(group, Vector2.zero, -unitWidth - 4);
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
             controls.BindText(input, () => amount.DisplayValue, () => string.Empty, value =>
@@ -39,7 +32,6 @@ namespace DigitalLogistics.UI.Buses
             });
             controls.AddRefresh(() => dropdown.SetValueWithoutNotify((int)amount.Unit));
             dropdown.SetValueWithoutNotify((int)amount.Unit);
-            return group;
         }
     }
 }

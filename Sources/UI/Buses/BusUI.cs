@@ -36,7 +36,7 @@ namespace DigitalLogistics.UI.Buses
         {
             StorageBus.ItemId or FluidStorageBus.ItemId => StorageBusRow.DefaultHeight,
             TriggerBus.ItemId => TriggerBusRow.DefaultHeight,
-            _ => FluidIOBus.IsIO(bus) ? FluidIOBusRow.GetBaseHeight(bus) : IOBusRow.GetBaseHeight(bus)
+            _ => IOBusRow<IOBusScheduleEntry>.DefaultHeight
         };
 
         internal static PixelWindow Create(GameItem bus)
@@ -125,9 +125,13 @@ namespace DigitalLogistics.UI.Buses
                 {
                     StorageBusManager.Connection storage => new StorageBusRow(storage),
                     FluidStorageBusManager.Connection storage => new StorageBusRow(storage),
-                    FluidIOBusManager.Connection fluid => new FluidIOBusRow(fluid),
+                    FluidIOBusManager.Connection fluid => new IOBusRow<FluidBusScheduleEntry>(fluid, fluid.Configuration,
+                        () => fluid.DefaultName, fluid.DefaultFilter, () => FluidIOBusManager.ApplyConfiguration(fluid),
+                        FluidIOBus.CanOutput(fluid.Bus) ? fluid.Configuration : null),
                     TriggerBusManager.Connection trigger => new TriggerBusRow(trigger),
-                    _ => new IOBusRow((IOBusManager.Connection)connection)
+                    IOBusManager.Connection item => new IOBusRow<IOBusScheduleEntry>(item, item.Configuration,
+                        () => item.DefaultName, item.DefaultFilter, () => IOBusManager.ApplyConfiguration(item)),
+                    _ => throw new InvalidOperationException()
                 };
                 var rowControls = new BusRowControls(scroll.content, host.handler, y, editor.Height,
                     () => Rebuild(force: true));
@@ -147,7 +151,8 @@ namespace DigitalLogistics.UI.Buses
         {
             emptyState.SetActive(rows.Count == 0);
             int contentHeight = ContentHeight(rows.Count);
-            int height = ContentHeight(Mathf.Min(rows.Count, VisibleRows), includeSchedule: false);
+            int baseHeight = ContentHeight(Mathf.Min(rows.Count, VisibleRows), includeSchedule: false);
+            int height = Mathf.Min(contentHeight, Mathf.Max(baseHeight, 360));
             bool overflow = contentHeight > height;
             host.ResizePixels(Width, height / 2);
             host.rectTransform.sizeDelta = new Vector2(Width, height / 2);

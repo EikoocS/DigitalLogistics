@@ -16,9 +16,7 @@ namespace DigitalLogistics.Buses
         {
             public string Key;
             public bool Disabled = true;
-            public List<CountedBusScheduleEntry> Schedule = new();
-            public int Count = 1;
-            public bool LoopTrigger;
+            public List<TriggerBusScheduleEntry> Schedule = new();
             public bool OnInputUpdate;
             public string OptionId;
         }
@@ -33,8 +31,6 @@ namespace DigitalLogistics.Buses
             internal TriggerBusAction.Option[] Options => Action.GetOptions?.Invoke()
                 ?? Array.Empty<TriggerBusAction.Option>();
             internal string Name => Machine.GetDisplayName(preferCustomName: true);
-            internal int TriggerCount => Configuration.LoopTrigger
-                ? DigitalLogistics.Instance.Settings.MaxContinuousTriggers.Value : Configuration.Count;
         }
 
         [Serializable]
@@ -122,9 +118,9 @@ namespace DigitalLogistics.Buses
             }
         }
 
-        private static BusOperation CreateOperation(Connection connection, CountedBusScheduleEntry entry = null) =>
-            new(entry?.Order ?? 6, entry?.Priority ?? 0, BusOperationKind.Trigger,
-                () => Trigger(connection, entry?.RepeatCount ?? connection.TriggerCount));
+        private static BusOperation CreateOperation(Connection connection, TriggerBusScheduleEntry entry = null) =>
+            new(entry, BusOperationKind.Trigger, () => Trigger(connection,
+                entry?.Limit == true ? entry.Count : DigitalLogistics.Instance.Settings.MaxContinuousTriggers.Value));
 
         private static void Trigger(Connection connection, int limit)
         {

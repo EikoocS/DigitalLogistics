@@ -12,9 +12,10 @@ namespace DigitalLogistics.UI.Buses
     {
         private readonly TriggerBusManager.Connection connection;
         public object Connection => connection;
-        internal const int DefaultHeight = 192;
-        public int BaseHeight => DefaultHeight + (connection.Options.Length > 0 ? BusScheduleEditor.EntryHeight : 0);
-        public int Height => BaseHeight + connection.Configuration.Schedule.Count * BusScheduleEditor.EntryHeight;
+        internal const int DefaultHeight = Padding * 2 + Line + BusScheduleEditor.HeaderHeight;
+        public int BaseHeight => DefaultHeight + (connection.Options.Length > 0 ? Line : 0)
+            + (connection.Action.SubscribeInputs != null ? Line : 0);
+        public int Height => BaseHeight + connection.Configuration.Schedule.Count * BusScheduleEditor.TriggerEntryHeight;
 
         internal TriggerBusRow(TriggerBusManager.Connection connection) => this.connection = connection;
 
@@ -22,54 +23,59 @@ namespace DigitalLogistics.UI.Buses
         {
             var root = controls.Root;
             var configuration = connection.Configuration;
-            var label = CreateLabel(root, new Vector2(Padding + 48, -Padding), string.Empty);
-            ((RectTransform)label.root.transform).sizeDelta = new Vector2(Width * 2 - Padding * 4 - 48, 36);
+            var label = CreateLabel(root, new Vector2(NameX, -Padding), connection.Name);
+            var nameRect = (RectTransform)label.root.transform;
+            nameRect.anchorMax = Vector2.one;
+            nameRect.sizeDelta = new Vector2(-NameX - Padding, 36);
             label.text.enableWordWrapping = false;
             label.text.overflowMode = TextOverflowModes.Ellipsis;
             label.text.richText = false;
             controls.AddRefresh(() => label.SetText(connection.Name));
-            label.SetText(connection.Name);
-            var inputToggle = controls.BindToggle(root, new Vector2(Padding, -52), () => configuration.OnInputUpdate,
-                value => configuration.OnInputUpdate = value,
-                text: DigitalLogistics.Localize("ui.trigger_bus.on_input_update"));
-            var loopToggle = controls.BindToggle(root, new Vector2(Padding, -96), () => configuration.LoopTrigger,
-                value => configuration.LoopTrigger = value,
-                text: DigitalLogistics.Localize("ui.trigger_bus.loop_trigger"));
-            int countX = 360 + Padding + FitLabel(CreateLabel(root, new Vector2(360, -96), DigitalLogistics.Localize("ui.io_bus.trigger_count")));
-            var countInput = CreateInput(root, new Vector2(countX, -96), 128, stretch: false);
-            controls.BindInteger(countInput, () => connection.TriggerCount, value =>
+
+            bool IsEnabled() => !configuration.Disabled;
+            int y = Padding + Line;
+            if (connection.Action.SubscribeInputs != null)
             {
-                if (!configuration.LoopTrigger) configuration.Count = Mathf.Max(0, value);
-            });
+                var autoTrigger = controls.BindToggle(root, new Vector2(Padding, -y), () => configuration.OnInputUpdate,
+                    value => configuration.OnInputUpdate = value,
+                    text: DigitalLogistics.Localize("ui.trigger_bus.on_input_update"));
+                controls.AddLateRefresh(() => autoTrigger.SetDisabled(!IsEnabled()));
+                y += Line;
+            }
             var options = connection.Options;
             if (options.Length > 0)
             {
-                int optionX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -140), DigitalLogistics.Localize("ui.io_bus.trigger_configuration")));
-                var dropdownRoot = CustomUIManager.Instance.SpawnElement(
-                    CustomUIManager.ElementKind.Dropdown, root, null, "TriggerOption");
-                CustomUIMachineryStyle.Reskin(dropdownRoot);
-                var rect = (RectTransform)dropdownRoot.transform;
-                rect.anchorMin = rect.pivot = new Vector2(0, 1);
-                rect.anchorMax = Vector2.one;
-                rect.anchoredPosition = new Vector2(optionX, -140);
-                rect.sizeDelta = new Vector2(-Padding - optionX, 36);
-                var dropdown = CustomUIElement.Bind(dropdownRoot, "option").dropdown;
-                dropdown.ClearOptions();
-                dropdown.AddOptions(options.Select(option => option.Name).ToList());
-                dropdown.onValueChanged.AddListener(index => configuration.OptionId = options[index].Id);
-                void RefreshOption() => dropdown.SetValueWithoutNotify(
-                    Array.FindIndex(options, option => option.Id == configuration.OptionId));
-                controls.AddRefresh(RefreshOption);
-                RefreshOption();
+                BindOption(controls, y, options);
+                y += Line;
             }
-            BusScheduleEditor.Build(controls, options.Length > 0 ? 184 : 140, "trigger", configuration.Schedule, controls.Rebuild);
-            controls.BindEnabled(() => !configuration.Disabled, value => configuration.Disabled = !value);
-            controls.AddRefresh(() =>
-            {
-                countInput.interactable = !configuration.Disabled && !configuration.LoopTrigger;
-                loopToggle.SetDisabled(configuration.Disabled);
-                inputToggle.SetDisabled(configuration.Disabled);
-            });
+            controls.BindEnabled(IsEnabled, value => configuration.Disabled = !value);
+            BusScheduleEditor.Build(controls, y, configuration.Schedule, IsEnabled,
+                "ui.trigger_bus.limit_count", "ui.trigger_bus.at_most", 112, (amount, entry) =>
+                    controls.BindInteger(CreateInput(amount, Vector2.zero, 0),
+                        () => entry.Count, value => entry.Count = Mathf.Max(1, value)));
+        }
+
+        private void BindOption(BusRowControls controls, int y, TriggerBusAction.Option[] options)
+        {
+            var root = controls.Root;
+            int x = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -y),
+                DigitalLogistics.Localize("ui.trigger_bus.configuration")));
+            var dropdownRoot = CustomUIManager.Instance.SpawnElement(
+                CustomUIManager.ElementKind.Dropdown, root, null, "TriggerOption");
+            CustomUIMachineryStyle.Reskin(dropdownRoot);
+            var rect = (RectTransform)dropdownRoot.transform;
+            rect.anchorMin = rect.pivot = new Vector2(0, 1);
+            rect.anchorMax = Vector2.one;
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(-Padding - x, 36);
+            var dropdown = CustomUIElement.Bind(dropdownRoot, "option").dropdown;
+            dropdown.ClearOptions();
+            dropdown.AddOptions(options.Select(option => option.Name).ToList());
+            dropdown.onValueChanged.AddListener(index => connection.Configuration.OptionId = options[index].Id);
+            void Refresh() => dropdown.SetValueWithoutNotify(
+                Array.FindIndex(options, option => option.Id == connection.Configuration.OptionId));
+            controls.AddRefresh(Refresh);
+            Refresh();
         }
     }
 }

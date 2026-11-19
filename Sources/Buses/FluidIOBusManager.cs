@@ -15,16 +15,9 @@ namespace DigitalLogistics.Buses
         private const string DataKey = "fluid_io_bus_configuration";
 
         [Serializable]
-        internal sealed class Configuration
+        internal sealed class Configuration : TransferBusConfiguration<FluidBusScheduleEntry>
         {
-            public string Key;
-            public string Name = string.Empty;
-            public bool Disabled = true;
-            public string Filter = string.Empty;
-            public FluidVolume Amount = new();
-            public bool UnlimitedTransfer;
-            public List<FluidBusScheduleEntry> InputSchedule = new();
-            public List<FluidBusScheduleEntry> OutputSchedule = new();
+            public bool AvoidMixing = true;
         }
 
         internal sealed class Connection
@@ -118,45 +111,31 @@ namespace DigitalLogistics.Buses
             foreach (var connection in GetConfigurations(bus))
             {
                 if (connection.Configuration.Disabled) continue;
-                if (FluidIOBus.CanInput(bus))
-                    foreach (var operation in GetOperations(connection, true, nightly)) yield return operation;
-                if (FluidIOBus.CanOutput(bus))
-                    foreach (var operation in GetOperations(connection, false, nightly)) yield return operation;
+                foreach (var operation in BusOperation.ForTransfers(FluidIOBus.CanInput(bus), FluidIOBus.CanOutput(bus),
+                    nightly ? connection.Configuration.Schedule : null,
+                    DigitalLogistics.Instance.Settings.MaxContinuousFluidVolumeUL.Value, entry => entry.Amount.VolumeUL,
+                    (bool input, FluidBusScheduleEntry entry, ref int remaining) => Transfer(connection, input, entry, ref remaining)))
+                    yield return operation;
             }
         }
-        private static IEnumerable<BusOperation> GetOperations(Connection connection, bool input, bool nightly)
+        private static void Transfer(Connection connection, bool input, FluidBusScheduleEntry entry, ref int remaining)
         {
-            if (!nightly)
-            {
-                yield return CreateOperation(connection, input);
-                yield break;
-            }
-            foreach (var entry in input ? connection.Configuration.InputSchedule : connection.Configuration.OutputSchedule)
-                if (entry.Enabled) yield return CreateOperation(connection, input, entry);
-        }
-        private static BusOperation CreateOperation(Connection connection, bool input, FluidBusScheduleEntry entry = null) =>
-            new(entry?.Order ?? 6, entry?.Priority ?? 0, input ? BusOperationKind.Input : BusOperationKind.Output,
-                () => Transfer(connection, input, entry));
-
-        private static void Transfer(Connection connection, bool input, FluidBusScheduleEntry entry)
-        {
-            if (connection.Configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)
+            if (remaining <= 0 || connection.Configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)
                 || !connection.Endpoint.Available) return;
             connection.Endpoint.Refresh();
             var local = connection.Endpoint.Providers.ToArray();
             var network = DigitalLogistics.Manager.FluidProviders.Except(local)
                 .OrderByDescending(provider => provider.Priority).ToArray();
-            var expression = entry?.Expression ?? (input && connection.Bus.identifier == FluidIOBus.InputOutputId
-                ? connection.Expression.Not() : connection.Expression);
-            bool unlimited = entry?.UnlimitedTransfer ?? connection.Configuration.UnlimitedTransfer;
-            int remaining = unlimited ? DigitalLogistics.Instance.Settings.MaxContinuousFluidVolumeUL.Value
-                : (entry?.Amount ?? connection.Configuration.Amount).VolumeUL;
+            var expression = entry?.Expression ?? connection.Expression;
+            if (input && connection.Bus.identifier == FluidIOBus.InputOutputId) expression = expression.Not();
+            bool avoidMixing = !input && connection.Configuration.AvoidMixing;
             var sources = input ? local : network;
             var targets = input ? network : local;
             foreach (var source in sources)
                 foreach (var target in targets)
                 {
                     if (remaining <= 0) return;
+                    if (avoidMixing && target.VolumeUL > 0) continue;
                     if (!source.Available || !expression.Evaluate(source.Content)
                         || !input && !source.Filter.Evaluate(source.Content)) continue;
                     remaining -= FluidTransfer.Transfer(source, target, remaining, applyTargetFilter: input).RemovedUL;

@@ -53,7 +53,7 @@ namespace DigitalLogistics.Buses
         {
             if (!CanRun) return;
             var ordered = operations.OrderBy(entry => entry.Operation.Order)
-                .ThenByDescending(entry => entry.Operation.Priority)
+                .ThenByDescending(entry => entry.Operation.SubOrder)
                 .ThenBy(entry => entry.Operation.Kind).ToArray();
             running = true;
             try

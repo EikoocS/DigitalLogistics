@@ -17,18 +17,7 @@ namespace DigitalLogistics.Buses
         internal const string OnMoveTag = "DIGITAL_LOGISTICS_IO_BUS_ON_MOVE";
 
         [Serializable]
-        internal sealed class Configuration
-        {
-            public string Key;
-            public string Name = string.Empty;
-            public bool Disabled = true;
-            public List<IOBusScheduleEntry> InputSchedule = new();
-            public List<IOBusScheduleEntry> OutputSchedule = new();
-            public string Filter = string.Empty;
-            public int Count = 1;
-            public bool UnlimitedTransfer;
-            internal int RepeatCount => Math.Max(1, Count);
-        }
+        internal sealed class Configuration : TransferBusConfiguration<IOBusScheduleEntry> { }
 
         internal sealed class Connection
         {
@@ -138,51 +127,33 @@ namespace DigitalLogistics.Buses
             foreach (var connection in GetConfigurations(bus))
             {
                 if (connection.Configuration.Disabled) continue;
-                if (IOBus.CanInput(bus))
-                    foreach (var operation in GetOperations(connection, true, nightly)) yield return operation;
-                if (IOBus.CanOutput(bus))
-                    foreach (var operation in GetOperations(connection, false, nightly)) yield return operation;
+                foreach (var operation in BusOperation.ForTransfers(IOBus.CanInput(bus), IOBus.CanOutput(bus),
+                    nightly ? connection.Configuration.Schedule : null,
+                    DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value, entry => entry.Count,
+                    (bool input, IOBusScheduleEntry entry, ref int remaining) => Transfer(connection, input, entry, ref remaining)))
+                    yield return operation;
             }
         }
 
-        private static IEnumerable<BusOperation> GetOperations(Connection connection, bool input, bool nightly)
+        private static void Transfer(Connection connection, bool input, IOBusScheduleEntry entry, ref int remaining)
         {
-            if (!nightly)
-            {
-                yield return CreateOperation(connection, input);
-                yield break;
-            }
-            foreach (var entry in input ? connection.Configuration.InputSchedule : connection.Configuration.OutputSchedule)
-                if (entry.Enabled) yield return CreateOperation(connection, input, entry);
-        }
-
-        private static BusOperation CreateOperation(Connection connection, bool input, IOBusScheduleEntry entry = null) =>
-            new(entry?.Order ?? 6, entry?.Priority ?? 0, input ? BusOperationKind.Input : BusOperationKind.Output,
-                () => Transfer(connection, input, entry));
-
-        private static void Transfer(Connection connection, bool input, IOBusScheduleEntry entry)
-        {
+            if (remaining <= 0) return;
             var configuration = connection.Configuration;
             if (configuration.Disabled || !GetConfigurations(connection.Bus).Contains(connection)) return;
             var provider = connection.Link.Provider;
             if (!provider.Available) return;
-            var expression = entry?.Expression ?? (input && connection.Bus.identifier == IOBus.InputOutputId
-                ? connection.Expression.Not() : connection.Expression);
-            bool unlimited = entry?.UnlimitedTransfer ?? configuration.UnlimitedTransfer;
-            int remaining = unlimited ? DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value : entry?.RepeatCount ?? configuration.RepeatCount;
-            if (remaining <= 0) return;
+            var expression = entry?.Expression ?? connection.Expression;
+            if (input && connection.Bus.identifier == IOBus.InputOutputId) expression = expression.Not();
             var candidates = input ? provider.Snapshot().Where(expression.Evaluate)
                 : DigitalLogistics.Manager.SearchForOutput(expression, provider);
             foreach (var stored in candidates)
             {
                 using (var lease = stored.AcquireInstance())
                     if (lease == null || Bus.IsBus(lease.Item) || BusAccess.IsBlocked(lease.Item)) continue;
-                int amount = unlimited ? remaining : -1;
                 var result = input
-                    ? StorageTransfer.TryInput(stored, amount, providerFilter: target => target != provider)
-                    : StorageTransfer.TryInput(stored, provider, amount);
-                if (result.Amount <= 0) continue;
-                remaining -= unlimited ? result.Amount : 1;
+                    ? StorageTransfer.TryInput(stored, remaining, providerFilter: target => target != provider)
+                    : StorageTransfer.TryInput(stored, provider, remaining);
+                remaining -= result.Amount;
                 if (remaining == 0) break;
             }
         }

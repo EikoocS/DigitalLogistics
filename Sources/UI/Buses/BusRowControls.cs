@@ -13,6 +13,8 @@ namespace DigitalLogistics.UI.Buses
         internal const int Width = 360;
         internal const int Padding = 8;
         internal const int RowGap = 8;
+        internal const int Line = 44;
+        internal const int NameX = Padding + 48;
 
         private readonly TreeNodeRender handler;
         private readonly List<Action> refreshers = new();
@@ -24,18 +26,31 @@ namespace DigitalLogistics.UI.Buses
         {
             this.handler = handler;
             Rebuild = rebuild;
-            Root = new GameObject("BusConfiguration", typeof(RectTransform)).GetComponent<RectTransform>();
-            Root.SetParent(parent, false);
-            Root.anchorMin = Root.pivot = new Vector2(0, 1);
-            Root.anchorMax = Vector2.one;
-            Root.anchoredPosition = new Vector2(Padding, -y);
-            Root.sizeDelta = new Vector2(-Padding * 2, height);
-            var background = Root.gameObject.AddComponent<Image>();
+            Root = CreateSection(parent, "BusConfiguration", y, height);
+        }
+
+        internal static RectTransform CreateStrip(RectTransform parent, string name, Vector2 position,
+            int width, int height, bool right = false)
+        {
+            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.pivot = new Vector2(right ? 1 : 0, 1);
+            rect.anchorMax = Vector2.one;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(width, height);
+            return rect;
+        }
+
+        internal static RectTransform CreateSection(RectTransform parent, string name, int y, int height)
+        {
+            var rect = CreateStrip(parent, name, new Vector2(Padding, -y), -Padding * 2, height);
+            var background = rect.gameObject.AddComponent<Image>();
             background.sprite = MachineryStyle.BevelFrame;
             background.type = Image.Type.Sliced;
             background.pixelsPerUnitMultiplier = 0.5f;
             background.color = Color.white;
             background.raycastTarget = false;
+            return rect;
         }
 
         internal void AddRefresh(Action refresh) => refreshers.Add(refresh);
@@ -71,6 +86,18 @@ namespace DigitalLogistics.UI.Buses
                 group.alpha = enabled ? 1 : 0.45f;
                 foreach (var input in inputs) input.interactable = enabled;
                 foreach (var dropdown in dropdowns) dropdown.interactable = enabled;
+            });
+        }
+
+        internal void BindAvailability(RectTransform parent, Func<bool> enabled)
+        {
+            var inputs = parent.GetComponentsInChildren<TMP_InputField>(true);
+            var dropdowns = parent.GetComponentsInChildren<TMP_Dropdown>(true);
+            AddLateRefresh(() =>
+            {
+                bool available = enabled();
+                foreach (var input in inputs) input.interactable = available;
+                foreach (var dropdown in dropdowns) dropdown.interactable = available;
             });
         }
 
@@ -111,13 +138,17 @@ namespace DigitalLogistics.UI.Buses
             });
         }
 
-        internal void BindFilter(TMP_InputField input, Func<string> get, Func<string> defaultValue, Action<string> set)
+        internal void BindFilter(TMP_InputField input, Func<string> get, Func<string> defaultValue, Action<string> set,
+            bool inheritWhenEmpty = false)
         {
             BindText(input, get, defaultValue, value =>
             {
-                var expression = ParseFilter(string.IsNullOrWhiteSpace(value) ? defaultValue() : value);
-                input.textComponent.color = expression == null ? Color.red : Color.white;
-                if (expression != null) set(value);
+                value = value.Trim();
+                bool valid = value.Length == 0
+                    ? inheritWhenEmpty || ParseFilter(defaultValue()) != null
+                    : ParseFilter(value) != null;
+                input.textComponent.color = valid ? Color.white : Color.red;
+                if (valid) set(value);
             });
             input.onValueChanged.AddListener(_ => input.textComponent.color = Color.white);
         }
@@ -141,7 +172,7 @@ namespace DigitalLogistics.UI.Buses
             Refresh();
         }
 
-        internal static CachedItemExpression ParseFilter(string text)
+        private static CachedItemExpression ParseFilter(string text)
         {
             try { return CachedItemExpressionParser.Parse(text); }
             catch (Superpower.ParseException) { return null; }
