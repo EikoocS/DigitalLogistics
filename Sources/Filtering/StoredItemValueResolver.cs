@@ -10,6 +10,7 @@ namespace DigitalLogistics.Filtering
         public static long ReadPrice(CachedItem item) => item.Price;
         public static long ReadBasePrice(CachedItem item) => item.BasePrice;
         public static int ReadHeat(CachedItem item) => item.Heat ?? 0;
+        public static bool ReadHasHeat(CachedItem item) => item.Heat.HasValue;
         public static int ReadContrabandLevel(CachedItem item) => item.ContrabandLevel;
         public static bool ReadItemType(CachedItem item, int index) => item.TypeMask[index];
 

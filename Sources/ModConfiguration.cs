@@ -10,6 +10,7 @@ namespace DigitalLogistics
 
         internal readonly ConfigEntry<int> SearchDelayMilliseconds;
         internal readonly ConfigEntry<int> RefreshHoldMilliseconds;
+        internal readonly ConfigEntry<bool> AutoSmartFilter;
         internal readonly ConfigEntry<string> TerminalRefresh;
         internal TerminalRefreshMode RefreshMode => TerminalRefresh.Value switch
         {
@@ -31,6 +32,8 @@ namespace DigitalLogistics
                 () => Localize("search_delay_ms"));
             RefreshHoldMilliseconds = config.Define("refresh_hold_ms", 650, "Digital Logistics",
                 () => Localize("refresh_hold_ms"));
+            AutoSmartFilter = config.Define("terminal_auto_smart_filter", true, "Digital Logistics",
+                () => Localize("terminal_auto_smart_filter"));
             TerminalRefresh = config.Define("terminal_refresh_mode", AutoRefresh, "Digital Logistics",
                 () => Localize("terminal_refresh_mode"), new[] { AutoRefresh, ShowNotification, NoRefresh });
             SearchBudgetMilliseconds = config.Define("search_budget_ms", 2f, "Digital Logistics",

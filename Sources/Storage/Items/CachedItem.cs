@@ -46,7 +46,7 @@ namespace DigitalLogistics.Storage.Items
             (long)item.GetTagReadonly(WaterHelper.LIQUID_CONTAINER_CAPACITY).GetInt() - WaterHelper.GetTotalVolume(item));
         internal virtual long ReadLiquidAmount(string key) => GetTag(key)?.GetInt() ?? 0;
 
-        private T ReadItem<T>(Func<GameItem, T> read)
+        internal virtual T ReadItem<T>(Func<GameItem, T> read)
         {
             using var lease = AcquireInstance();
             return lease == null ? default : read(lease.Item);

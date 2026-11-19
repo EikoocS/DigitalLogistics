@@ -16,6 +16,7 @@ storage.slot.energy,能量
 ui.storage_terminal.sort_by,排序依据：{0}
 ui.storage_terminal.sort_direction,排序方向：{0}
 ui.storage_terminal.safety,安全性：{0}
+ui.storage_terminal.smart_filter,智能筛选
 ui.storage_terminal.identifier,标识符
 ui.storage_terminal.mod_id,模组
 ui.storage_terminal.display_name,名称
@@ -54,6 +55,7 @@ ui.io_bus.storage_priority,优先级：
 ui.io_bus.inherit_filter,使用全局过滤器
 ui.bus.no_connections,无有效无连接对象
 config.search_delay_ms,搜索输入等待时间（毫秒）
+config.terminal_auto_smart_filter,顾客到柜台时自动开启智能筛选
 config.refresh_hold_ms,刷新按钮长按时间（毫秒）
 config.terminal_refresh_mode,终端刷新方式
 config.search_budget_ms,物品搜索时间预算（毫秒）

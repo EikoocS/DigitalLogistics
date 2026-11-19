@@ -1,3 +1,4 @@
+using System;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Disks;
 using DigitalLogistics.Storage.Providers;
@@ -14,10 +15,16 @@ namespace DigitalLogistics.Storage.Items
         {
             this.provider = provider;
             this.entry = entry;
-            using var lease = new ItemInstanceLease(ItemSerialization.Decode(entry.Item, entry.Count), true);
-            CacheProperties(lease.Item);
+            ItemSerialization.Inspect(entry.Item, entry.Count, item =>
+            {
+                CacheProperties(item);
+                return 0;
+            });
             UniqueId = entry.Id;
         }
+
+        internal override T ReadItem<T>(Func<GameItem, T> read) => VerifyValidity()
+            ? ItemSerialization.Inspect(entry.Item, entry.Count, read) : default;
 
         public override bool VerifyValidity() => provider.Contains(UniqueId);
         public override ItemInstanceLease AcquireInstance() => VerifyValidity()

@@ -25,6 +25,7 @@ namespace DigitalLogistics.Controller
         private StorageTerminalResults staging;
         private CancellationTokenSource searchCancellation;
         private TaskCompletionSource<bool> nextFrame;
+        private StoreClientInstance customer;
         private double searchDeadline = double.PositiveInfinity;
         private readonly HashSet<int> stagedEdits = new();
         private bool preserveStagedPosition;
@@ -73,6 +74,7 @@ namespace DigitalLogistics.Controller
 
         internal void Open()
         {
+            UpdateCustomer();
             Configuration.RefreshDescriptions();
             view.SetRefreshing(Refreshing);
             if (!Refreshing) Search(true);
@@ -103,18 +105,36 @@ namespace DigitalLogistics.Controller
             }
             view.SetRefreshing(Refreshing);
             if (Refreshing || !isActiveAndEnabled) return;
+            UpdateCustomer();
             Search(true);
+        }
+
+        private bool UpdateCustomer()
+        {
+            var store = PlayerStore.Instance;
+            var current = store != null && store.isClientArrived ? store.currentClientInstance : null;
+            if (current?.GetClientBlueprint().clientIntent == StoreClient.ClientIntent.SELL) current = null;
+            if (ReferenceEquals(current, customer)) return false;
+
+            bool wasActive = Configuration.SmartFilterActive;
+            customer = current;
+            Configuration.SmartFilterActive = customer != null && DigitalLogistics.Instance.Settings.AutoSmartFilter.Value;
+            Configuration.SetCustomerAvailable(customer != null);
+            return wasActive || Configuration.SmartFilterActive;
         }
 
         private CachedItemExpression BuildSearchExpression()
         {
-            var expression = StorageTerminalSearchParser.Parse(view.SearchText);
+            var expression = Configuration.SmartFilterActive
+                ? CustomerItemFilter.Build(customer.GetClientBlueprint())
+                : StorageTerminalSearchParser.Parse(view.SearchText);
             if (Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.All) return expression;
 
             var unsafeItems = CachedItemExpression.ContrabandLevel.EqualTo(0).Not()
                 .Or(CachedItemExpression.Heat.EqualTo(0).Not());
-            return expression.And(Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.Legal
-                ? unsafeItems.Not() : unsafeItems);
+            var safety = Configuration.Safety == StorageTerminalConfiguration.SafetyFilter.Legal
+                ? unsafeItems.Not() : unsafeItems;
+            return safety.And(expression);
         }
 
         private async void Search(bool preservePosition = false)
@@ -249,6 +269,8 @@ namespace DigitalLogistics.Controller
 
         private void OnSearchChanged(string text)
         {
+            UpdateCustomer();
+            Configuration.SmartFilterActive = false;
             StopSearch();
             searchDeadline = Time.realtimeSinceStartupAsDouble + DigitalLogistics.Instance.Settings.SearchDelayMilliseconds.Value / 1000d;
         }
@@ -257,9 +279,10 @@ namespace DigitalLogistics.Controller
 
         private void LateUpdate()
         {
+            bool customerFilterChanged = UpdateCustomer();
             if (Refreshing) return;
             double now = Time.realtimeSinceStartupAsDouble;
-            if (now >= searchDeadline) Search();
+            if (customerFilterChanged || now >= searchDeadline) Search();
             else if (storageChanged && RefreshMode == TerminalRefreshMode.Automatic
                 && searchCancellation == null && double.IsPositiveInfinity(searchDeadline) && !InputInProgress)
                 Search(true);

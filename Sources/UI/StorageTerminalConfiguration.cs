@@ -16,8 +16,22 @@ namespace DigitalLogistics.UI
         private readonly MachineryButton sortButton;
         private readonly MachineryButton directionButton;
         private readonly MachineryButton safetyButton;
+        private readonly MachineryButton smartFilterButton;
+        private bool enabled = true;
+        private bool hasCustomer;
+        private bool smartFilterActive;
 
         internal MachineryStack Layout { get; }
+        internal bool SmartFilterActive
+        {
+            get => smartFilterActive;
+            set
+            {
+                if (smartFilterActive == value) return;
+                smartFilterActive = value;
+                smartFilterButton.SetText(value ? "<u>Auto</u>" : "Auto");
+            }
+        }
         internal StorageSort.SortBy SortBy
         {
             get => (StorageSort.SortBy)item.GetTagReadonly(SortByTag).GetInt();
@@ -53,7 +67,13 @@ namespace DigitalLogistics.UI
                 Safety = (SafetyFilter)(((int)Safety + 1) % 3);
                 OnChanged();
             });
-            Layout = MachineryStack.Vertical(sortButton, directionButton, safetyButton)
+            smartFilterButton = CreateButton(() =>
+            {
+                SmartFilterActive = !SmartFilterActive;
+                Changed?.Invoke();
+            }).SetText("Auto").SetDescription(Localize("smart_filter"));
+            smartFilterButton.SetDisabled(true);
+            Layout = MachineryStack.Vertical(sortButton, directionButton, safetyButton, smartFilterButton)
                 .SetAlign(MachineryStack.Align.Start)
                 .SetMainAlign(MachineryStack.Align.Start);
             RefreshDescriptions();
@@ -74,9 +94,17 @@ namespace DigitalLogistics.UI
 
         internal void SetEnabled(bool enabled)
         {
+            this.enabled = enabled;
             sortButton.SetDisabled(!enabled);
             directionButton.SetDisabled(!enabled);
             safetyButton.SetDisabled(!enabled);
+            smartFilterButton.SetDisabled(!enabled || !hasCustomer);
+        }
+
+        internal void SetCustomerAvailable(bool available)
+        {
+            hasCustomer = available;
+            smartFilterButton.SetDisabled(!enabled || !hasCustomer);
         }
 
         private void OnChanged()

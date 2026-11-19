@@ -16,6 +16,7 @@ storage.slot.energy,Energy
 ui.storage_terminal.sort_by,
 ui.storage_terminal.sort_direction,
 ui.storage_terminal.safety,
+ui.storage_terminal.smart_filter,Smart filter
 ui.storage_terminal.identifier,
 ui.storage_terminal.mod_id,
 ui.storage_terminal.display_name,
@@ -54,6 +55,7 @@ ui.io_bus.storage_priority,Priority:
 ui.io_bus.inherit_filter,Use global filter
 ui.bus.no_connections,No valid connected targets
 config.search_delay_ms,Search input delay (ms)
+config.terminal_auto_smart_filter,Activate smart filter when a customer arrives
 config.refresh_hold_ms,Refresh button hold duration (ms)
 config.terminal_refresh_mode,Terminal refresh mode
 config.search_budget_ms,Item search time budget (ms)

@@ -23,6 +23,8 @@ namespace DigitalLogistics.Filtering
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadBasePrice)));
         public static StoredItemNumber<int> Heat { get; } = new(
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadHeat)));
+        internal static CachedItemExpression HasHeat { get; } = new(
+            FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadHasHeat)));
         public static StoredItemNumber<int> ContrabandLevel { get; } = new(
             FilterExpressionBuilder.Read(nameof(StoredItemValueResolver.ReadContrabandLevel)));
 

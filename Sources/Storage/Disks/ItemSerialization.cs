@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using DigitalLogistics.Storage.Items;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -10,6 +11,10 @@ namespace DigitalLogistics.Storage.Disks
 {
     internal static class ItemSerialization
     {
+        [ThreadStatic]
+        private static int inspectionDepth;
+        internal static bool Inspecting => inspectionDepth > 0;
+
         [Serializable]
         private sealed class ItemData : SaveState
         {
@@ -48,6 +53,17 @@ namespace DigitalLogistics.Storage.Disks
             {
                 store.savedItemFeatureList = savedFeatures;
             }
+        }
+
+        internal static T Inspect<T>(string json, int count, Func<GameItem, T> read)
+        {
+            inspectionDepth++;
+            try
+            {
+                using var lease = new ItemInstanceLease(Decode(json, count), true);
+                return read(lease.Item);
+            }
+            finally { inspectionDepth--; }
         }
 
         internal static GameItem Decode(string json, int count)
