@@ -22,7 +22,7 @@ namespace DigitalLogistics
             Manifest = manifest;
             Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
-            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk || Bus.IsBus(item));
+            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
         }
@@ -59,6 +59,9 @@ namespace DigitalLogistics
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
             directory.Add(ItemDisk.ItemId, ItemDisk.Create);
             directory.Add(FluidDisk.ItemId, FluidDisk.Create);
+            directory.Add(StorageDrive.SimpleId, () => StorageDrive.Create(StorageDrive.SimpleId, 2, 4, 4));
+            directory.Add(StorageDrive.ItemId, () => StorageDrive.Create(StorageDrive.ItemId, 3, 4, 8));
+            directory.Add(StorageDrive.ExpandedId, () => StorageDrive.Create(StorageDrive.ExpandedId, 4, 8, 8));
             directory.Add(FluidStorageBus.ItemId, FluidStorageBus.Create);
             directory.Add(FluidIOBus.InputId, () => FluidIOBus.Create(FluidIOBus.InputId));
             directory.Add(FluidIOBus.OutputId, () => FluidIOBus.Create(FluidIOBus.OutputId));

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Filtering;
@@ -27,16 +26,11 @@ namespace DigitalLogistics.Buses
         {
             if (!active.TryGetValue(link, out var connection))
             {
-                connection = new Connection { Link = link };
-                if (link.Identity is not Guid)
-                {
-                    if (!configurations.TryGetValue(link.Key, out var configuration))
-                        configurations.Add(link.Key, configuration = new StorageBusManager.Configuration { Key = link.Key });
-                    connection.Configuration = configuration;
-                }
+                if (!configurations.TryGetValue(link.Key, out var configuration))
+                    configurations.Add(link.Key, configuration = new StorageBusManager.Configuration { Key = link.Key });
+                connection = new Connection { Link = link, Configuration = configuration };
                 active.Add(link, connection);
-                if (connection.Configuration == null) DigitalLogistics.Manager.Register(link.Provider);
-                else ApplyConfiguration(connection);
+                ApplyConfiguration(connection);
             }
             connection.References++;
         }
@@ -71,8 +65,7 @@ namespace DigitalLogistics.Buses
         }
 
         internal static void Save() => ModHelper.SetModData(DigitalLogistics.Instance.Manifest.ID, DataKey,
-            JsonConvert.SerializeObject(active.Values.Select(connection => connection.Configuration)
-                .Where(configuration => configuration != null).ToList()));
+            JsonConvert.SerializeObject(active.Values.Select(connection => connection.Configuration).ToList()));
 
         internal static void Clear()
         {

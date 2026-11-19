@@ -11,10 +11,10 @@ namespace DigitalLogistics.Item
         private readonly Dictionary<GameItem, FluidProviderRegistry.Link> links = new();
         protected override bool HasLinks => links.Count > 0;
         internal override IEnumerable<object> Configurations => links.Values.Distinct()
-            .Select(FluidStorageBusManager.GetConfiguration).Where(connection => connection.Configuration != null);
+            .Select(FluidStorageBusManager.GetConfiguration);
         private FluidStorageBus() : base(ItemId) { }
         internal static GameItem Create() => new FluidStorageBus().Item;
-        protected override bool CanTargetExternal(GameItem target) => target is FluidDisk || FluidEndpoint.IsContainer(target);
+        protected override bool CanTargetExternal(GameItem target) => target is not StorageDisk && FluidEndpoint.IsContainer(target);
 
         protected override void UpdateLinks(IEnumerable<GameItem> targets)
         {

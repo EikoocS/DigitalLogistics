@@ -107,3 +107,12 @@ ui.io_bus.unlimited_transfer,执行时无限转移
 ui.io_bus.schedule_unlimited,无限
 config.max_continuous_item_transfers,单次连续转移物品数量上限
 config.max_continuous_fluid_volume_ul,单次连续转移流体容量上限（ul）
+item.storage_drive_simple.name,存储驱动器（简易）
+item.storage_drive_simple.desc,
+item.storage_drive_simple.flavor,
+item.storage_drive.name,存储驱动器
+item.storage_drive.desc,
+item.storage_drive.flavor,
+item.storage_drive_expanded.name,存储驱动器（扩展）
+item.storage_drive_expanded.desc,
+item.storage_drive_expanded.flavor,

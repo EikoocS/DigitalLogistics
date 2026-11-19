@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Filtering;
-using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using Newtonsoft.Json;
 
@@ -74,23 +73,6 @@ namespace DigitalLogistics.Buses
             if (configuration.Disabled) DigitalLogistics.Manager.Unregister(provider);
             else DigitalLogistics.Manager.Register(provider);
             DigitalLogistics.Manager.NotifyChanged();
-        }
-
-        internal static Guid? ConnectDisk(ItemDisk disk)
-        {
-            if (BusAccess.IsBlocked(disk)) return null;
-            var data = disk.GetStorage();
-            if (data == null) return null;
-            var provider = SharedProviderRegistry.AcquireDisk(disk.DiskId.Value, data, disk.Capacity,
-                disk.DiskName, disk.Filter, disk);
-            DigitalLogistics.Manager.Register(provider);
-            return disk.DiskId.Value;
-        }
-
-        internal static void DisconnectDisk(Guid id, ItemDisk disk)
-        {
-            var provider = SharedProviderRegistry.ReleaseDisk(id, disk);
-            if (provider != null) DigitalLogistics.Manager.Unregister(provider);
         }
 
         internal static void Load()

@@ -1,4 +1,5 @@
 using DigitalLogistics.Buses;
+using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Disks;
 
@@ -19,6 +20,7 @@ namespace DigitalLogistics
         {
             StorageIndexRefresh.Clear();
             BusController.ClearConnections();
+            StorageDrive.ClearConnections();
             IOBusManager.Clear();
             FluidIOBusManager.Clear();
             TriggerBusManager.Clear();

@@ -107,3 +107,12 @@ ui.io_bus.unlimited_transfer,Transfer without a limit when executing
 ui.io_bus.schedule_unlimited,Unlimited
 config.max_continuous_item_transfers,Maximum items transferred per execution
 config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (ul)
+item.storage_drive_simple.name,
+item.storage_drive_simple.desc,
+item.storage_drive_simple.flavor,
+item.storage_drive.name,
+item.storage_drive.desc,
+item.storage_drive.flavor,
+item.storage_drive_expanded.name,
+item.storage_drive_expanded.desc,
+item.storage_drive_expanded.flavor,
