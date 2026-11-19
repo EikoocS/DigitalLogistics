@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DigitalLogistics.Item;
 using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage
@@ -16,7 +17,8 @@ namespace DigitalLogistics.Storage
         }
 
         private static bool CanMove(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
-            && !ItemPinHelper.IsPinned(item) && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;
+            && !ItemPinHelper.IsPinned(item) && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove())
+            && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
 
         public static StorageTransferResult TryPlace(CachedItem source, Func<GameItem, SlotMarker> findSlot, int amount)
         {

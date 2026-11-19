@@ -64,6 +64,13 @@ namespace DigitalLogistics.Item
             or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId or TriggerBus.ItemId
             or FluidStorageBus.ItemId or FluidIOBus.InputId or FluidIOBus.OutputId or FluidIOBus.InputOutputId;
 
+        internal static bool ContainsEnabledBus(GameItem item)
+        {
+            static bool IsEnabledBus(GameItem candidate) => IsBus(candidate) && !candidate.IsTag(DisabledTag);
+
+            return IsEnabledBus(item) || GraphUtils.FindChildType<GameItem>(item, IsEnabledBus, _ => true) != null;
+        }
+
         internal static void SuppressClickActivation(GameItem item, ref bool activate)
         {
             if (IsBus(item)) activate = false;

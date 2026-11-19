@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DigitalLogistics.Filtering;
+using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Items;
 using DigitalLogistics.UI;
@@ -231,10 +232,11 @@ namespace DigitalLogistics.Controller
         }
 
         private static bool CanTakeExternal(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
-            && !ItemPinHelper.IsPinned(item) && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove() && item.MaxNumRemove() > 0;
+            && !ItemPinHelper.IsPinned(item) && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove()
+            && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
 
         private static bool CanOutput(GameItem item) => item is GameItemElement && item.unitCount > 0
-            && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0;
+            && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
 
         private void SetSelection(StorageTerminalRowController row)
         {

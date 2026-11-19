@@ -22,7 +22,8 @@ namespace DigitalLogistics
             Manifest = manifest;
             Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
-            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive || Bus.IsBus(item));
+            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive
+                || item.identifier == StorageTerminal.ItemId || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
         }
