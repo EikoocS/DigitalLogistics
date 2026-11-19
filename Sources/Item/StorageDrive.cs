@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Buses;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Tracing;
 using UnityEngine;
 
 namespace DigitalLogistics.Item
@@ -87,8 +88,14 @@ namespace DigitalLogistics.Item
         private void Connect()
         {
             if (!DigitalLogistics.Instance.Enabled || SaveManager.IsDecoding || parentInventory == null) return;
-            active.Add(this);
-            RefreshDisks();
+            var trace = PerformanceTrace.Active;
+            var timer = new TraceTimer(trace != null);
+            try
+            {
+                active.Add(this);
+                RefreshDisks();
+            }
+            finally { trace?.RecordDriveConnection(timer.ElapsedTicks); }
         }
 
         private void RefreshDisks()

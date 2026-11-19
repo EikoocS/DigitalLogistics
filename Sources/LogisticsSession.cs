@@ -2,6 +2,7 @@ using DigitalLogistics.Buses;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Disks;
+using DigitalLogistics.Tracing;
 
 namespace DigitalLogistics
 {
@@ -18,6 +19,7 @@ namespace DigitalLogistics
 
         internal static void Stop()
         {
+            PerformanceTrace.Reset();
             StorageIndexRefresh.Clear();
             BusController.ClearConnections();
             StorageDrive.ClearConnections();

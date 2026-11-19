@@ -7,6 +7,7 @@ using DigitalLogistics.Collections;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage.Indexing;
 using DigitalLogistics.Storage.Items;
+using DigitalLogistics.Tracing;
 
 namespace DigitalLogistics.Storage
 {
@@ -71,7 +72,17 @@ namespace DigitalLogistics.Storage
             }
         }
 
-        public async IAsyncEnumerable<CachedItem> SearchAsync(
+        public IAsyncEnumerable<CachedItem> SearchAsync(
+            CachedItemExpression expression,
+            StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
+            bool reverse = false,
+            Func<StorageProvider, bool> providerFilter = null,
+            CancellationToken cancellationToken = default,
+            bool prioritizeOutput = false) =>
+            SearchAsync(null, expression, sortBy, reverse, providerFilter, cancellationToken, prioritizeOutput);
+
+        internal async IAsyncEnumerable<CachedItem> SearchAsync(
+            SearchMeasurement trace,
             CachedItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,
@@ -79,6 +90,7 @@ namespace DigitalLogistics.Storage
             [EnumeratorCancellation] CancellationToken cancellationToken = default,
             bool prioritizeOutput = false)
         {
+            var timer = new TraceTimer(trace != null);
             var providersCopy = new List<ItemStorageProvider>(ItemProviders);
             var itemComparer = sortBy.Comparer();
             var comparer = ComparerHelper.ComparedBy((IAsyncEnumerator<CachedItem> enumerator) => enumerator.Current, itemComparer);
@@ -97,10 +109,13 @@ namespace DigitalLogistics.Storage
                     cancellationToken.ThrowIfCancellationRequested();
                     if (providerFilter != null && !providerFilter(provider)) continue;
 
-                    pendingEnumerator = provider.SearchAsync(expression, sortBy, reverse, cancellationToken)
+                    pendingEnumerator = provider.SearchAsync(trace, expression, sortBy, reverse, cancellationToken)
                         .GetAsyncEnumerator();
                     priorities[pendingEnumerator] = provider;
-                    if (await pendingEnumerator.MoveNextAsync())
+                    timer.Pause();
+                    bool found = await pendingEnumerator.MoveNextAsync();
+                    timer.Resume();
+                    if (found)
                         heads.Add(pendingEnumerator);
                     else
                         await pendingEnumerator.DisposeAsync();
@@ -111,9 +126,12 @@ namespace DigitalLogistics.Storage
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     pendingEnumerator = heads.Pop(bottom: !reverse);
+                    timer.Pause();
                     yield return pendingEnumerator.Current;
 
-                    if (await pendingEnumerator.MoveNextAsync())
+                    bool found = await pendingEnumerator.MoveNextAsync();
+                    timer.Resume();
+                    if (found)
                         heads.Add(pendingEnumerator);
                     else
                         await pendingEnumerator.DisposeAsync();
@@ -123,6 +141,7 @@ namespace DigitalLogistics.Storage
             }
             finally
             {
+                trace?.AddLookup(timer.ElapsedTicks);
                 if (pendingEnumerator != null)
                     await pendingEnumerator.DisposeAsync();
                 foreach (var enumerator in heads)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Item;
+using DigitalLogistics.Tracing;
 
 namespace DigitalLogistics.Buses
 {
@@ -30,15 +31,15 @@ namespace DigitalLogistics.Buses
         internal static IEnumerable<object> GetConfigurations(GameItem item) =>
             connections.TryGetValue(item, out var bus) ? bus.Configurations : Enumerable.Empty<object>();
 
-        internal static void Run(IEnumerable<GameItem> items) => Execute(GetOperations(
-            items.Where(connections.ContainsKey).Select(item => connections[item])));
+        internal static void Run(IEnumerable<GameItem> items, BusRunSource source = BusRunSource.Manual) =>
+            Execute(GetOperations(items.Where(connections.ContainsKey).Select(item => connections[item])), source);
 
         internal static void Run(IEnumerable<(GameItem Item, BusOperation Operation)> operations) => Execute(operations
             .Where(entry => connections.ContainsKey(entry.Item))
-            .Select(entry => (connections[entry.Item], entry.Operation)));
+            .Select(entry => (connections[entry.Item], entry.Operation)), BusRunSource.Automatic);
 
         internal static void RunWindow(int window) => Execute(GetOperations(connections.Values, nightly: true)
-            .Where(entry => HopperHelper.WindowOf(entry.Operation.Order) == window));
+            .Where(entry => HopperHelper.WindowOf(entry.Operation.Order) == window), BusRunSource.Nightly);
 
         private static IEnumerable<(Bus Bus, BusOperation Operation)> GetOperations(IEnumerable<Bus> buses,
             bool nightly = false)
@@ -49,23 +50,35 @@ namespace DigitalLogistics.Buses
                         yield return (bus, operation);
         }
 
-        private static void Execute(IEnumerable<(Bus Bus, BusOperation Operation)> operations)
+        private static void Execute(IEnumerable<(Bus Bus, BusOperation Operation)> operations, BusRunSource source)
         {
             if (!CanRun) return;
-            var ordered = operations.OrderBy(entry => entry.Operation.Order)
-                .ThenByDescending(entry => entry.Operation.SubOrder)
-                .ThenBy(entry => entry.Operation.Kind).ToArray();
-            running = true;
+            var trace = PerformanceTrace.Active;
+            var batchTimer = new TraceTimer(trace != null);
             try
             {
+                var ordered = operations.OrderBy(entry => entry.Operation.Order)
+                    .ThenByDescending(entry => entry.Operation.SubOrder)
+                    .ThenBy(entry => entry.Operation.Kind).ToArray();
+                running = true;
                 foreach (var entry in ordered)
                 {
                     if (!entry.Bus.CanExecute) continue;
                     currentKind = entry.Operation.Kind;
-                    entry.Operation.Execute();
+                    var operationTimer = new TraceTimer(trace != null);
+                    try { entry.Operation.Execute(); }
+                    finally
+                    {
+                        trace?.RecordOperation(entry.Bus.Item.identifier, entry.Operation.Kind,
+                            entry.Bus.Item.uniqueId, operationTimer.ElapsedTicks);
+                    }
                 }
             }
-            finally { running = false; }
+            finally
+            {
+                running = false;
+                trace?.RecordBatch(source, batchTimer.ElapsedTicks);
+            }
         }
     }
 }

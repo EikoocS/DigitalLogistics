@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Tracing;
 using DigitalLogistics.UI;
 using UnityEngine;
 
@@ -121,23 +122,27 @@ namespace DigitalLogistics.Controller
             StopSearch();
             if (!isActiveAndEnabled || Refreshing) return;
 
+            var trace = SearchMeasurement.Begin();
             storageChanged = false;
             UpdatePendingIndicator();
             List.RefreshPriceUnit();
             var expression = BuildSearchExpression();
             var sortBy = Configuration.SortBy;
             bool reverse = Configuration.Reverse;
+            trace?.BeginListWork();
             var results = new StorageTerminalResults(this, List, expression, sortBy, reverse,
                 preservePosition ? visible?.ExpandedGroups : null);
+            trace?.EndListWork();
             staging = results;
             preserveStagedPosition = preservePosition;
             var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             searchCancellation = cancellation;
+            var outcome = SearchOutcome.Failed;
 
             try
             {
-                await using (var enumerator = DigitalLogistics.Manager.SearchAsync(expression, sortBy, reverse,
+                await using (var enumerator = DigitalLogistics.Manager.SearchAsync(trace, expression, sortBy, reverse,
                     cancellationToken: token).GetAsyncEnumerator())
                 {
                     double deadline = Time.realtimeSinceStartupAsDouble + RefreshBudgetSeconds;
@@ -145,7 +150,11 @@ namespace DigitalLogistics.Controller
                     {
                         token.ThrowIfCancellationRequested();
                         if (!stagedEdits.Contains(enumerator.Current.UniqueId))
+                        {
+                            trace?.BeginListWork();
                             results.AddItem(enumerator.Current);
+                            trace?.EndListWork();
+                        }
                         if (Time.realtimeSinceStartupAsDouble < deadline) continue;
                         await WaitForNextFrame();
                         token.ThrowIfCancellationRequested();
@@ -156,16 +165,22 @@ namespace DigitalLogistics.Controller
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
+                    trace?.BeginListWork();
                     results.RenderChildren(Time.realtimeSinceStartupAsDouble + RefreshBudgetSeconds);
+                    trace?.EndListWork();
                     if (!results.HasPendingChildren && !InputInProgress) break;
                     await WaitForNextFrame();
                 }
 
+                trace?.BeginListWork();
                 List.Publish(results.Content, preservePosition ? List.ScrollPosition : 0);
+                trace?.EndListWork();
                 visible = results;
+                outcome = SearchOutcome.Completed;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                outcome = SearchOutcome.Cancelled;
             }
             catch (Exception exception)
             {
@@ -173,6 +188,7 @@ namespace DigitalLogistics.Controller
             }
             finally
             {
+                trace?.Record(outcome, results.ResultCount);
                 if (ReferenceEquals(staging, results)) staging = null;
                 if (!ReferenceEquals(visible, results)) StorageTerminalList.Discard(results.Content);
                 if (ReferenceEquals(searchCancellation, cancellation)) searchCancellation = null;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using DigitalLogistics.Tracing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -36,14 +37,20 @@ namespace DigitalLogistics.Storage.Disks
 
         internal int UsedCells => Items.Sum(item => item.Cells);
 
-        internal string Encode()
+        internal string Encode(bool measure, out DiskPayloadSize size)
         {
             using var buffer = new MemoryStream();
+            CountingWriteStream counter = null;
             using (var compression = new GZipStream(buffer, CompressionMode.Compress, leaveOpen: true))
-            using (var text = new StreamWriter(compression))
-            using (var json = new JsonTextWriter(text))
+            {
+                if (measure) counter = new CountingWriteStream(compression);
+                using var text = new StreamWriter(counter ?? (Stream)compression);
+                using var json = new JsonTextWriter(text);
                 JsonSerializer.Create().Serialize(json, this);
-            return Convert.ToBase64String(buffer.GetBuffer(), 0, (int)buffer.Length);
+            }
+            string encoded = Convert.ToBase64String(buffer.GetBuffer(), 0, (int)buffer.Length);
+            size = counter == null ? default : new DiskPayloadSize(counter.BytesWritten, buffer.Length, encoded.Length);
+            return encoded;
         }
 
         internal static StorageDiskData Decode(string value)

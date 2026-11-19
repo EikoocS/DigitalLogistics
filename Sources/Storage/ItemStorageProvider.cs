@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage.Indexing;
 using DigitalLogistics.Storage.Items;
+using DigitalLogistics.Tracing;
 
 namespace DigitalLogistics.Storage
 {
@@ -16,6 +17,7 @@ namespace DigitalLogistics.Storage
         private StorageIndex storageIndex = new();
         private StorageIndex rebuildingIndex;
         public int Size => Available ? storageIndex.Size : 0;
+        internal bool HasBuiltIndex { get; private set; }
 
         protected ItemStorageProvider() : this(null) { }
 
@@ -43,6 +45,7 @@ namespace DigitalLogistics.Storage
             storageIndex.onChange -= NotifyChanged;
             storageIndex = index;
             storageIndex.onChange += NotifyChanged;
+            HasBuiltIndex = true;
             NotifyChanged();
         }
 
@@ -102,33 +105,50 @@ namespace DigitalLogistics.Storage
             return items;
         }
 
-        public async IAsyncEnumerable<CachedItem> SearchAsync(
+        public IAsyncEnumerable<CachedItem> SearchAsync(
+            CachedItemExpression expression,
+            StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
+            bool reverse = false,
+            CancellationToken cancellationToken = default) =>
+            SearchAsync(null, expression, sortBy, reverse, cancellationToken);
+
+        internal async IAsyncEnumerable<CachedItem> SearchAsync(
+            SearchMeasurement trace,
             CachedItemExpression expression,
             StorageSort.SortBy sortBy = StorageSort.SortBy.IDENTIFIER,
             bool reverse = false,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var filteredExpression = expression.And(Filter);
-            if (!Available || !storageIndex.MayMatch(filteredExpression)) yield break;
-            var timer = Stopwatch.StartNew();
-            using var enumerator = storageIndex.GetEnumerator(sortBy, reverse);
-            while (enumerator.MoveNext())
+            var lookup = new TraceTimer(trace != null);
+            try
             {
-                if (!Available) yield break;
                 cancellationToken.ThrowIfCancellationRequested();
-                var item = enumerator.Current;
-                if (filteredExpression.Evaluate(item))
+                var filteredExpression = expression.And(Filter);
+                if (!Available || !storageIndex.MayMatch(filteredExpression)) yield break;
+                var budget = Stopwatch.StartNew();
+                using var enumerator = storageIndex.GetEnumerator(sortBy, reverse);
+                while (enumerator.MoveNext())
                 {
-                    yield return item;
-                    timer.Restart();
-                }
-                if (timer.Elapsed.TotalMilliseconds >= DigitalLogistics.Instance.Settings.SearchBudgetMilliseconds.Value)
-                {
-                    await Task.Yield();
-                    timer.Restart();
+                    if (!Available) yield break;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var item = enumerator.Current;
+                    if (filteredExpression.Evaluate(item))
+                    {
+                        lookup.Pause();
+                        yield return item;
+                        budget.Restart();
+                        lookup.Resume();
+                    }
+                    if (budget.Elapsed.TotalMilliseconds >= DigitalLogistics.Instance.Settings.SearchBudgetMilliseconds.Value)
+                    {
+                        lookup.Pause();
+                        await Task.Yield();
+                        budget.Restart();
+                        lookup.Resume();
+                    }
                 }
             }
+            finally { trace?.AddLookup(lookup.ElapsedTicks); }
         }
     }
 }

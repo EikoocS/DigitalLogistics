@@ -5,6 +5,7 @@ using System.Linq;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Tracing;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -103,7 +104,7 @@ namespace DigitalLogistics.Buses
             scheduled = null;
             var buses = pending.ToArray();
             pending.Clear();
-            BusController.Run(buses);
+            BusController.Run(buses, BusRunSource.Automatic);
         }
 
         internal static IEnumerable<BusOperation> GetOperations(GameItem bus, bool nightly)

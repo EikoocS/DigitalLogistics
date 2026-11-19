@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DigitalLogistics.Tracing;
 using Newtonsoft.Json;
 
 namespace DigitalLogistics.Storage.Disks
@@ -42,8 +43,15 @@ namespace DigitalLogistics.Storage.Disks
 
         internal static void Save()
         {
+            var trace = PerformanceTrace.Active;
             foreach (Guid id in dirtyDisks)
-                ModHelper.SetModData(ModId, DiskKey(id), disks[id].Encode());
+            {
+                var timer = new TraceTimer(trace != null);
+                string encoded = disks[id].Encode(trace != null, out var size);
+                timer.Pause();
+                ModHelper.SetModData(ModId, DiskKey(id), encoded);
+                trace?.RecordDisk(id, size, timer.ElapsedTicks);
+            }
             if (directoryDirty)
                 ModHelper.SetModData(ModId, DirectoryKey, JsonConvert.SerializeObject(Directory));
             dirtyDisks.Clear();

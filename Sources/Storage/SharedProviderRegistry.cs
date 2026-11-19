@@ -28,7 +28,7 @@ namespace DigitalLogistics.Storage
         private static readonly Dictionary<GameInventory, InventoryLink> inventories = new();
         private static readonly Dictionary<Guid, DiskLink> disks = new();
         internal static IEnumerable<ItemStorageProvider> Providers => inventories.Values.Select(link => (ItemStorageProvider)link.Provider)
-            .Concat(disks.Values.Select(link => link.Provider));
+            .Concat(disks.Values.Where(link => link.Owners.Count > 0).Select(link => link.Provider));
 
         internal static void OnPinChanged(GameItem item)
         {
@@ -65,6 +65,11 @@ namespace DigitalLogistics.Storage
         {
             if (disks.TryGetValue(id, out var link))
             {
+                if (link.Owners.Count == 0)
+                {
+                    link.Provider.Name = name;
+                    link.Provider.Filter = filter;
+                }
                 link.Owners.Add(owner);
                 return link.Provider;
             }
@@ -81,14 +86,18 @@ namespace DigitalLogistics.Storage
             var link = disks[id];
             link.Owners.Remove(owner);
             if (link.Owners.Count > 0) return null;
-            disks.Remove(id);
-            link.Provider.Dispose();
+            if (!link.Provider.HasBuiltIndex)
+            {
+                disks.Remove(id);
+                link.Provider.Dispose();
+            }
             return link.Provider;
         }
 
         internal static void Clear()
         {
-            foreach (var provider in Providers.ToArray()) provider.Dispose();
+            foreach (var link in inventories.Values) link.Provider.Dispose();
+            foreach (var link in disks.Values) link.Provider.Dispose();
             inventories.Clear();
             disks.Clear();
         }

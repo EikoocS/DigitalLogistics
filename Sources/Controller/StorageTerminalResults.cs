@@ -40,6 +40,7 @@ namespace DigitalLogistics.Controller
         internal RectTransform Content { get; }
         internal IEnumerable<string> ExpandedGroups => expandedGroups;
         internal bool HasPendingChildren => pendingChildren.Count > 0;
+        internal int ResultCount => currentItems.Count;
 
         internal StorageTerminalResults(StorageTerminalController owner, StorageTerminalList list,
             CachedItemExpression expression, StorageSort.SortBy sortBy, bool reverse, IEnumerable<string> expanded)

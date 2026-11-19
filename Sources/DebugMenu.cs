@@ -12,6 +12,7 @@ namespace DigitalLogistics
         private const string ProvidersWindowId = "digital_logistics__providers_debug";
         private const string SearchQueryWindowId = "digital_logistics__search_query_debug";
         private const string ExpressionWindowId = "digital_logistics__expression_debug";
+        private const string PerformanceWindowId = "digital_logistics__performance_debug";
 
         internal static void Open()
         {
@@ -30,6 +31,7 @@ namespace DigitalLogistics
             AddMenuButton(builder, "View storage providers", OpenProviders);
             AddMenuButton(builder, "Parse search query", OpenSearchQuery);
             AddMenuButton(builder, "Parse expression", OpenExpression);
+            AddMenuButton(builder, "Performance trace", OpenPerformance);
             CustomUIDebugPanel.SetBackgroundAlpha(builder.Show(), 0.8f);
         }
 
@@ -79,8 +81,16 @@ namespace DigitalLogistics
             CustomUIDebugPanel.SetBackgroundAlpha(builder.Show(), 0.8f);
         }
 
+        private static void OpenPerformance()
+        {
+            var builder = CreateWindow(PerformanceWindowId, "Performance trace", WindowId);
+            _ = new PerformanceTraceView(builder);
+            CustomUIDebugPanel.SetBackgroundAlpha(builder.Show(), 0.8f);
+        }
+
         internal static void Close()
         {
+            CustomUIManager.Instance?.CloseWindow(PerformanceWindowId);
             CustomUIManager.Instance?.CloseWindow(ExpressionWindowId);
             CustomUIManager.Instance?.CloseWindow(SearchQueryWindowId);
             CustomUIManager.Instance?.CloseWindow(ProvidersWindowId);
