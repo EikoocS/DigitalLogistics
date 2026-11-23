@@ -33,7 +33,7 @@ namespace DigitalLogistics.UI
             visual.localScale = new Vector3(shape.flipped ? -1 : 1, 1, 1);
         }
 
-        internal void Move(Vector3 position) => root.position = position;
+        internal void SetOverlayPosition(Vector2 position) => root.localPosition = position;
 
         internal void Destroy()
         {

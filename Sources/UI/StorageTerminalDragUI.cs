@@ -13,7 +13,7 @@ namespace DigitalLogistics.UI
         {
             preview?.Destroy();
             preview = new StorageItemPreview((GameItemElement)item, shape);
-            preview.Move(Input.mousePosition);
+            UpdatePreviewPosition();
         }
 
         internal void SetShape(GridShape shape) => preview.SetShape(shape);
@@ -27,13 +27,28 @@ namespace DigitalLogistics.UI
         internal void Update()
         {
             OverlayHandler.current.HideTooltip();
-            if (inputShield != null)
+            if (inputShield != null && TryGetOverlayPoint(Vector2.zero, out var min)
+                && TryGetOverlayPoint(new Vector2(Screen.width, Screen.height), out var max))
             {
-                inputShield.rectTransform.position = new Vector3(Screen.width / 2f, Screen.height / 2f);
-                var scale = inputShield.rectTransform.lossyScale;
-                inputShield.rectTransform.sizeDelta = new Vector2(Screen.width / scale.x, Screen.height / scale.y);
+                inputShield.rectTransform.localPosition = (min + max) * 0.5f;
+                inputShield.rectTransform.sizeDelta = max - min;
             }
-            preview?.Move(Input.mousePosition);
+            UpdatePreviewPosition();
+        }
+
+        private void UpdatePreviewPosition()
+        {
+            if (preview != null && TryGetOverlayPoint(Input.mousePosition, out var position))
+                preview.SetOverlayPosition(position);
+        }
+
+        private static bool TryGetOverlayPoint(Vector2 screenPosition, out Vector2 position)
+        {
+            var render = RenderHandler.current;
+            var canvas = render.OverlayCanvas;
+            var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(render.overlayRoot.rectTransform,
+                screenPosition, camera, out position);
         }
 
         internal void Highlight(SlotMarker slot) => highlights.Try(slot, slot?.numTransfer > 0
