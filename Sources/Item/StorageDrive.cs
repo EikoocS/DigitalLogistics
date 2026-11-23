@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Storage;
+using DigitalLogistics.Storage.Disks;
 using DigitalLogistics.Tracing;
 using UnityEngine;
 
@@ -16,6 +17,14 @@ namespace DigitalLogistics.Item
         private readonly Vector2[] diskSlotOffsets;
         private readonly GameInventory inventory;
         private readonly Dictionary<StorageDisk, Action> disks = new();
+        private IEnumerable<IndustryDisk> IndustryDisks => inventory.childItems.OfType<IndustryDisk>();
+        internal static event Action IndustryDisksChanged;
+
+        internal static IEnumerable<IndustryDisk> MountedIndustryDisks() =>
+            active.SelectMany(drive => drive.IndustryDisks.Where(drive.IsMounted));
+
+        internal bool IsMounted(IndustryDisk disk) => active.Contains(this)
+            && disk.parentInventory == inventory && disk.IsMaterialized && !ItemAccess.IsBlocked(disk);
 
         private StorageDrive(string id, int size, int columns, int rows, Vector2 firstSlot, Vector2 slotStep)
             : base(id, "Items/itematlas", "unknown")
@@ -38,7 +47,7 @@ namespace DigitalLogistics.Item
             ContainerHelper.InitContainerItem(inventory, this);
             inventory.EnableTag(HopperHelper.NO_HOPPER_INVENTORY_TAG);
             var canAdd = inventory.mayInventoryAddItemFunc;
-            inventory.mayInventoryAddItemFunc = (item, target) => item is StorageDisk && canAdd(item, target);
+            inventory.mayInventoryAddItemFunc = (item, target) => item is StorageDisk or IndustryDisk && canAdd(item, target);
             mayInventoryAddItemFunc = CanPlace;
             onSlotAddItemFunc += (_, _, _) => Connect();
             onSlotRemoveItemFunc += (_, _, _) => Disconnect();
@@ -67,8 +76,13 @@ namespace DigitalLogistics.Item
         {
             var overlays = new List<ItemSpriteModifier>(diskSlotOffsets.Length * 3);
             int slot = 0;
-            foreach (var disk in inventory.childItems.OfType<StorageDisk>().Take(diskSlotOffsets.Length))
-                disk.AddDriveOverlays(overlays, diskSlotOffsets[slot++]);
+            foreach (var disk in inventory.childItems.Where(item => item is StorageDisk or IndustryDisk)
+                         .Take(diskSlotOffsets.Length))
+            {
+                var offset = diskSlotOffsets[slot++];
+                if (disk is StorageDisk storageDisk) storageDisk.AddDriveOverlays(overlays, offset);
+                else overlays.Add(new ItemSpriteModifier(ResolveSpriteByName("disk_overlay_item"), offset));
+            }
             if (slot < diskSlotOffsets.Length)
             {
                 var empty = ResolveSpriteByName("disk_overlay_null");
@@ -78,9 +92,17 @@ namespace DigitalLogistics.Item
             return overlays;
         }
 
-        private void OnDiskInventoryChanged(GameItem _, GameInventory __, SlotMarker ___)
+        private void OnDiskInventoryChanged(GameItem item, GameInventory _, SlotMarker __)
         {
-            RefreshDisks();
+            if (item is IndustryDisk)
+            {
+                if (active.Contains(this))
+                {
+                    RefreshIndustryDisks();
+                    IndustryDisksChanged?.Invoke();
+                }
+            }
+            else RefreshDisks();
             Validate();
         }
 
@@ -91,8 +113,10 @@ namespace DigitalLogistics.Item
             var timer = new TraceTimer(trace != null);
             try
             {
-                active.Add(this);
+                bool connected = active.Add(this);
                 RefreshDisks();
+                RefreshIndustryDisks();
+                if (connected && IndustryDisks.Any()) IndustryDisksChanged?.Invoke();
             }
             finally { trace?.RecordDriveConnection(timer.ElapsedTicks); }
         }
@@ -104,6 +128,25 @@ namespace DigitalLogistics.Item
             foreach (var disk in disks.Keys.Except(desired).ToArray()) UnmountDisk(disk);
             foreach (var disk in desired)
                 if (!disks.ContainsKey(disk)) MountDisk(disk);
+        }
+
+        private void RefreshIndustryDisks()
+        {
+            if (LogisticsSession.Loading || SaveManager.IsDecoding) return;
+            foreach (var disk in IndustryDisks)
+                if (!ItemAccess.IsBlocked(disk)) disk.Mount();
+        }
+
+        internal static void RestoreIndustryDisks()
+        {
+            foreach (var drive in active) drive.RefreshIndustryDisks();
+            IndustryDisksChanged?.Invoke();
+        }
+
+        internal static void SaveIndustryDisks()
+        {
+            foreach (var disk in active.SelectMany(drive => drive.IndustryDisks))
+                if (disk.IsMaterialized) IndustryDiskStore.Save(disk);
         }
 
         private void MountDisk(StorageDisk disk)
@@ -153,15 +196,19 @@ namespace DigitalLogistics.Item
             disks.Remove(disk);
         }
 
-        private void Disconnect()
+        private void Disconnect(bool saveIndustry = true)
         {
+            bool connected = active.Contains(this);
+            var industryDisks = connected ? IndustryDisks.ToArray() : Array.Empty<IndustryDisk>();
+            foreach (var disk in industryDisks) disk.Unmount(saveIndustry);
             active.Remove(this);
             foreach (var disk in disks.Keys.ToArray()) UnmountDisk(disk);
+            if (industryDisks.Length != 0) IndustryDisksChanged?.Invoke();
         }
 
-        internal static void ClearConnections()
+        internal static void ClearConnections(bool saveIndustry)
         {
-            foreach (var drive in active.ToArray()) drive.Disconnect();
+            foreach (var drive in active.ToArray()) drive.Disconnect(saveIndustry);
         }
     }
 }

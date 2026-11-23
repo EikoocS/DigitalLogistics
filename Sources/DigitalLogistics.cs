@@ -25,7 +25,7 @@ namespace DigitalLogistics
             Manager = new StorageManager();
             SuppressItemClickActivation.Register(Bus.IsBus);
             SuppressItemClickActivation.Register(item => item is Hopper);
-            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive or Hopper
+            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or IndustryDisk or StorageDrive or Hopper
                 || item.identifier == StorageTerminal.ItemId || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
@@ -63,6 +63,8 @@ namespace DigitalLogistics
         private void RegisterItems(ModItemDirectory directory)
         {
             directory.Add(StorageTerminal.ItemId, StorageTerminal.Create);
+            directory.Add(IndustryTerminal.ItemId, IndustryTerminal.Create);
+            directory.Add(IndustryDisk.ItemId, IndustryDisk.Create);
             StorageDisk.RegisterTiers(directory, ItemDisk.FamilyId, ItemDisk.Create);
             StorageDisk.RegisterTiers(directory, FluidDisk.FamilyId, FluidDisk.Create);
             StorageDrive.RegisterVariants(directory);

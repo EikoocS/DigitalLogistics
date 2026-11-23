@@ -1,6 +1,19 @@
 item.storage_terminal.name,存储终端
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
+item.industry_terminal.name,工业终端
+item.industry_terminal.desc,
+item.industry_terminal.flavor,
+item.industry_disk.name,工业磁盘
+item.industry_disk.desc,
+item.industry_disk.flavor,
+ui.industry.no_disks,没有已挂载的工业磁盘
+ui.industry.upgrade,工业磁盘扩容
+ui.industry.upgrade_title,扩容
+ui.industry.add_row,纵向拓展
+ui.industry.add_column,横向拓展
+ui.industry.max_size,已达到尺寸上限
+ui.industry.upgrade_requirement,{0} → {1} · 需要 1 枚{2}或更高纯度的金属锭
 item.item_disk.name,{0} 物品磁盘
 item.item_disk.desc,
 item.item_disk.flavor,

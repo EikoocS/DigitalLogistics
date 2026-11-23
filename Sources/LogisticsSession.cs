@@ -10,21 +10,29 @@ namespace DigitalLogistics
 {
     internal static class LogisticsSession
     {
+        internal static bool Loading { get; private set; }
+
         internal static void LoadConfigurations()
         {
+            Loading = true;
             HopperSession.BeginLoad();
             BusConfigurationStore.Load();
         }
 
-        internal static void FinishLoad() => HopperSession.FinishLoad();
+        internal static void FinishLoad()
+        {
+            Loading = false;
+            StorageDrive.RestoreIndustryDisks();
+            HopperSession.FinishLoad();
+        }
 
-        internal static void Stop()
+        internal static void Stop(bool saveIndustry = true)
         {
             PerformanceTrace.Reset();
             StorageIndexRefresh.Clear();
+            StorageDrive.ClearConnections(saveIndustry);
             BusController.ClearConnections();
             HopperSession.Clear();
-            StorageDrive.ClearConnections();
             IOBusManager.Clear();
             FluidIOBusManager.Clear();
             TriggerBusManager.Clear();
@@ -34,18 +42,20 @@ namespace DigitalLogistics
             SharedProviderRegistry.Clear();
             FluidProviderRegistry.Clear();
             BusConfigurationStore.Clear();
+            Loading = false;
         }
 
         internal static void Reset()
         {
             ModDataDebugView.Close();
             ModDataDebugEdits.Clear();
-            Stop();
+            Stop(saveIndustry: false);
             StorageDiskStore.Clear();
         }
 
         internal static void Save()
         {
+            StorageDrive.SaveIndustryDisks();
             StorageDiskStore.Save();
             if (DigitalLogistics.Instance.Enabled)
             {

@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using DigitalLogistics.Tracing;
 using Newtonsoft.Json;
@@ -37,29 +34,18 @@ namespace DigitalLogistics.Storage.Disks
 
         internal int UsedCells => Items.Sum(item => item.Cells);
 
-        internal string Encode(bool measure, out DiskPayloadSize size)
-        {
-            using var buffer = new MemoryStream();
-            CountingWriteStream counter = null;
-            using (var compression = new GZipStream(buffer, CompressionMode.Compress, leaveOpen: true))
+        internal string Encode(bool measure, out DiskPayloadSize size) =>
+            DiskPayloadCodec.Encode(text =>
             {
-                if (measure) counter = new CountingWriteStream(compression);
-                using var text = new StreamWriter(counter ?? (Stream)compression);
-                using var json = new JsonTextWriter(text);
+                using var json = new JsonTextWriter(text) { CloseOutput = false };
                 JsonSerializer.Create().Serialize(json, this);
-            }
-            string encoded = Convert.ToBase64String(buffer.GetBuffer(), 0, (int)buffer.Length);
-            size = counter == null ? default : new DiskPayloadSize(counter.BytesWritten, buffer.Length, encoded.Length);
-            return encoded;
-        }
+            }, measure, out size);
 
-        internal static StorageDiskData Decode(string value)
-        {
-            using var buffer = new MemoryStream(Convert.FromBase64String(value));
-            using var compression = new GZipStream(buffer, CompressionMode.Decompress);
-            using var text = new StreamReader(compression);
-            using var json = new JsonTextReader(text) { DateParseHandling = DateParseHandling.None };
-            return JsonSerializer.Create().Deserialize<StorageDiskData>(json);
-        }
+        internal static StorageDiskData Decode(string value) =>
+            DiskPayloadCodec.Decode(value, text =>
+            {
+                using var json = new JsonTextReader(text) { DateParseHandling = DateParseHandling.None };
+                return JsonSerializer.Create().Deserialize<StorageDiskData>(json);
+            });
     }
 }

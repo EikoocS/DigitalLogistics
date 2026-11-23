@@ -1,6 +1,19 @@
 item.storage_terminal.name,Storage Terminal
 item.storage_terminal.desc,
 item.storage_terminal.flavor,
+item.industry_terminal.name,Industrial Terminal
+item.industry_terminal.desc,
+item.industry_terminal.flavor,
+item.industry_disk.name,Industrial Disk
+item.industry_disk.desc,
+item.industry_disk.flavor,
+ui.industry.no_disks,No industrial disks mounted
+ui.industry.upgrade,Expand Industrial Disk
+ui.industry.upgrade_title,Expand
+ui.industry.add_row,Expand Vertically
+ui.industry.add_column,Expand Horizontally
+ui.industry.max_size,Maximum size reached
+ui.industry.upgrade_requirement,{0} → {1} · 1 metal ingot: {2} or better
 item.item_disk.name,{0} Item Disk
 item.item_disk.desc,
 item.item_disk.flavor,
