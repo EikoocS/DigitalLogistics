@@ -1,3 +1,4 @@
+using DigitalLogistics.Item;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -102,7 +103,7 @@ namespace DigitalLogistics.Buses
                 (ref int remaining) => Trigger(connection, remaining));
 
         private static bool CanTrigger(Connection connection) => !connection.Configuration.Disabled
-            && GetConfigurations(connection.Bus).Contains(connection) && !BusAccess.IsBlocked(connection.Machine)
+            && GetConfigurations(connection.Bus).Contains(connection) && !ItemAccess.IsBlocked(connection.Machine)
             && connection.Machine.contentWindow != null;
 
         private static void Trigger(Connection connection, int limit)

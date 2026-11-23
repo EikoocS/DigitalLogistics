@@ -233,10 +233,11 @@ namespace DigitalLogistics.Controller
 
         private static bool CanTakeExternal(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
             && !ItemPinHelper.IsPinned(item) && !item.isDebugMenu && item.unitCount > 0 && item.MayRemove()
-            && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
+            && item.MaxNumRemove() > 0 && !ItemMovementProtection.ContainsEnabledDevice(item);
 
         private static bool CanOutput(GameItem item) => item is GameItemElement && item.unitCount > 0
-            && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
+            && (item.parentInventory == null || item.MayRemove()) && item.MaxNumRemove() > 0
+            && !ItemMovementProtection.ContainsEnabledDevice(item);
 
         private void SetSelection(StorageTerminalRowController row)
         {

@@ -1,6 +1,6 @@
-namespace DigitalLogistics.Buses
+namespace DigitalLogistics.Item
 {
-    internal static class BusAccess
+    internal static class ItemAccess
     {
         internal static bool IsPinnedOrBlocked(GameItem item) => ItemPinHelper.IsPinned(item) || IsBlocked(item);
 

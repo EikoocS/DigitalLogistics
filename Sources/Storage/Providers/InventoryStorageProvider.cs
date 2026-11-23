@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Items;
-using DigitalLogistics.Buses;
+using DigitalLogistics.Item;
 
 namespace DigitalLogistics.Storage.Providers
 {
@@ -15,7 +15,7 @@ namespace DigitalLogistics.Storage.Providers
             (inventory as PixelElement)?.handler?.FindParentElement<MachineryPanel>();
 
         public InventoryStorageProvider(GameInventory inventory, string name = "Unnamed")
-            : base(() => !BusAccess.IsBlocked(inventory.GetParentItem()))
+            : base(() => !ItemAccess.IsBlocked(inventory.GetParentItem()))
         {
             this.inventory = inventory;
             Name = name;

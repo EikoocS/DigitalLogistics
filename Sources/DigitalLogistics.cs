@@ -1,4 +1,5 @@
 using DigitalLogistics.Item;
+using DigitalLogistics.Patch;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Providers;
 using DigitalLogistics.UI;
@@ -22,7 +23,9 @@ namespace DigitalLogistics
             Manifest = manifest;
             Settings = new ModConfiguration(manifest.ID);
             Manager = new StorageManager();
-            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive
+            SuppressItemClickActivation.Register(Bus.IsBus);
+            SuppressItemClickActivation.Register(item => item is Hopper);
+            ItemDiskStorageProvider.Blacklist.Add(item => item is StorageDisk or StorageDrive or Hopper
                 || item.identifier == StorageTerminal.ItemId || Bus.IsBus(item));
             Log = new ModLog(manifest);
             Log.Log($"{manifest.Name} v{manifest.ModVersion} loaded.");
@@ -37,6 +40,7 @@ namespace DigitalLogistics
             ModHook.OnCreateTooltipLate += StorageDisk.AddTooltip;
             ModHook.OnGameLoadedInit += LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly += LogisticsSession.LoadConfigurations;
+            ModHook.OnGameLoadedLate += LogisticsSession.FinishLoad;
             StorageIndexRefresh.Completed += StorageTerminalUI.NotifyRefreshResult;
             Log.Log("Enabled.");
         }
@@ -50,6 +54,7 @@ namespace DigitalLogistics
             ModHook.OnCreateTooltipLate -= StorageDisk.AddTooltip;
             ModHook.OnGameLoadedInit -= LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly -= LogisticsSession.LoadConfigurations;
+            ModHook.OnGameLoadedLate -= LogisticsSession.FinishLoad;
             StorageIndexRefresh.Completed -= StorageTerminalUI.NotifyRefreshResult;
             LogisticsSession.Stop();
             Log.Log("Disabled.");
@@ -61,6 +66,7 @@ namespace DigitalLogistics
             StorageDisk.RegisterTiers(directory, ItemDisk.FamilyId, ItemDisk.Create);
             StorageDisk.RegisterTiers(directory, FluidDisk.FamilyId, FluidDisk.Create);
             StorageDrive.RegisterVariants(directory);
+            Hopper.Register(directory);
             directory.Add(FluidStorageBus.ItemId, FluidStorageBus.Create);
             directory.Add(FluidIOBus.InputId, () => FluidIOBus.Create(FluidIOBus.InputId));
             directory.Add(FluidIOBus.OutputId, () => FluidIOBus.Create(FluidIOBus.OutputId));

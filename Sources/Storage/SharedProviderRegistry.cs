@@ -4,7 +4,7 @@ using System.Linq;
 using DigitalLogistics.Filtering;
 using DigitalLogistics.Storage.Disks;
 using DigitalLogistics.Storage.Providers;
-using DigitalLogistics.Buses;
+using DigitalLogistics.Item;
 
 namespace DigitalLogistics.Storage
 {
@@ -76,7 +76,7 @@ namespace DigitalLogistics.Storage
             link = new DiskLink();
             link.Owners.Add(owner);
             link.Provider = new ItemDiskStorageProvider(id, data, capacity, name, filter,
-                () => link.Owners.Any(item => !BusAccess.IsPinnedOrBlocked(item)));
+                () => link.Owners.Any(item => !ItemAccess.IsPinnedOrBlocked(item)));
             disks.Add(id, link);
             return link.Provider;
         }

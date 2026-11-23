@@ -110,7 +110,7 @@ namespace DigitalLogistics.Buses
             foreach (var stored in candidates)
             {
                 using (var lease = stored.AcquireInstance())
-                    if (lease == null || Bus.IsBus(lease.Item) || BusAccess.IsBlocked(lease.Item)) continue;
+                    if (lease == null || Bus.IsBus(lease.Item) || ItemAccess.IsBlocked(lease.Item)) continue;
                 var result = input
                     ? StorageTransfer.TryInput(stored, remaining, providerFilter: target => target != provider)
                     : StorageTransfer.TryInput(stored, provider, remaining);

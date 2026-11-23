@@ -12,7 +12,7 @@ namespace DigitalLogistics.Item
         protected GameInventory Parent { get; private set; }
         protected bool IsInternal => GetMode(Item) == BusMode.Internal;
         internal bool Disabled => GetMode(Item) == BusMode.Disabled;
-        internal bool CanExecute => !Disabled && HasLinks && !BusAccess.IsBlocked(Item);
+        internal bool CanExecute => !Disabled && HasLinks && !ItemAccess.IsBlocked(Item);
         protected abstract bool HasLinks { get; }
         internal abstract IEnumerable<object> Configurations { get; }
 
@@ -61,17 +61,7 @@ namespace DigitalLogistics.Item
             or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId or TriggerBus.ItemId
             or FluidStorageBus.ItemId or FluidIOBus.InputId or FluidIOBus.OutputId or FluidIOBus.InputOutputId;
 
-        internal static bool ContainsEnabledBus(GameItem item)
-        {
-            static bool IsEnabledBus(GameItem candidate) => IsBus(candidate) && GetMode(candidate) != BusMode.Disabled;
-
-            return IsEnabledBus(item) || GraphUtils.FindChildType<GameItem>(item, IsEnabledBus, _ => true) != null;
-        }
-
-        internal static void SuppressClickActivation(GameItem item, ref bool activate)
-        {
-            if (IsBus(item)) activate = false;
-        }
+        internal static bool IsEnabledBus(GameItem item) => IsBus(item) && GetMode(item) != BusMode.Disabled;
 
         private string GetStatusSpriteId()
         {
@@ -150,18 +140,18 @@ namespace DigitalLogistics.Item
 
         private IEnumerable<GameItem> GetTargets()
         {
-            if (Disabled || Parent == null || BusAccess.IsBlocked(Item)) yield break;
+            if (Disabled || Parent == null || ItemAccess.IsBlocked(Item)) yield break;
             if (IsInternal)
             {
                 var owner = GraphUtils.FindParentType<GameItem>(Parent);
-                if (owner != null && !BusAccess.IsBlocked(owner)) yield return owner;
+                if (owner != null && !ItemAccess.IsBlocked(owner)) yield return owner;
                 yield break;
             }
             if (!(Parent is GameGridInventory) && !(Parent is GameGridScrollableInventory)) yield break;
             var shape = Item.modifiedShape;
             foreach (var target in Parent.childItems)
             {
-                if (ReferenceEquals(target, Item) || BusAccess.IsBlocked(target) || !CanTargetExternal(target)) continue;
+                if (ReferenceEquals(target, Item) || ItemAccess.IsBlocked(target) || !CanTargetExternal(target)) continue;
                 for (int column = 0; column < shape.width; column++)
                 {
                     var (x, y) = shape.ForwardTransform(column, -1);

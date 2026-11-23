@@ -26,7 +26,7 @@ namespace DigitalLogistics.Item
         {
             var desired = new Dictionary<object, GameItem>();
             var targetList = targets.ToArray();
-            if (!Disabled && Parent != null && IsInternal && !BusAccess.IsBlocked(Item))
+            if (!Disabled && Parent != null && IsInternal && !ItemAccess.IsBlocked(Item))
             {
                 var owner = targetList.FirstOrDefault();
                 if (FluidEndpoint.IsContainer(owner)) desired[owner] = owner;

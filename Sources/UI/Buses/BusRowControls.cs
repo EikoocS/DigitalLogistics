@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using DigitalLogistics.Filtering;
+using DigitalLogistics.UI.Common;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -139,43 +139,10 @@ namespace DigitalLogistics.UI.Buses
         }
 
         internal void BindFilter(TMP_InputField input, Func<string> get, Func<string> defaultValue, Action<string> set,
-            bool inheritWhenEmpty = false)
-        {
-            BindText(input, get, defaultValue, value =>
-            {
-                value = value.Trim();
-                bool valid = value.Length == 0
-                    ? inheritWhenEmpty || ParseFilter(defaultValue()) != null
-                    : ParseFilter(value) != null;
-                input.textComponent.color = valid ? Color.white : Color.red;
-                if (valid) set(value);
-            });
-            input.onValueChanged.AddListener(_ => input.textComponent.color = Color.white);
-        }
+            bool inheritWhenEmpty = false) =>
+            AddRefresh(MachineryInputBinding.BindFilter(input, get, defaultValue, set, inheritWhenEmpty));
 
-        internal void BindText(TMP_InputField input, Func<string> get, Func<string> defaultValue, Action<string> set)
-        {
-            input.textComponent.color = Color.white;
-            var placeholder = (TMP_Text)input.placeholder;
-            placeholder.color = Color.gray;
-            placeholder.fontStyle = FontStyles.Normal;
-            input.onSelect.AddListener(_ => placeholder.text = string.Empty);
-            input.onDeselect.AddListener(_ => placeholder.text = defaultValue());
-            input.onEndEdit.AddListener(value => set(value));
-            void Refresh()
-            {
-                if (input.isFocused) return;
-                input.SetTextWithoutNotify(get());
-                placeholder.text = defaultValue();
-            }
-            refreshers.Add(Refresh);
-            Refresh();
-        }
-
-        private static CachedItemExpression ParseFilter(string text)
-        {
-            try { return CachedItemExpressionParser.Parse(text); }
-            catch (Superpower.ParseException) { return null; }
-        }
+        internal void BindText(TMP_InputField input, Func<string> get, Func<string> defaultValue, Action<string> set) =>
+            AddRefresh(MachineryInputBinding.BindText(input, get, defaultValue, set));
     }
 }

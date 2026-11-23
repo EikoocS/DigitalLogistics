@@ -1,4 +1,5 @@
 using DigitalLogistics.Buses;
+using DigitalLogistics.Item;
 using DigitalLogistics.Storage.Items;
 
 namespace DigitalLogistics.Storage.Providers
@@ -11,7 +12,7 @@ namespace DigitalLogistics.Storage.Providers
         public override CachedItem Content => new PhysicalItem(container);
 
         public ContainerStorageProvider(GameItem container, string name = "Unnamed")
-            : base(() => FluidEndpoint.IsContainer(container) && !BusAccess.IsPinnedOrBlocked(container))
+            : base(() => FluidEndpoint.IsContainer(container) && !ItemAccess.IsPinnedOrBlocked(container))
         {
             this.container = container;
             Name = name;

@@ -19,7 +19,7 @@ namespace DigitalLogistics.Item
         protected override void UpdateLinks(IEnumerable<GameItem> targets)
         {
             var desired = new Dictionary<GameInventory, GameItem>();
-            if (!Disabled && Parent != null && IsInternal && !BusAccess.IsBlocked(Item))
+            if (!Disabled && Parent != null && IsInternal && !ItemAccess.IsBlocked(Item))
             {
                 var owner = targets.FirstOrDefault();
                 if (InventoryStorageProvider.GetPanel(Parent)?.role != "note")

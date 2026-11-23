@@ -18,7 +18,7 @@ namespace DigitalLogistics.Storage
 
         private static bool CanMove(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
             && !ItemPinHelper.IsPinned(item) && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove())
-            && item.MaxNumRemove() > 0 && !Bus.ContainsEnabledBus(item);
+            && item.MaxNumRemove() > 0 && !ItemMovementProtection.ContainsEnabledDevice(item);
 
         public static StorageTransferResult TryPlace(CachedItem source, Func<GameItem, SlotMarker> findSlot, int amount)
         {

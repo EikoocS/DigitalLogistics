@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Buses;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage.Providers;
 
@@ -22,7 +21,7 @@ namespace DigitalLogistics.Storage
 
         internal static Link Acquire(GameItem item)
         {
-            if (BusAccess.IsBlocked(item)) return null;
+            if (ItemAccess.IsBlocked(item)) return null;
             var disk = item as FluidDisk;
             var data = disk?.GetStorage();
             if (disk != null && data == null) return null;
@@ -42,7 +41,7 @@ namespace DigitalLogistics.Storage
             link.Provider = disk == null
                 ? new ContainerStorageProvider(item, link.Name)
                 : new FluidDiskStorageProvider(disk.DiskId.Value, data, disk,
-                    () => link.Owners.Any(owner => !BusAccess.IsPinnedOrBlocked(owner)));
+                    () => link.Owners.Any(owner => !ItemAccess.IsPinnedOrBlocked(owner)));
             links.Add(identity, link);
             return link;
         }

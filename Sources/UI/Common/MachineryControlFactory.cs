@@ -9,17 +9,36 @@ namespace DigitalLogistics.UI.Common
         internal static (EmptyPixelElement Host, GameObject Root) CreateControl(
             CustomUIManager.ElementKind kind, int width, int height, bool canResize = false)
         {
+            var host = CreateHost(width, height, canResize);
+            var root = CustomUIManager.Instance.SpawnElement(kind, host.handler.transform, null, kind.ToString());
+            CustomUIMachineryStyle.Reskin(root);
+            PositionControlRoot((RectTransform)root.transform, width, height);
+            return (host, root);
+        }
+
+        internal static (EmptyPixelElement Host, RectTransform Root) CreateControlGroup(int width, int height)
+        {
+            var host = CreateHost(width, height, canResize: false);
+            var root = (RectTransform)new GameObject("Controls", typeof(RectTransform)).transform;
+            root.SetParent(host.handler.transform, false);
+            PositionControlRoot(root, width, height);
+            return (host, root);
+        }
+
+        private static EmptyPixelElement CreateHost(int width, int height, bool canResize)
+        {
             var host = new EmptyPixelElement(width, height, canResize);
             host.handler.image.enabled = false;
             host.rectTransform.sizeDelta = new Vector2(width, height);
-            var root = CustomUIManager.Instance.SpawnElement(kind, host.handler.transform, null, kind.ToString());
-            CustomUIMachineryStyle.Reskin(root);
-            var rect = (RectTransform)root.transform;
+            return host;
+        }
+
+        private static void PositionControlRoot(RectTransform rect, int width, int height)
+        {
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = new Vector2(width * 2, height * 2);
             rect.localScale = new Vector3(0.5f, 0.5f, 1);
-            return (host, root);
         }
 
         internal static CustomUIElement CreateLabel(RectTransform parent, Vector2 position, string text, float anchor = 0)

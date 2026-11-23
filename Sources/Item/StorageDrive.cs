@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DigitalLogistics.Buses;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Tracing;
 using UnityEngine;
@@ -109,7 +108,7 @@ namespace DigitalLogistics.Item
 
         private void MountDisk(StorageDisk disk)
         {
-            if (BusAccess.IsBlocked(disk)) return;
+            if (ItemAccess.IsBlocked(disk)) return;
             if (disk is ItemDisk itemDisk)
             {
                 var data = itemDisk.GetStorage();

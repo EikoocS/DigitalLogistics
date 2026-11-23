@@ -110,3 +110,13 @@ ui.trigger_bus.on_input_update,输入更新时触发
 ui.trigger_bus.configuration,触发配置：
 ui.trigger_bus.limit_count,限制触发次数
 ui.trigger_bus.at_most,至多触发：
+item.item_hopper.name,物理漏斗
+item.item_hopper.disabled.name,物理漏斗（停用）
+item.item_hopper.desc,
+item.item_hopper.flavor,
+item.fluid_hopper.name,流体漏斗
+item.fluid_hopper.disabled.name,流体漏斗（停用）
+item.fluid_hopper.desc,
+item.fluid_hopper.flavor,
+ui.hopper.input_slot,输入槽位：
+ui.hopper.output_slot,输出槽位：

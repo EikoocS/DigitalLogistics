@@ -1,4 +1,5 @@
 using DigitalLogistics.Buses;
+using DigitalLogistics.Hoppers;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage;
 using DigitalLogistics.Storage.Disks;
@@ -9,13 +10,20 @@ namespace DigitalLogistics
 {
     internal static class LogisticsSession
     {
-        internal static void LoadConfigurations() => BusConfigurationStore.Load();
+        internal static void LoadConfigurations()
+        {
+            HopperSession.BeginLoad();
+            BusConfigurationStore.Load();
+        }
+
+        internal static void FinishLoad() => HopperSession.FinishLoad();
 
         internal static void Stop()
         {
             PerformanceTrace.Reset();
             StorageIndexRefresh.Clear();
             BusController.ClearConnections();
+            HopperSession.Clear();
             StorageDrive.ClearConnections();
             IOBusManager.Clear();
             FluidIOBusManager.Clear();
@@ -39,7 +47,11 @@ namespace DigitalLogistics
         internal static void Save()
         {
             StorageDiskStore.Save();
-            if (DigitalLogistics.Instance.Enabled) BusConfigurationStore.Save();
+            if (DigitalLogistics.Instance.Enabled)
+            {
+                BusConfigurationStore.Save();
+                HopperSession.Save();
+            }
             ModDataDebugEdits.WriteToSave();
         }
     }

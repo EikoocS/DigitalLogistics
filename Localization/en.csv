@@ -110,3 +110,13 @@ ui.trigger_bus.on_input_update,Trigger when inputs change
 ui.trigger_bus.configuration,Trigger action:
 ui.trigger_bus.limit_count,Limit trigger count
 ui.trigger_bus.at_most,Trigger at most:
+item.item_hopper.name,Item Hopper
+item.item_hopper.disabled.name,Item Hopper (Disabled)
+item.item_hopper.desc,
+item.item_hopper.flavor,
+item.fluid_hopper.name,Fluid Hopper
+item.fluid_hopper.disabled.name,Fluid Hopper (Disabled)
+item.fluid_hopper.desc,
+item.fluid_hopper.flavor,
+ui.hopper.input_slot,Input slot:
+ui.hopper.output_slot,Output slot:

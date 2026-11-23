@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Buses;
+using DigitalLogistics.Item;
 
 namespace DigitalLogistics.Storage
 {
@@ -14,9 +15,10 @@ namespace DigitalLogistics.Storage
         private readonly Action<bool> liquidChanged;
         internal string Key { get; }
         internal string Name { get; }
-        internal bool Available => !BusAccess.IsPinnedOrBlocked(owner);
+        internal bool Available => !ItemAccess.IsPinnedOrBlocked(owner);
         internal IEnumerable<FluidStorageProvider> Providers => containers.Values.Select(link => link.Provider);
         internal event Action Added;
+        internal event Action Changed;
 
         internal static bool IsContainer(GameItem item) => item is GameItemElement element
             && !element.IsDestroyed() && item.unitCount > 0 && item.IsTag(WaterHelper.LIQUID_CONTAINER_TAG);
@@ -33,7 +35,12 @@ namespace DigitalLogistics.Storage
             Key = inventory == null ? "fluid:" + owner.GetUniqueID() : SharedProviderRegistry.GetKey(inventory, owner);
             Name = inventory == null ? owner.GetDisplayName(preferCustomName: true)
                 : SharedProviderRegistry.GetName(inventory, owner);
-            liquidChanged = increased => { if (increased && Available) Added?.Invoke(); };
+            liquidChanged = increased =>
+            {
+                if (!Available) return;
+                if (increased) Added?.Invoke();
+                Changed?.Invoke();
+            };
             if (inventory != null)
             {
                 inventory.onSlotAddItemEndFunc += OnAdded;
@@ -47,7 +54,7 @@ namespace DigitalLogistics.Storage
         {
             var desired = (Available
                 ? inventory == null ? new[] { container } : inventory.childItems.ToArray()
-                : Array.Empty<GameItem>()).Where(item => IsContainer(item) && !BusAccess.IsBlocked(item)).ToHashSet();
+                : Array.Empty<GameItem>()).Where(item => IsContainer(item) && !ItemAccess.IsBlocked(item)).ToHashSet();
             foreach (var item in containers.Keys.Except(desired).ToArray()) Release(item);
             foreach (var item in desired)
             {
@@ -61,9 +68,18 @@ namespace DigitalLogistics.Storage
         private void OnAdded(GameItem item, GameInventory _, SlotMarker __)
         {
             Refresh();
-            if (IsContainer(item) && !ItemPinHelper.IsPinned(item)) Added?.Invoke();
+            if (IsContainer(item) && !ItemPinHelper.IsPinned(item))
+            {
+                Added?.Invoke();
+                Changed?.Invoke();
+            }
         }
-        private void OnRemoved(GameItem _, GameInventory __, SlotMarker ___) => Refresh();
+        private void OnRemoved(GameItem item, GameInventory _, SlotMarker __)
+        {
+            bool wasContainer = item != null && containers.ContainsKey(item);
+            Refresh();
+            if (item != null && (wasContainer || containers.ContainsKey(item))) Changed?.Invoke();
+        }
 
         private void Release(GameItem item)
         {
