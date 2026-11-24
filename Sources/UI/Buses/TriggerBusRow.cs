@@ -60,7 +60,7 @@ namespace DigitalLogistics.UI.Buses
         {
             var root = controls.Root;
             int x = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -y),
-                DigitalLogistics.Localize("ui.trigger_bus.configuration")));
+                DigitalLogistics.Localize("ui.trigger_bus.action_option")));
             var dropdownRoot = CustomUIManager.Instance.SpawnElement(
                 CustomUIManager.ElementKind.Dropdown, root, null, "TriggerOption");
             CustomUIMachineryStyle.Reskin(dropdownRoot);

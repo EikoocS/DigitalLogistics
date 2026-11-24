@@ -1,31 +1,79 @@
+# 物品
+## 物品 控制器
 item.storage_terminal.name,存储终端
-item.storage_terminal.desc,
-item.storage_terminal.flavor,
+item.storage_terminal.desc,集中式访问存储的方式，\n同时是访问物品磁盘存储的唯一方式。
+item.storage_terminal.flavor,“一站式处理工厂物品，告别复杂仓库整理”
 item.industry_terminal.name,工业终端
-item.industry_terminal.desc,
-item.industry_terminal.flavor,
-item.industry_disk.name,工业磁盘
-item.industry_disk.desc,
-item.industry_disk.flavor,
-ui.industry.no_disks,没有已挂载的工业磁盘
-ui.industry.upgrade,工业磁盘扩容
-ui.industry.upgrade_title,扩容
-ui.industry.add_row,纵向拓展
-ui.industry.add_column,横向拓展
-ui.industry.max_size,已达到尺寸上限
-ui.industry.upgrade_requirement,{0} → {1} · 需要 1 枚{2}或更高纯度的金属锭
+item.industry_terminal.desc,集中式访问数字工厂的方式，\n同时也具备管理工厂的能力。
+item.industry_terminal.flavor,“忘掉那些老掉牙的设备吧，你需要最新的科技”
+item.storage_drive_simple.name,存储驱动器（简易）
+item.storage_drive_simple.desc,带有 4*4 驱动空间的驱动器，可以驱动少量磁盘。
+item.storage_drive_simple.flavor,“轻量的空间占用，优秀的空间利用率”
+item.storage_drive.name,存储驱动器
+item.storage_drive.desc,带有 4*8 驱动空间的驱动器，可以驱动磁盘。
+item.storage_drive.flavor,“可靠的标准器械，能处理更多磁盘”
+item.storage_drive_expanded.name,存储驱动器（扩展）
+item.storage_drive_expanded.desc,带有 8*8 驱动空间，可以驱动大量磁盘。
+item.storage_drive_expanded.flavor,“大就是好”
+## 物品 磁盘
 item.item_disk.name,{0} 物品磁盘
-item.item_disk.desc,
-item.item_disk.flavor,
-ui.storage_terminal.search_placeholder,
+item.item_disk.desc,可以储存物品的磁盘，\n仅在被挂载时可以通过网络访问其中内容物。
+item.item_disk.flavor,更大的容器和设计使得其有着出色的性能，\n是上层商城流行的物品仓储方案，\n部分特别富有的人也会用其存储自己的珍藏。\n不要琢磨为什么物品能被压进这么小的磁盘里了，\n你没有别的要紧的事了吗？
+item.fluid_disk.name,{0} 流体磁盘
+item.fluid_disk.desc,可以储存流体的磁盘，\n仅在被挂载时可以通过网络访问其中内容物。
+item.fluid_disk.flavor,便利管理大量优质饮品的绝佳选择，\n部分上层实验室也用它存储化学品。\n所以也不要琢磨为什么存水的磁盘不会进水了，\n它进酸也没事！
+item.industry_disk.name,工业磁盘
+item.industry_disk.desc,可以储存机器的磁盘，\n仅在被挂载时可以运行其中的机械。\n使用金属锭进行扩展，越大的尺寸需要的金属锭品质越高。
+item.industry_disk.flavor,将复杂的大量复杂的机械集中管理的方案，\n深受工厂主的喜爱。
+## 物品 总线 模式
+item.bus.mode.external,外接
+item.bus.mode.internal,内接
+item.bus.mode.disabled,停用
+## 物品 总线 物品
+item.storage_bus.name,存储总线（{0}）
+item.storage_bus.desc,可以将实体存储容器接入存储网络的设备。\n外接时接入所对的容器，内接时接入所在的容器。\n可以配置同时接入多个容器。
+item.storage_bus.flavor,数字存储的低成本实现之一，\n毕竟下层区不是人人买得起昂贵的数字化磁盘的。
+item.input_bus.name,输入总线（{0}）
+item.input_bus.desc,可以将物品输入到存储网络的设备。\n外接时从所对的容器抽取，内接时从所在的容器抽取。\n可以配置同时从多个容器抽取。
+item.input_bus.flavor,一件数字工厂的经典设备，善于回收机械产出。
+item.output_bus.name,输出总线（{0}）
+item.output_bus.desc,可以将物品从存储网络输出的设备。\n外接时输出所对的容器，内接时输出所在的容器。\n可以配置同时输出到多个容器。
+item.output_bus.flavor,一件数字工厂的经典设备，善于供给机械输入。
+item.input_output_bus.name,输入输出总线（{0}）
+item.input_output_bus.desc,可以将物品在存储网络中交换的设备。\n将符合过滤器的输入进容器，并将不符过滤器的从中抽出。\n外接时交互所对的容器，内接时交互所在的容器。\n可以配置同时交互多个容器。
+item.input_output_bus.flavor,一件数字工厂的高级设备，\n善于处理在同一个容器中嬗变的配方。
+## 物品 总线 流体
+item.fluid_storage_bus.name,流体存储总线（{0}）
+item.fluid_storage_bus.desc,可以将液体容器接入存储网络的设备。\n外接时接入所对的容器，内接时接入总线所在的容器。\n可以配置同时接入多个容器。
+item.fluid_storage_bus.flavor,数字流体储存方案之一，\n低成本实现自动化净水的绝佳选择。
+item.fluid_input_bus.name,流体输入总线（{0}）
+item.fluid_input_bus.desc,可以将流体输入到存储网络的设备。\n外接时从所对的容器或设备槽位抽取，\n内接时从所在的容器或槽位抽取。\n可以配置同时从多个目标抽取。
+item.fluid_input_bus.flavor,适合需要持续产出液体的机器，如集水器。
+item.fluid_output_bus.name,流体输出总线（{0}）
+item.fluid_output_bus.desc,可以将流体从存储网络输出的设备。\n外接时向所对的容器或设备槽位输出，\n内接时向所在的容器或槽位输出。\n可以配置同时向多个目标输出。
+item.fluid_output_bus.flavor,适合需要持续消耗液体的机器，如水培机。
+item.fluid_input_output_bus.name,流体输入输出总线（{0}）
+item.fluid_input_output_bus.desc,可以在容器和存储网络之间交换流体的设备。\n将符合过滤器的流体送入容器，\n并将不符合的流体抽回网络。\n外接时连接所对的容器或设备槽位，\n内接时连接所在的容器或槽位。\n可以配置同时与多个目标交换流体。
+item.fluid_input_output_bus.flavor,适合对液体进行嬗变的机器，如净水器。
+## 物品 总线 其他
+item.trigger_bus.name,触发总线（{0}）
+item.trigger_bus.desc,可以自动化启动机器的设备，支持设置夜晚计划。\n兼容水瓶打印机，搅拌器，化学成型机等。
+item.trigger_bus.flavor,不要让那些老旧的手动机器挡在“睡”后收入的推进。
+## 物品 漏斗
+item.item_hopper.name,物理漏斗
+item.item_hopper.disabled.name,物理漏斗（停用）
+item.item_hopper.desc,使得物品在容器/机器之间转移，而无需中转容器。
+item.item_hopper.flavor,在没有储存网络的情况下进行自动化，\n更小的范围换来的是更便利的配置。
+item.fluid_hopper.name,流体漏斗
+item.fluid_hopper.disabled.name,流体漏斗（停用）
+item.fluid_hopper.desc,使得流体在容器/机器之间转移，而无需中转容器。
+item.fluid_hopper.flavor,在没有储存网络的情况下进行自动化，\n更小的范围换来的是更便利的配置。
+
+# UI
+# UI 存储终端
+ui.storage_terminal.search_placeholder,点击输入搜索条件
 ui.storage_terminal.refreshing,正在刷新
 ui.storage_terminal.refresh_result,刷新 {0:N0} 件 / {1:N0} ms
-item.storage_bus.external.name,存储总线（外接）
-item.storage_bus.internal.name,存储总线（内接）
-item.storage_bus.disabled.name,存储总线（停用）
-item.storage_bus.desc,
-item.storage_bus.flavor,
-storage.slot.energy,能量
 ui.storage_terminal.sort_by,排序依据：{0}
 ui.storage_terminal.sort_direction,排序方向：{0}
 ui.storage_terminal.safety,安全性：{0}
@@ -39,97 +87,54 @@ ui.storage_terminal.heat,热度
 ui.storage_terminal.ascending,正序
 ui.storage_terminal.descending,倒序
 ui.storage_terminal.all,全部物品
-ui.storage_terminal.legal,仅选择无违规物品
-ui.storage_terminal.illegal,仅选择违规物品
-item.input_bus.external.name,输入总线（外接）
-item.input_bus.internal.name,输入总线（内接）
-item.input_bus.disabled.name,输入总线（停用）
-item.input_bus.desc,
-item.input_bus.flavor,
-item.output_bus.external.name,输出总线（外接）
-item.output_bus.internal.name,输出总线（内接）
-item.output_bus.disabled.name,输出总线（停用）
-item.output_bus.desc,
-item.output_bus.flavor,
-item.input_output_bus.external.name,输入输出总线（外接）
-item.input_output_bus.internal.name,输入输出总线（内接）
-item.input_output_bus.disabled.name,输入输出总线（停用）
-item.input_output_bus.desc,
-item.input_output_bus.flavor,
-ui.io_bus.on_add,有物品放入时也运行
-ui.io_bus.on_move,此总线被移动时也运行
-item.trigger_bus.external.name,触发总线（外接）
-item.trigger_bus.internal.name,触发总线（内接）
-item.trigger_bus.disabled.name,触发总线（停用）
-item.trigger_bus.desc,
-item.trigger_bus.flavor,
-ui.io_bus.storage_configuration,存储过滤：
-ui.io_bus.storage_priority,优先级：
+ui.storage_terminal.legal,仅显示无违规物品
+ui.storage_terminal.illegal,仅显示违规物品
+# UI 工业终端
+ui.industry_terminal.no_disks,没有已挂载的工业磁盘
+# UI 工业磁盘
+ui.industry_disk.upgrade,工业磁盘扩容
+ui.industry_disk.upgrade_title,扩容
+ui.industry_disk.add_row,纵向拓展
+ui.industry_disk.add_column,横向拓展
+ui.industry_disk.max_size,已达到尺寸上限
+ui.industry_disk.upgrade_requirement,{0} → {1} · 需要 1 枚{2}或更高纯度的金属锭
+# UI 通用
+ui.common.filter,过滤器：
+# UI 总线
+ui.bus.no_connections,无有效连接对象
+ui.bus.schedule,夜间计划：
+ui.bus.run_order,运行顺序：
+ui.bus.run_sub_order,运行子顺序：
+# UI 存储总线
+ui.storage_bus.filter,存储过滤：
+ui.storage_bus.priority,优先级：
+# UI IO 总线
+ui.io_bus.on_changed,连接对象内容变化时运行
+ui.io_bus.on_move,此总线被移动时触发运行
 ui.io_bus.inherit_filter,使用全局过滤器
-ui.bus.no_connections,无有效无连接对象
+ui.io_bus.at_most,至多转移：
+# UI 物品 IO 总线
+ui.item_bus.limit_quantity,限制转移数量
+# UI 流体 IO 总线
+ui.fluid_bus.limit_volume,限制转移容量
+ui.fluid_bus.avoid_mixing,避免液体混合
+# UI 触发总线
+ui.trigger_bus.on_input_update,输入更新时触发
+ui.trigger_bus.action_option,触发配置：
+ui.trigger_bus.limit_count,限制触发次数
+ui.trigger_bus.at_most,至多触发：
+# UI 漏斗
+ui.hopper.input_slot,输入槽位：
+ui.hopper.output_slot,输出槽位：
+
+# 配置
 config.search_delay_ms,搜索输入等待时间（毫秒）
-config.terminal_auto_smart_filter,顾客到柜台时自动开启智能筛选
 config.refresh_hold_ms,刷新按钮长按时间（毫秒）
 config.terminal_refresh_mode,终端刷新方式
+config.terminal_auto_smart_filter,买家到柜台时自动开启智能筛选
 config.search_budget_ms,物品搜索时间预算（毫秒）
 config.terminal_budget_ms,终端列表每帧时间预算（毫秒）
 config.index_refresh_budget_ms,索引刷新每帧时间预算（毫秒）
 config.max_continuous_triggers,单次连续触发次数上限
-
-item.fluid_disk.name,{0} 流体磁盘
-item.fluid_disk.desc,
-item.fluid_disk.flavor,
-item.fluid_storage_bus.external.name,流体存储总线（外接）
-item.fluid_storage_bus.internal.name,流体存储总线（内接）
-item.fluid_storage_bus.disabled.name,流体存储总线（停用）
-item.fluid_storage_bus.desc,
-item.fluid_storage_bus.flavor,
-item.fluid_input_bus.external.name,流体输入总线（外接）
-item.fluid_input_bus.internal.name,流体输入总线（内接）
-item.fluid_input_bus.disabled.name,流体输入总线（停用）
-item.fluid_input_bus.desc,
-item.fluid_input_bus.flavor,
-item.fluid_output_bus.external.name,流体输出总线（外接）
-item.fluid_output_bus.internal.name,流体输出总线（内接）
-item.fluid_output_bus.disabled.name,流体输出总线（停用）
-item.fluid_output_bus.desc,
-item.fluid_output_bus.flavor,
-item.fluid_input_output_bus.external.name,流体输入输出总线（外接）
-item.fluid_input_output_bus.internal.name,流体输入输出总线（内接）
-item.fluid_input_output_bus.disabled.name,流体输入输出总线（停用）
-item.fluid_input_output_bus.desc,
-item.fluid_input_output_bus.flavor,
-ui.fluid_bus.on_add,放入容器或流体增加时也运行
 config.max_continuous_item_transfers,单次连续转移物品数量上限
 config.max_continuous_fluid_volume_ul,单次连续转移流体容量上限（ul）
-item.storage_drive_simple.name,存储驱动器（简易）
-item.storage_drive_simple.desc,
-item.storage_drive_simple.flavor,
-item.storage_drive.name,存储驱动器
-item.storage_drive.desc,
-item.storage_drive.flavor,
-item.storage_drive_expanded.name,存储驱动器（扩展）
-item.storage_drive_expanded.desc,
-item.storage_drive_expanded.flavor,
-ui.bus.filter,过滤器：
-ui.bus.schedule,夜间计划：
-ui.bus.run_order,运行顺序：
-ui.bus.run_sub_order,运行子顺序：
-ui.bus.limit_quantity,限制转移数量
-ui.bus.limit_volume,限制转移容量
-ui.bus.at_most,至多转移：
-ui.fluid_bus.avoid_mixing,避免液体混合
-ui.trigger_bus.on_input_update,输入更新时触发
-ui.trigger_bus.configuration,触发配置：
-ui.trigger_bus.limit_count,限制触发次数
-ui.trigger_bus.at_most,至多触发：
-item.item_hopper.name,物理漏斗
-item.item_hopper.disabled.name,物理漏斗（停用）
-item.item_hopper.desc,
-item.item_hopper.flavor,
-item.fluid_hopper.name,流体漏斗
-item.fluid_hopper.disabled.name,流体漏斗（停用）
-item.fluid_hopper.desc,
-item.fluid_hopper.flavor,
-ui.hopper.input_slot,输入槽位：
-ui.hopper.output_slot,输出槽位：

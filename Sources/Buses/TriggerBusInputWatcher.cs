@@ -6,7 +6,6 @@ namespace DigitalLogistics.Buses
 {
     internal sealed class TriggerBusInputWatcher : IDisposable
     {
-        private readonly Action<bool> liquidChanged;
         private readonly GameInventory[] inventories;
         private readonly GameItem liquidOwner;
         private readonly Action changed;
@@ -17,7 +16,6 @@ namespace DigitalLogistics.Buses
             this.inventories = inventories.Distinct().ToArray();
             this.liquidOwner = liquidOwner;
             this.changed = changed;
-            liquidChanged = _ => changed();
             foreach (var inventory in this.inventories)
             {
                 inventory.onSlotAddItemEndFunc += OnInventoryChanged;
@@ -41,13 +39,13 @@ namespace DigitalLogistics.Buses
             foreach (var item in desired)
             {
                 if (!items.Add(item)) continue;
-                LiquidChangeEvents.Subscribe(item, liquidChanged);
+                LiquidChangeEvents.Subscribe(item, changed);
             }
         }
 
         private void Unwatch(GameItem item)
         {
-            LiquidChangeEvents.Unsubscribe(item, liquidChanged);
+            LiquidChangeEvents.Unsubscribe(item, changed);
             items.Remove(item);
         }
 

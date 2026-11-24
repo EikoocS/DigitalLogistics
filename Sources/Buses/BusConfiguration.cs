@@ -11,7 +11,8 @@ namespace DigitalLogistics.Buses
     internal sealed class BusGlobalConfiguration
     {
         public BusMode Mode;
-        public bool OnAdd;
+        [JsonProperty("OnAdd")]
+        public bool OnChanged;
         public bool OnMove;
     }
 

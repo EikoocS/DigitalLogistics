@@ -12,6 +12,8 @@ namespace DigitalLogistics.Item
         internal const string IngotId = "metal_ingot";
         internal const int MaxSide = 20;
         private const int InitialSide = 6;
+        private const int BasePrice = 400;
+        private const int IngotBasePrice = 50;
         private const string DiskIdTag = "DIGITAL_LOGISTICS_INDUSTRY_DISK_UUID_STRING";
         private const string ColumnsTag = "DIGITAL_LOGISTICS_INDUSTRY_COLUMNS";
         private const string RowsTag = "DIGITAL_LOGISTICS_INDUSTRY_ROWS";
@@ -32,6 +34,7 @@ namespace DigitalLogistics.Item
 
         private IndustryDisk() : base(ItemId, "Items/itematlas", "unknown")
         {
+            unitValue = BasePrice;
             SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, ItemId)
                 .SetShape(new GridShapeBuilder().SetDataFill(3, 2));
             name = DigitalLogistics.Localize("item.industry_disk.name");
@@ -43,6 +46,7 @@ namespace DigitalLogistics.Item
             EnableTag(GeneralHelper.IS_UNLOAD_DISABLED_TAG);
             mayStackItemFunc = (_, _) => false;
             onSlotRemoveItemFunc += (_, _, _) => Unmount(save: true);
+            onLoaded += _ => RefreshValue();
         }
 
         private IndustryAreaUI CreateArea(int columns, int rows)
@@ -133,6 +137,20 @@ namespace DigitalLogistics.Item
             _ => IngotPurityHelper.INGOT_PURITY_PERFECT
         };
 
+        private static double RequiredIngotValue(int side)
+        {
+            double total = 0;
+            for (int size = InitialSide + 1; size <= side; size++)
+                total += IngotBasePrice * (1 + IngotPurityHelper.ingotPurities[RequiredPurity(size)].ValueMod / 100d);
+            return total;
+        }
+
+        private void RefreshValue()
+        {
+            double materialValue = RequiredIngotValue(ReadSide(ColumnsTag)) + RequiredIngotValue(ReadSide(RowsTag));
+            unitValue = BasePrice + (long)Math.Round(materialValue * 0.5, MidpointRounding.AwayFromZero);
+        }
+
         internal bool CanExpand(bool row)
         {
             if (!CanOpen) return false;
@@ -153,6 +171,7 @@ namespace DigitalLogistics.Item
             int columns = Columns + (row ? 0 : 1);
             int rows = Rows + (row ? 1 : 0);
             ModifyTag(row ? RowsTag : ColumnsTag, tag => tag.Enable().SetInt(row ? rows : columns), skipValidate: true);
+            RefreshValue();
             ResizeArea(columns, rows);
         }
 

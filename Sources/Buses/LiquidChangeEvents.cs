@@ -6,15 +6,15 @@ namespace DigitalLogistics.Buses
 {
     internal static class LiquidChangeEvents
     {
-        private static readonly Dictionary<GameItem, Action<bool>> listeners = new();
+        private static readonly Dictionary<GameItem, Action> listeners = new();
 
-        internal static void Subscribe(GameItem item, Action<bool> changed)
+        internal static void Subscribe(GameItem item, Action changed)
         {
             listeners.TryGetValue(item, out var current);
             listeners[item] = current + changed;
         }
 
-        internal static void Unsubscribe(GameItem item, Action<bool> changed)
+        internal static void Unsubscribe(GameItem item, Action changed)
         {
             var remaining = listeners[item] - changed;
             if (remaining == null) listeners.Remove(item);
@@ -25,9 +25,9 @@ namespace DigitalLogistics.Buses
             listeners.ContainsKey(item) && !ItemPinHelper.IsPinned(item)
                 && Liquid.Liquids.Any(liquid => liquid.currentPart == tag);
 
-        internal static void Notify(GameItem item, bool increased)
+        internal static void Notify(GameItem item)
         {
-            if (listeners.TryGetValue(item, out var changed)) changed(increased);
+            if (listeners.TryGetValue(item, out var changed)) changed();
         }
     }
 }

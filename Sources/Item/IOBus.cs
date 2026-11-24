@@ -13,7 +13,7 @@ namespace DigitalLogistics.Item
         protected override void OnConnected(SharedProviderRegistry.InventoryLink link) => IOBusManager.Acquire(Item, link);
         protected override void OnDisconnected(SharedProviderRegistry.InventoryLink link) => IOBusManager.Release(Item, link.Inventory);
 
-        private IOBus(string id) : base(id) { }
+        private IOBus(string id) : base(id, 200) { }
         internal static GameItem Create(string id) => new IOBus(id).Item;
         internal static bool IsIO(GameItem item) => item?.identifier is InputId or OutputId or InputOutputId;
         internal static bool CanInput(GameItem item) => item.identifier != OutputId;

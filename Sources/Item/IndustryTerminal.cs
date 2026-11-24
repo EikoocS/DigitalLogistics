@@ -10,7 +10,8 @@ namespace DigitalLogistics.Item
         {
             var item = ItemDirectory.CreateEmptyItem(ItemId)
                 .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, ItemId)
-                .SetShape(new GridShapeBuilder().SetDataFill(3, 3));
+                .SetShape(new GridShapeBuilder().SetDataFill(3, 3))
+                .SetValue(400);
             item.name = DigitalLogistics.Localize("item.industry_terminal.name");
             item.shortDescription = DigitalLogistics.Localize("item.industry_terminal.desc");
             item.flavorText = DigitalLogistics.Localize("item.industry_terminal.flavor");

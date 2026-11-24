@@ -14,7 +14,7 @@ namespace DigitalLogistics.Item
         private readonly Dictionary<object, FluidEndpoint> endpoints = new();
         protected override bool HasLinks => endpoints.Count > 0;
         internal override IEnumerable<object> Configurations => FluidIOBusManager.GetConfigurations(Item);
-        private FluidIOBus(string id) : base(id) { }
+        private FluidIOBus(string id) : base(id, 200) { }
         internal static GameItem Create(string id) => new FluidIOBus(id).Item;
         internal static bool IsIO(GameItem item) => item?.identifier is InputId or OutputId or InputOutputId;
         internal static bool CanInput(GameItem item) => item.identifier != OutputId;

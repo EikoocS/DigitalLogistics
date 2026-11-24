@@ -34,7 +34,7 @@ namespace DigitalLogistics.UI.Buses
             var root = controls.Root;
             controls.BindText(CreateInput(root, new Vector2(NameX, -Padding), -NameX - Padding),
                 () => configuration.Name, defaultName, value => configuration.Name = value);
-            controls.BindFilter(BusScheduleEditor.CreateLabeledInput(root, Padding + Line, "ui.bus.filter"),
+            controls.BindFilter(BusScheduleEditor.CreateLabeledInput(root, Padding + Line, "ui.common.filter"),
                 () => configuration.Filter, () => defaultFilter, value => configuration.Filter = value);
             bool IsEnabled() => !configuration.Disabled;
             int y = Padding + Line * 2;
@@ -48,7 +48,7 @@ namespace DigitalLogistics.UI.Buses
             controls.BindEnabled(IsEnabled, value => configuration.Disabled = !value);
             bool fluid = typeof(T) == typeof(FluidBusScheduleEntry);
             BusScheduleEditor.Build(controls, y, configuration, IsEnabled,
-                fluid ? "ui.bus.limit_volume" : "ui.bus.limit_quantity", "ui.bus.at_most", fluid ? 200 : 112,
+                fluid ? "ui.fluid_bus.limit_volume" : "ui.item_bus.limit_quantity", "ui.io_bus.at_most", fluid ? 200 : 112,
                 (amount, entry) =>
                 {
                     switch (entry)

@@ -53,7 +53,7 @@ namespace DigitalLogistics.UI
 
             var disks = StorageDrive.MountedIndustryDisks().OrderBy(disk => disk.uniqueId).ToArray();
             if (disks.Length == 0)
-                AddRow(DigitalLogistics.Localize("ui.industry.no_disks"), null);
+                AddRow(DigitalLogistics.Localize("ui.industry_terminal.no_disks"), null);
             foreach (var disk in disks)
                 AddRow($"{disk.GetDisplayName(preferCustomName: true)}  #{disk.uniqueId}", disk);
         }

@@ -14,7 +14,7 @@ namespace DigitalLogistics.Item
         protected abstract void OnConnected(SharedProviderRegistry.InventoryLink link);
         protected abstract void OnDisconnected(SharedProviderRegistry.InventoryLink link);
 
-        protected InventoryBus(string id) : base(id) { }
+        protected InventoryBus(string id, long price) : base(id, price) { }
 
         protected override void UpdateLinks(IEnumerable<GameItem> targets)
         {

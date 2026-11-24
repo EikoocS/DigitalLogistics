@@ -34,6 +34,7 @@ namespace DigitalLogistics.Item
 
         private Hopper(string id) : base(id, "Items/itematlas", "unknown")
         {
+            unitValue = 150;
             SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, id)
                 .SetShape(new GridShapeBuilder().SetDataFill(2, 1));
             SetGameItemType("MACHINE");

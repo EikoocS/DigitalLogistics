@@ -16,7 +16,7 @@ namespace DigitalLogistics.Buses
             internal TransferBusConfiguration<IOBusScheduleEntry> Configuration;
             internal GameItem Bus;
             internal SharedProviderRegistry.InventoryLink Link;
-            internal Action<GameItem, GameInventory, SlotMarker> OnAdded;
+            internal Action<GameItem, GameInventory, SlotMarker> OnChanged;
             internal string DefaultName => Link.Name;
             internal string DefaultFilter => Bus.identifier == IOBus.InputId ? "True" : "False";
         }
@@ -25,7 +25,7 @@ namespace DigitalLogistics.Buses
         private static readonly HashSet<GameItem> pending = new();
         private static Coroutine scheduled;
 
-        internal static bool IsOnAdd(GameItem bus) => BusConfigurationStore.FindGlobal(bus)?.OnAdd == true;
+        internal static bool IsOnChanged(GameItem bus) => BusConfigurationStore.FindGlobal(bus)?.OnChanged == true;
         internal static bool IsOnMove(GameItem bus) => BusConfigurationStore.FindGlobal(bus)?.OnMove == true;
         internal static IEnumerable<Connection> GetConfigurations(GameItem bus) =>
             active.TryGetValue(bus, out var links) ? links : Enumerable.Empty<Connection>();
@@ -35,11 +35,13 @@ namespace DigitalLogistics.Buses
             var configuration = BusConfigurationStore.GetTarget<TransferBusConfiguration<IOBusScheduleEntry>>(
                 link.Key, BusActions.ForTransfer(bus));
             var connection = new Connection { Configuration = configuration, Bus = bus, Link = link };
-            connection.OnAdded = (item, _, _) =>
+            connection.OnChanged = (item, _, _) =>
             {
-                if (!configuration.Disabled && !SaveManager.IsDecoding && !Bus.IsBus(item) && IsOnAdd(bus)) Schedule(bus);
+                if (!configuration.Disabled && !SaveManager.IsDecoding && !Bus.IsBus(item) && IsOnChanged(bus)) Schedule(bus);
             };
-            link.Inventory.onSlotAddItemEndFunc += connection.OnAdded;
+            link.Inventory.onSlotAddItemEndFunc += connection.OnChanged;
+            link.Inventory.onSlotRemoveItemEndFunc += connection.OnChanged;
+            link.Inventory.onSlotChangeAmountItemFunc += connection.OnChanged;
             if (!active.TryGetValue(bus, out var links)) active.Add(bus, links = new());
             links.Add(connection);
             DigitalLogistics.Manager.NotifyChanged();
@@ -49,7 +51,9 @@ namespace DigitalLogistics.Buses
         {
             var links = active[bus];
             var connection = links.Single(row => row.Link.Inventory == inventory);
-            inventory.onSlotAddItemEndFunc -= connection.OnAdded;
+            inventory.onSlotAddItemEndFunc -= connection.OnChanged;
+            inventory.onSlotRemoveItemEndFunc -= connection.OnChanged;
+            inventory.onSlotChangeAmountItemFunc -= connection.OnChanged;
             links.Remove(connection);
             if (links.Count == 0)
             {

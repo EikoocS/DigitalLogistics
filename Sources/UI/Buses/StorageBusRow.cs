@@ -36,7 +36,7 @@ namespace DigitalLogistics.UI.Buses
         {
             var root = controls.Root;
             var priorityLabel = CreateLabel(root, new Vector2(-Padding - 120 - Padding, -Padding),
-                DigitalLogistics.Localize("ui.io_bus.storage_priority"), anchor: 1);
+                DigitalLogistics.Localize("ui.storage_bus.priority"), anchor: 1);
             int priorityLabelWidth = FitLabel(priorityLabel);
             ((RectTransform)priorityLabel.root.transform).pivot = Vector2.one;
             controls.BindText(CreateInput(root, new Vector2(Padding + 48, -Padding), -192 - priorityLabelWidth - Padding),
@@ -51,7 +51,7 @@ namespace DigitalLogistics.UI.Buses
                     configuration.Priority = value;
                     apply();
                 });
-            int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), DigitalLogistics.Localize("ui.io_bus.storage_configuration")));
+            int filterX = Padding * 2 + FitLabel(CreateLabel(root, new Vector2(Padding, -52), DigitalLogistics.Localize("ui.storage_bus.filter")));
             controls.BindFilter(CreateInput(root, new Vector2(filterX, -52), -Padding - filterX),
                 () => configuration.Filter, () => StorageBusConfiguration.DefaultFilter, value =>
                 {

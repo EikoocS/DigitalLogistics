@@ -26,9 +26,10 @@ namespace DigitalLogistics.Item
         internal bool IsMounted(IndustryDisk disk) => active.Contains(this)
             && disk.parentInventory == inventory && disk.IsMaterialized && !ItemAccess.IsBlocked(disk);
 
-        private StorageDrive(string id, int size, int columns, int rows, Vector2 firstSlot, Vector2 slotStep)
+        private StorageDrive(string id, long price, int size, int columns, int rows, Vector2 firstSlot, Vector2 slotStep)
             : base(id, "Items/itematlas", "unknown")
         {
+            unitValue = price;
             diskSlotOffsets = new Vector2[columns * rows];
             for (int i = 0; i < diskSlotOffsets.Length; i++)
                 diskSlotOffsets[i] = firstSlot + new Vector2(i % columns * slotStep.x, i / columns * slotStep.y);
@@ -65,9 +66,9 @@ namespace DigitalLogistics.Item
         internal static void RegisterVariants(ModItemDirectory directory)
         {
             // Slot origins and spacing in artwork pixels; negative Y points down.
-            directory.Add(SimpleId, () => new StorageDrive(SimpleId, 2, 2, 2, new(3, -14), new(14, -7)));
-            directory.Add(ItemId, () => new StorageDrive(ItemId, 3, 2, 4, new(10, -21), new(16, -7)));
-            directory.Add(ExpandedId, () => new StorageDrive(ExpandedId, 4, 4, 4, new(5, -27), new(14, -8)));
+            directory.Add(SimpleId, () => new StorageDrive(SimpleId, 250, 2, 2, 2, new(3, -14), new(14, -7)));
+            directory.Add(ItemId, () => new StorageDrive(ItemId, 450, 3, 2, 4, new(10, -21), new(16, -7)));
+            directory.Add(ExpandedId, () => new StorageDrive(ExpandedId, 800, 4, 4, 4, new(5, -27), new(14, -8)));
         }
 
         private static bool CanPlace(GameItem item, GameInventory target) => target.GetParentItem() == null;

@@ -51,7 +51,7 @@ namespace DigitalLogistics.UI.Buses
                 int fieldY = Padding + Line;
                 if (filter != null)
                 {
-                    controls.BindFilter(CreateLabeledInput(card, fieldY, "ui.bus.filter"), () => filter.Filter,
+                    controls.BindFilter(CreateLabeledInput(card, fieldY, "ui.common.filter"), () => filter.Filter,
                         () => DigitalLogistics.Localize("ui.io_bus.inherit_filter"), filter.SetFilter,
                         inheritWhenEmpty: true);
                     fieldY += Line;

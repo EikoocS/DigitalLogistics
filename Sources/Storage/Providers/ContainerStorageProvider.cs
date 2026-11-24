@@ -7,7 +7,6 @@ namespace DigitalLogistics.Storage.Providers
     public sealed class ContainerStorageProvider : FluidStorageProvider
     {
         private readonly GameItem container;
-        private readonly System.Action<bool> changed;
         internal override GameItem PhysicalContainer => container;
         public override CachedItem Content => new PhysicalItem(container);
 
@@ -16,8 +15,7 @@ namespace DigitalLogistics.Storage.Providers
         {
             this.container = container;
             Name = name;
-            changed = _ => NotifyChanged();
-            LiquidChangeEvents.Subscribe(container, changed);
+            LiquidChangeEvents.Subscribe(container, NotifyChanged);
         }
 
         public override TagState ReadTag(string key) => container.GetTagReadonly(key);
@@ -27,6 +25,6 @@ namespace DigitalLogistics.Storage.Providers
         internal override void ReceiveTemperature(int volumeUL, double temperature) =>
             ChemicalHelper.HandleReceiveLiquidTemp(container, volumeUL, temperature);
         internal override void Synchronize() => container.SyncModifiedState();
-        protected override void DisposeCore() => LiquidChangeEvents.Unsubscribe(container, changed);
+        protected override void DisposeCore() => LiquidChangeEvents.Unsubscribe(container, NotifyChanged);
     }
 }

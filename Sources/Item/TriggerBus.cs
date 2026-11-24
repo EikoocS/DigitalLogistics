@@ -10,7 +10,7 @@ namespace DigitalLogistics.Item
         protected override bool HasLinks => TriggerBusManager.GetConfigurations(Item).Any();
         internal override IEnumerable<object> Configurations => TriggerBusManager.GetConfigurations(Item);
 
-        private TriggerBus() : base(ItemId) { }
+        private TriggerBus() : base(ItemId, 250) { }
         internal static GameItem Create() => new TriggerBus().Item;
         protected override void UpdateLinks(IEnumerable<GameItem> targets) => TriggerBusManager.Connect(Item, targets);
         protected override void ClearLinks() => TriggerBusManager.Disconnect(Item);

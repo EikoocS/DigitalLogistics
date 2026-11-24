@@ -29,7 +29,7 @@ namespace DigitalLogistics.UI
             input = CreateSlotDropdown(hopper.Input, "ui.hopper.input_slot", Padding);
             output = CreateSlotDropdown(hopper.Output, "ui.hopper.output_slot", Padding + Line);
             int y = Padding + 2 * Line;
-            int x = LabelEnd("ui.bus.filter", y);
+            int x = LabelEnd("ui.common.filter", y);
             var filter = CreateInput(controls, new Vector2(x, -y), -Padding - x);
             refreshFilter = MachineryInputBinding.BindFilter(filter, () => hopper.Configuration.Filter, () => HopperConfiguration.DefaultFilter,
                 value => hopper.Configuration.Filter = value);

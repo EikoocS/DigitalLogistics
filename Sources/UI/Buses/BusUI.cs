@@ -64,11 +64,11 @@ namespace DigitalLogistics.UI.Buses
             PixelElement content = host;
             if (ui.IsIO)
             {
-                var onAdd = ui.CreateToggle(FluidIOBus.IsIO(bus) ? "ui.fluid_bus.on_add" : "ui.io_bus.on_add",
-                    () => IOBusManager.IsOnAdd(bus), value => BusConfigurationStore.GetGlobal(bus).OnAdd = value);
+                var onChanged = ui.CreateToggle("ui.io_bus.on_changed",
+                    () => IOBusManager.IsOnChanged(bus), value => BusConfigurationStore.GetGlobal(bus).OnChanged = value);
                 var onMove = ui.CreateToggle("ui.io_bus.on_move",
                     () => IOBusManager.IsOnMove(bus), value => BusConfigurationStore.GetGlobal(bus).OnMove = value);
-                content = MachineryStack.Vertical(onAdd, onMove, host)
+                content = MachineryStack.Vertical(onChanged, onMove, host)
                     .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
             }
             ui.intake = new MachineryIntake(content);

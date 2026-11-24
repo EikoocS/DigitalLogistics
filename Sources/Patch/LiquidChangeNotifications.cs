@@ -17,7 +17,7 @@ namespace DigitalLogistics.Patch
         private static void Postfix(GameItem __instance, string tagName, int? __state)
         {
             if (__state.HasValue && __instance.state.dict[tagName].GetInt() != __state.Value)
-                LiquidChangeEvents.Notify(__instance, __instance.state.dict[tagName].GetInt() > __state.Value);
+                LiquidChangeEvents.Notify(__instance);
         }
     }
 }

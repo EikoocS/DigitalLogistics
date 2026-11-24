@@ -12,7 +12,7 @@ namespace DigitalLogistics.Item
         protected override bool HasLinks => links.Count > 0;
         internal override IEnumerable<object> Configurations => links.Values.Distinct()
             .Select(FluidStorageBusManager.GetConfiguration);
-        private FluidStorageBus() : base(ItemId) { }
+        private FluidStorageBus() : base(ItemId, 120) { }
         internal static GameItem Create() => new FluidStorageBus().Item;
         protected override bool CanTargetExternal(GameItem target) => target is not StorageDisk && FluidEndpoint.IsContainer(target);
 

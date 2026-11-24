@@ -1,135 +1,140 @@
+# Items
+## Items: Controllers
 item.storage_terminal.name,Storage Terminal
-item.storage_terminal.desc,
-item.storage_terminal.flavor,
+item.storage_terminal.desc,A central access point for your storage network and the only way to browse the contents of Item Disks.
+item.storage_terminal.flavor,“Handle your factory's items in one place. No more sorting through warehouses.”
 item.industry_terminal.name,Industrial Terminal
-item.industry_terminal.desc,
-item.industry_terminal.flavor,
-item.industry_disk.name,Industrial Disk
-item.industry_disk.desc,
-item.industry_disk.flavor,
-ui.industry.no_disks,No industrial disks mounted
-ui.industry.upgrade,Expand Industrial Disk
-ui.industry.upgrade_title,Expand
-ui.industry.add_row,Expand Vertically
-ui.industry.add_column,Expand Horizontally
-ui.industry.max_size,Maximum size reached
-ui.industry.upgrade_requirement,{0} → {1} · 1 metal ingot: {2} or better
+item.industry_terminal.desc,A central access point for viewing and managing your digital factory.
+item.industry_terminal.flavor,“Forget those old relics. You need the latest tech.”
+item.storage_drive_simple.name,Storage Drive (Basic)
+item.storage_drive_simple.desc,A drive with a 4 × 4 mounting grid for a few disks.
+item.storage_drive_simple.flavor,“Small footprint. Makes every slot count.”
+item.storage_drive.name,Storage Drive
+item.storage_drive.desc,A drive with a 4 × 8 mounting grid for disks.
+item.storage_drive.flavor,“A dependable workhorse that handles more disks.”
+item.storage_drive_expanded.name,Storage Drive (Expanded)
+item.storage_drive_expanded.desc,A drive with an 8 × 8 mounting grid for a large number of disks.
+item.storage_drive_expanded.flavor,“Bigger is better.”
+## Items: Disks
 item.item_disk.name,{0} Item Disk
-item.item_disk.desc,
-item.item_disk.flavor,
-ui.storage_terminal.search_placeholder,
-ui.storage_terminal.refreshing,
+item.item_disk.desc,Stores items. Its contents can only be accessed through the network while the disk is mounted.
+item.item_disk.flavor,Roomy storage and a better design make it a top performer. It's popular in Upper Levels malls, and some particularly wealthy collectors use it to store their prized possessions.\nDon't ask how all that fits on such a small disk. Haven't you got better things to do?
+item.fluid_disk.name,{0} Fluid Disk
+item.fluid_disk.desc,Stores fluids. Its contents can only be accessed through the network while the disk is mounted.
+item.fluid_disk.flavor,Ideal for managing large stocks of premium drinks. Some labs in the Upper Levels use it to store chemicals, too.\nDon't ask how a disk full of water stays dry. Even acid won't hurt it!
+item.industry_disk.name,Industrial Disk
+item.industry_disk.desc,Stores machines. Machines inside can only operate while the disk is mounted.\nExpand it with metal ingots. Larger sizes require higher-purity ingots.
+item.industry_disk.flavor,A favorite among factory owners who need to manage a lot of complicated machinery in one place.
+## Items: Bus Modes
+item.bus.mode.external,External
+item.bus.mode.internal,Internal
+item.bus.mode.disabled,Disabled
+## Items: Item Buses
+item.storage_bus.name,Storage Bus ({0})
+item.storage_bus.desc,Connects physical storage containers to the storage network.\nIn external mode it connects to the containers it faces. In internal mode it connects to the container holding it.\nIt can connect to multiple containers at once.
+item.storage_bus.flavor,A low-cost way to set up digital storage. Not everyone in the Lower Levels can afford fancy disks.
+item.input_bus.name,Input Bus ({0})
+item.input_bus.desc,Moves items into the storage network.\nIn external mode it draws from the containers it faces. In internal mode it draws from the container holding it.\nIt can draw from multiple containers at once.
+item.input_bus.flavor,A digital factory staple for collecting machine output.
+item.output_bus.name,Output Bus ({0})
+item.output_bus.desc,Moves items out of the storage network.\nIn external mode it delivers to the containers it faces. In internal mode it delivers to the container holding it.\nIt can supply multiple containers at once.
+item.output_bus.flavor,A digital factory staple for keeping machines supplied.
+item.input_output_bus.name,Input/Output Bus ({0})
+item.input_output_bus.desc,Exchanges items between containers and the storage network.\nSends matching items into the containers and draws nonmatching items back into the network.\nIn external mode it works with the containers it faces. In internal mode it works with the container holding it.\nIt can exchange items with multiple containers at once.
+item.input_output_bus.flavor,An advanced digital factory device for recipes that turn inputs into outputs in the same container.
+## Items: Fluid Buses
+item.fluid_storage_bus.name,Fluid Storage Bus ({0})
+item.fluid_storage_bus.desc,Connects liquid containers to the storage network.\nIn external mode it connects to the containers it faces. In internal mode it connects to the liquid container holding it.\nIt can connect to multiple containers at once.
+item.fluid_storage_bus.flavor,A low-cost digital fluid storage option for automating water purification.
+item.fluid_input_bus.name,Fluid Input Bus ({0})
+item.fluid_input_bus.desc,Moves fluids into the storage network.\nIn external mode it draws from the containers or machine slots it faces. In internal mode it draws from the container or slot holding it.\nIt can draw from multiple targets at once.
+item.fluid_input_bus.flavor,Useful for machines that continuously produce liquid, like the Moisture Farm.
+item.fluid_output_bus.name,Fluid Output Bus ({0})
+item.fluid_output_bus.desc,Moves fluids out of the storage network.\nIn external mode it delivers to the containers or machine slots it faces. In internal mode it delivers to the container or slot holding it.\nIt can supply multiple targets at once.
+item.fluid_output_bus.flavor,Useful for machines that continuously consume liquid, like the Hydroponic System.
+item.fluid_input_output_bus.name,Fluid Input/Output Bus ({0})
+item.fluid_input_output_bus.desc,Exchanges fluids between containers and the storage network.\nSends matching fluids into the containers and draws nonmatching fluids back into the network.\nIn external mode it connects to the containers or machine slots it faces. In internal mode it connects to the container or slot holding it.\nIt can exchange fluids with multiple targets at once.
+item.fluid_input_output_bus.flavor,Useful for machines that change the liquid in place, like the Water Purifier.
+## Items: Other Buses
+item.trigger_bus.name,Trigger Bus ({0})
+item.trigger_bus.desc,Starts machines automatically and supports night schedules.\nWorks with the Bottle Printer, Blender, Chem Finisher, and other supported machines.
+item.trigger_bus.flavor,Don't let old hand-operated machines get between you and making money in your sleep.
+## Items: Hoppers
+item.item_hopper.name,Item Hopper
+item.item_hopper.disabled.name,Item Hopper (Disabled)
+item.item_hopper.desc,Moves items directly between containers or machines. No intermediate container needed.
+item.item_hopper.flavor,Automation without a storage network. Less reach, easier setup.
+item.fluid_hopper.name,Fluid Hopper
+item.fluid_hopper.disabled.name,Fluid Hopper (Disabled)
+item.fluid_hopper.desc,Moves fluids directly between containers or machines. No intermediate container needed.
+item.fluid_hopper.flavor,Automation without a storage network. Less reach, easier setup.
+
+# UI
+# UI: Storage Terminal
+ui.storage_terminal.search_placeholder,Click to enter a search query
+ui.storage_terminal.refreshing,Refreshing...
 ui.storage_terminal.refresh_result,Refreshed {0:N0} items / {1:N0} ms
-item.storage_bus.external.name,Storage Bus (External)
-item.storage_bus.internal.name,Storage Bus (Internal)
-item.storage_bus.disabled.name,Storage Bus (Disabled)
-item.storage_bus.desc,
-item.storage_bus.flavor,
-storage.slot.energy,Energy
-ui.storage_terminal.sort_by,
-ui.storage_terminal.sort_direction,
-ui.storage_terminal.safety,
+ui.storage_terminal.sort_by,Sort by: {0}
+ui.storage_terminal.sort_direction,Sort direction: {0}
+ui.storage_terminal.safety,Legality: {0}
 ui.storage_terminal.smart_filter,Smart filter
-ui.storage_terminal.identifier,
-ui.storage_terminal.mod_id,
-ui.storage_terminal.display_name,
-ui.storage_terminal.price,
-ui.storage_terminal.base_price,
-ui.storage_terminal.heat,
-ui.storage_terminal.ascending,
-ui.storage_terminal.descending,
-ui.storage_terminal.all,
-ui.storage_terminal.legal,
-ui.storage_terminal.illegal,
-item.input_bus.external.name,Input Bus (External)
-item.input_bus.internal.name,Input Bus (Internal)
-item.input_bus.disabled.name,Input Bus (Disabled)
-item.input_bus.desc,
-item.input_bus.flavor,
-item.output_bus.external.name,Output Bus (External)
-item.output_bus.internal.name,Output Bus (Internal)
-item.output_bus.disabled.name,Output Bus (Disabled)
-item.output_bus.desc,
-item.output_bus.flavor,
-item.input_output_bus.external.name,Input/Output Bus (External)
-item.input_output_bus.internal.name,Input/Output Bus (Internal)
-item.input_output_bus.disabled.name,Input/Output Bus (Disabled)
-item.input_output_bus.desc,
-item.input_output_bus.flavor,
-ui.io_bus.on_add,
-ui.io_bus.on_move,
-item.trigger_bus.external.name,
-item.trigger_bus.internal.name,
-item.trigger_bus.disabled.name,
-item.trigger_bus.desc,
-item.trigger_bus.flavor,
-ui.io_bus.storage_configuration,Storage filter:
-ui.io_bus.storage_priority,Priority:
-ui.io_bus.inherit_filter,Use global filter
+ui.storage_terminal.identifier,Identifier
+ui.storage_terminal.mod_id,Mod
+ui.storage_terminal.display_name,Name
+ui.storage_terminal.price,Price
+ui.storage_terminal.base_price,Base price
+ui.storage_terminal.heat,Heat
+ui.storage_terminal.ascending,Ascending
+ui.storage_terminal.descending,Descending
+ui.storage_terminal.all,All items
+ui.storage_terminal.legal,Show legal items only
+ui.storage_terminal.illegal,Show illegal items only
+# UI: Industrial Terminal
+ui.industry_terminal.no_disks,No industrial disks mounted
+# UI: Industrial Disk
+ui.industry_disk.upgrade,Expand Industrial Disk
+ui.industry_disk.upgrade_title,Expand
+ui.industry_disk.add_row,Expand Vertically
+ui.industry_disk.add_column,Expand Horizontally
+ui.industry_disk.max_size,Maximum size reached
+ui.industry_disk.upgrade_requirement,{0} → {1} · 1 metal ingot: {2} or better
+# UI: Common
+ui.common.filter,Filter:
+# UI: Buses
 ui.bus.no_connections,No valid connected targets
+ui.bus.schedule,Night schedule:
+ui.bus.run_order,Run order:
+ui.bus.run_sub_order,Run sub-order:
+# UI: Storage Buses
+ui.storage_bus.filter,Storage filter:
+ui.storage_bus.priority,Priority:
+# UI: IO Buses
+ui.io_bus.on_changed,Run when target contents change
+ui.io_bus.on_move,Run when this bus is moved
+ui.io_bus.inherit_filter,Use global filter
+ui.io_bus.at_most,Transfer at most:
+# UI: Item IO Buses
+ui.item_bus.limit_quantity,Limit transfer quantity
+# UI: Fluid IO Buses
+ui.fluid_bus.limit_volume,Limit transfer volume
+ui.fluid_bus.avoid_mixing,Avoid mixing liquids
+# UI: Trigger Bus
+ui.trigger_bus.on_input_update,Trigger when inputs change
+ui.trigger_bus.action_option,Trigger action:
+ui.trigger_bus.limit_count,Limit trigger count
+ui.trigger_bus.at_most,Trigger at most:
+# UI: Hoppers
+ui.hopper.input_slot,Input slot:
+ui.hopper.output_slot,Output slot:
+
+# Configuration
 config.search_delay_ms,Search input delay (ms)
-config.terminal_auto_smart_filter,Activate smart filter when a customer arrives
 config.refresh_hold_ms,Refresh button hold duration (ms)
 config.terminal_refresh_mode,Terminal refresh mode
+config.terminal_auto_smart_filter,Activate smart filter when a customer arrives at the counter
 config.search_budget_ms,Item search time budget (ms)
 config.terminal_budget_ms,Terminal list time budget per frame (ms)
 config.index_refresh_budget_ms,Index refresh time budget per frame (ms)
 config.max_continuous_triggers,Maximum consecutive triggers per execution
-
-item.fluid_disk.name,{0} Fluid Disk
-item.fluid_disk.desc,
-item.fluid_disk.flavor,
-item.fluid_storage_bus.external.name,
-item.fluid_storage_bus.internal.name,
-item.fluid_storage_bus.disabled.name,
-item.fluid_storage_bus.desc,
-item.fluid_storage_bus.flavor,
-item.fluid_input_bus.external.name,
-item.fluid_input_bus.internal.name,
-item.fluid_input_bus.disabled.name,
-item.fluid_input_bus.desc,
-item.fluid_input_bus.flavor,
-item.fluid_output_bus.external.name,
-item.fluid_output_bus.internal.name,
-item.fluid_output_bus.disabled.name,
-item.fluid_output_bus.desc,
-item.fluid_output_bus.flavor,
-item.fluid_input_output_bus.external.name,
-item.fluid_input_output_bus.internal.name,
-item.fluid_input_output_bus.disabled.name,
-item.fluid_input_output_bus.desc,
-item.fluid_input_output_bus.flavor,
-ui.fluid_bus.on_add,Run when a container or fluid is added
 config.max_continuous_item_transfers,Maximum items transferred per execution
-config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (ul)
-item.storage_drive_simple.name,
-item.storage_drive_simple.desc,
-item.storage_drive_simple.flavor,
-item.storage_drive.name,
-item.storage_drive.desc,
-item.storage_drive.flavor,
-item.storage_drive_expanded.name,
-item.storage_drive_expanded.desc,
-item.storage_drive_expanded.flavor,
-ui.bus.filter,Filter:
-ui.bus.schedule,Night schedule:
-ui.bus.run_order,Run order:
-ui.bus.run_sub_order,Run sub-order:
-ui.bus.limit_quantity,Limit transfer quantity
-ui.bus.limit_volume,Limit transfer volume
-ui.bus.at_most,Transfer at most:
-ui.fluid_bus.avoid_mixing,Avoid mixing liquids
-ui.trigger_bus.on_input_update,Trigger when inputs change
-ui.trigger_bus.configuration,Trigger action:
-ui.trigger_bus.limit_count,Limit trigger count
-ui.trigger_bus.at_most,Trigger at most:
-item.item_hopper.name,Item Hopper
-item.item_hopper.disabled.name,Item Hopper (Disabled)
-item.item_hopper.desc,
-item.item_hopper.flavor,
-item.fluid_hopper.name,Fluid Hopper
-item.fluid_hopper.disabled.name,Fluid Hopper (Disabled)
-item.fluid_hopper.desc,
-item.fluid_hopper.flavor,
-ui.hopper.input_slot,Input slot:
-ui.hopper.output_slot,Output slot:
+config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (µL)

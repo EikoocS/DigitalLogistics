@@ -116,6 +116,6 @@ namespace DigitalLogistics.UI
                 purity.itemCondition.display));
         }
 
-        private static string Localize(string key) => DigitalLogistics.Localize("ui.industry." + key);
+        private static string Localize(string key) => DigitalLogistics.Localize("ui.industry_disk." + key);
     }
 }

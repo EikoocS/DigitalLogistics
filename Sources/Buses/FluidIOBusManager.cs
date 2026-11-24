@@ -16,7 +16,7 @@ namespace DigitalLogistics.Buses
             internal FluidTransferBusConfiguration Configuration;
             internal GameItem Bus;
             internal FluidEndpoint Endpoint;
-            internal Action OnAdded;
+            internal Action OnChanged;
             internal string DefaultName => Endpoint.Name;
             internal string DefaultFilter => Bus.identifier == FluidIOBus.InputId ? "True" : "False";
         }
@@ -33,11 +33,11 @@ namespace DigitalLogistics.Buses
             var configuration = BusConfigurationStore.GetTarget<FluidTransferBusConfiguration>(
                 endpoint.Key, BusActions.ForTransfer(bus));
             var connection = new Connection { Configuration = configuration, Bus = bus, Endpoint = endpoint };
-            connection.OnAdded = () =>
+            connection.OnChanged = () =>
             {
-                if (!configuration.Disabled && !SaveManager.IsDecoding && IOBusManager.IsOnAdd(bus)) Schedule(bus);
+                if (!configuration.Disabled && !SaveManager.IsDecoding && IOBusManager.IsOnChanged(bus)) Schedule(bus);
             };
-            endpoint.Added += connection.OnAdded;
+            endpoint.Changed += connection.OnChanged;
             if (!active.TryGetValue(bus, out var connections)) active.Add(bus, connections = new());
             connections.Add(connection);
         }
@@ -46,7 +46,7 @@ namespace DigitalLogistics.Buses
         {
             var connections = active[bus];
             var connection = connections.Single(row => row.Endpoint == endpoint);
-            endpoint.Added -= connection.OnAdded;
+            endpoint.Changed -= connection.OnChanged;
             connections.Remove(connection);
             if (connections.Count != 0) return;
             active.Remove(bus);

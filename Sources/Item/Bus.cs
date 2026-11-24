@@ -16,11 +16,12 @@ namespace DigitalLogistics.Item
         protected abstract bool HasLinks { get; }
         internal abstract IEnumerable<object> Configurations { get; }
 
-        protected Bus(string id)
+        protected Bus(string id, long price)
         {
             Item = ItemDirectory.CreateEmptyItem(id)
                 .SetSpriteAndShapeFromMod(DigitalLogistics.Instance.Manifest.ID, id)
-                .SetShape(new GridShapeBuilder().SetDataFill(3, 1));
+                .SetShape(new GridShapeBuilder().SetDataFill(3, 1))
+                .SetValue(price);
             Item.SetContentWindow(BusUI.Create(Item));
             RefreshWindowState();
             Item.SetGameItemType("MACHINE");
@@ -80,8 +81,10 @@ namespace DigitalLogistics.Item
 
         private void UpdateAppearance()
         {
-            Item.SetSprite(DigitalLogistics.Instance.Manifest.ID, Item.identifier);
-            Item.name = DigitalLogistics.Localize($"item.{Item.identifier}.{Mode}.name");
+            string modId = DigitalLogistics.Instance.Manifest.ID;
+            Item.SetSprite(modId, Item.identifier);
+            string modeName = ModHelper.GetLocalized(modId, $"item.bus.mode.{Mode}");
+            Item.name = ModHelper.GetLocalized(modId, $"item.{Item.identifier}.name", modeName);
             Item.contentWindow.SetTitle(Item.GetDisplayName(preferCustomName: true));
             Item.Validate();
         }

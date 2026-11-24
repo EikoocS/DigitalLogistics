@@ -13,7 +13,7 @@ namespace DigitalLogistics.Item
         protected override void OnConnected(SharedProviderRegistry.InventoryLink link) => StorageBusManager.Connect(link);
         protected override void OnDisconnected(SharedProviderRegistry.InventoryLink link) => StorageBusManager.Disconnect(link);
 
-        private StorageBus() : base(ItemId) { }
+        private StorageBus() : base(ItemId, 120) { }
         internal static GameItem Create() => new StorageBus().Item;
 
         protected override bool CanTargetExternal(GameItem target) =>

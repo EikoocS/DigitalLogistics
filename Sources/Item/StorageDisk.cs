@@ -34,6 +34,7 @@ namespace DigitalLogistics.Item
             && Guid.TryParse(tag.GetString(), out var id) ? id : null;
         internal int Capacity { get; }
         private bool IsInfinite => Capacity == 0;
+        internal bool IsResaleRestricted => Capacity > 1024;
         internal string DiskName => CustomDiskName(ReadStorage()) ?? GetDisplayName();
         internal CachedItemExpression Filter
         {
@@ -49,13 +50,33 @@ namespace DigitalLogistics.Item
         {
             Capacity = capacity;
             this.tier = tier;
+            unitValue = capacity switch
+            {
+                0 => 0,
+                64 => 200,
+                256 => 750,
+                _ => 12_000
+            };
             string modId = DigitalLogistics.Instance.Manifest.ID;
             name = ModHelper.GetLocalized(modId, $"item.{familyId}.name", IsInfinite ? "∞" : tier);
             shortDescription = ModHelper.GetLocalized(modId, $"item.{familyId}.desc");
             flavorText = ModHelper.GetLocalized(modId, $"item.{familyId}.flavor");
             getItemSpriteModifierForItemFunc = item => ((StorageDisk)item).GetAppearanceOverlays();
             SetSpriteAndShapeFromMod(modId, familyId).SetShape(new GridShapeBuilder().SetDataFill(SideInCells, SideInCells));
-            onLoaded += item => ((StorageDisk)item).RefreshCapacityStatus();
+            ApplyResaleRestrictions();
+            onLoaded += item =>
+            {
+                var disk = (StorageDisk)item;
+                disk.ApplyResaleRestrictions();
+                disk.RefreshCapacityStatus();
+            };
+        }
+
+        private void ApplyResaleRestrictions()
+        {
+            if (!IsResaleRestricted) return;
+            EnableTag(TypeHelper.NOT_FOR_RESALE);
+            EnableTag(VendingMachineHelper.VENDING_BLACKLISTED_TAG);
         }
 
         internal static void RegisterTiers(ModItemDirectory directory, string familyId,
