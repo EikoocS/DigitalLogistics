@@ -41,6 +41,8 @@ namespace DigitalLogistics
             ModHook.OnGameLoadedInit += LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly += LogisticsSession.LoadConfigurations;
             ModHook.OnGameLoadedLate += LogisticsSession.FinishLoad;
+            ModHook.OnGoingSleepEarly += LogisticsScheduler.BeginNight;
+            ModHook.OnWakingUpLate += LogisticsScheduler.EndNight;
             StorageIndexRefresh.Completed += StorageTerminalUI.NotifyRefreshResult;
             Log.Log("Enabled.");
         }
@@ -55,6 +57,8 @@ namespace DigitalLogistics
             ModHook.OnGameLoadedInit -= LogisticsSession.Reset;
             ModHook.OnGameLoadedEarly -= LogisticsSession.LoadConfigurations;
             ModHook.OnGameLoadedLate -= LogisticsSession.FinishLoad;
+            ModHook.OnGoingSleepEarly -= LogisticsScheduler.BeginNight;
+            ModHook.OnWakingUpLate -= LogisticsScheduler.EndNight;
             StorageIndexRefresh.Completed -= StorageTerminalUI.NotifyRefreshResult;
             LogisticsSession.Stop();
             Log.Log("Disabled.");
@@ -74,7 +78,6 @@ namespace DigitalLogistics
             directory.Add(FluidIOBus.OutputId, () => FluidIOBus.Create(FluidIOBus.OutputId));
             directory.Add(FluidIOBus.InputOutputId, () => FluidIOBus.Create(FluidIOBus.InputOutputId));
             directory.Add(StorageBus.ItemId, StorageBus.Create);
-            directory.Add(TriggerBus.ItemId, TriggerBus.Create);
             directory.Add(IOBus.InputId, () => IOBus.Create(IOBus.InputId));
             directory.Add(IOBus.OutputId, () => IOBus.Create(IOBus.OutputId));
             directory.Add(IOBus.InputOutputId, () => IOBus.Create(IOBus.InputOutputId));

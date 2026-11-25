@@ -6,7 +6,7 @@ using DigitalLogistics.Storage.Providers;
 
 namespace DigitalLogistics.Item
 {
-    internal sealed class FluidIOBus : Bus, ITriggerableBus
+    internal sealed class FluidIOBus : Bus, ITransferBus
     {
         internal const string InputId = "fluid_input_bus";
         internal const string OutputId = "fluid_output_bus";
@@ -43,11 +43,7 @@ namespace DigitalLogistics.Item
             foreach (var key in endpoints.Keys.Except(desired.Keys).ToArray()) Release(key);
             foreach (var entry in desired)
             {
-                if (endpoints.TryGetValue(entry.Key, out var current))
-                {
-                    current.Refresh();
-                    continue;
-                }
+                if (endpoints.ContainsKey(entry.Key)) continue;
                 var endpoint = entry.Key is GameInventory inventory
                     ? new FluidEndpoint(entry.Value, inventory) : new FluidEndpoint((GameItem)entry.Key);
                 endpoints.Add(entry.Key, endpoint);
@@ -65,10 +61,7 @@ namespace DigitalLogistics.Item
         {
             foreach (var key in endpoints.Keys.ToArray()) Release(key);
         }
-        protected override void OnMoved()
-        {
-            if (IOBusManager.IsOnMove(Item)) FluidIOBusManager.Schedule(Item);
-        }
-        public IEnumerable<BusOperation> GetOperations(bool nightly) => FluidIOBusManager.GetOperations(Item, nightly);
+        public IEnumerable<LogisticsScheduler.Binding> Transfers =>
+            FluidIOBusManager.GetConfigurations(Item).SelectMany(connection => connection.Polling);
     }
 }

@@ -12,8 +12,7 @@ namespace DigitalLogistics.UI.Buses
         private readonly System.Action apply;
         public object Connection { get; }
         internal const int DefaultHeight = 96;
-        public int BaseHeight => DefaultHeight;
-        public int Height => BaseHeight;
+        public int Height => DefaultHeight;
 
         internal StorageBusRow(StorageBusManager.Connection connection)
             : this(connection, connection.Configuration, () => connection.DefaultName,

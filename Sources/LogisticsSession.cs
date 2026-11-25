@@ -35,7 +35,7 @@ namespace DigitalLogistics
             HopperSession.Clear();
             IOBusManager.Clear();
             FluidIOBusManager.Clear();
-            TriggerBusManager.Clear();
+            LogisticsScheduler.Clear();
             StorageBusManager.Clear();
             FluidStorageBusManager.Clear();
             DigitalLogistics.Manager.Clear();

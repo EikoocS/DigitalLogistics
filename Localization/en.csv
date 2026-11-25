@@ -55,10 +55,6 @@ item.fluid_output_bus.flavor,Useful for machines that continuously consume liqui
 item.fluid_input_output_bus.name,Fluid Input/Output Bus ({0})
 item.fluid_input_output_bus.desc,Exchanges fluids between containers and the storage network.\nSends matching fluids into the containers and draws nonmatching fluids back into the network.\nIn external mode it connects to the containers or machine slots it faces. In internal mode it connects to the container or slot holding it.\nIt can exchange fluids with multiple targets at once.
 item.fluid_input_output_bus.flavor,Useful for machines that change the liquid in place, like the Water Purifier.
-## Items: Other Buses
-item.trigger_bus.name,Trigger Bus ({0})
-item.trigger_bus.desc,Starts machines automatically and supports night schedules.\nWorks with the Bottle Printer, Blender, Chem Finisher, and other supported machines.
-item.trigger_bus.flavor,Don't let old hand-operated machines get between you and making money in your sleep.
 ## Items: Hoppers
 item.item_hopper.name,Item Hopper
 item.item_hopper.disabled.name,Item Hopper (Disabled)
@@ -102,27 +98,11 @@ ui.industry_disk.upgrade_requirement,{0} → {1} · 1 metal ingot: {2} or better
 ui.common.filter,Filter:
 # UI: Buses
 ui.bus.no_connections,No valid connected targets
-ui.bus.schedule,Night schedule:
-ui.bus.run_order,Run order:
-ui.bus.run_sub_order,Run sub-order:
 # UI: Storage Buses
 ui.storage_bus.filter,Storage filter:
 ui.storage_bus.priority,Priority:
-# UI: IO Buses
-ui.io_bus.on_changed,Run when target contents change
-ui.io_bus.on_move,Run when this bus is moved
-ui.io_bus.inherit_filter,Use global filter
-ui.io_bus.at_most,Transfer at most:
-# UI: Item IO Buses
-ui.item_bus.limit_quantity,Limit transfer quantity
 # UI: Fluid IO Buses
-ui.fluid_bus.limit_volume,Limit transfer volume
 ui.fluid_bus.avoid_mixing,Avoid mixing liquids
-# UI: Trigger Bus
-ui.trigger_bus.on_input_update,Trigger when inputs change
-ui.trigger_bus.action_option,Trigger action:
-ui.trigger_bus.limit_count,Limit trigger count
-ui.trigger_bus.at_most,Trigger at most:
 # UI: Hoppers
 ui.hopper.input_slot,Input slot:
 ui.hopper.output_slot,Output slot:
@@ -135,6 +115,5 @@ config.terminal_auto_smart_filter,Activate smart filter when a customer arrives 
 config.search_budget_ms,Item search time budget (ms)
 config.terminal_budget_ms,Terminal list time budget per frame (ms)
 config.index_refresh_budget_ms,Index refresh time budget per frame (ms)
-config.max_continuous_triggers,Maximum consecutive triggers per execution
 config.max_continuous_item_transfers,Maximum items transferred per execution
 config.max_continuous_fluid_volume_ul,Maximum fluid volume transferred per execution (µL)

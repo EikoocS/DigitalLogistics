@@ -32,7 +32,7 @@ namespace DigitalLogistics.UI
             int x = LabelEnd("ui.common.filter", y);
             var filter = CreateInput(controls, new Vector2(x, -y), -Padding - x);
             refreshFilter = MachineryInputBinding.BindFilter(filter, () => hopper.Configuration.Filter, () => HopperConfiguration.DefaultFilter,
-                value => hopper.Configuration.Filter = value);
+                hopper.SetFilter);
             Window = MachineHelper.CreateMachineryWindow(true, MachineHelper.Panel(null, host));
             Refresh();
         }

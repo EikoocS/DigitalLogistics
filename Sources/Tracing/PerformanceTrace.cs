@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using DigitalLogistics.Buses;
 
 namespace DigitalLogistics.Tracing
 {
@@ -44,14 +43,14 @@ namespace DigitalLogistics.Tracing
         internal static PerformanceTrace Active => Latest?.Recording == true ? Latest : null;
 
         private readonly Dictionary<BusRunSource, TimingStats> busBatches = new();
-        private readonly Dictionary<(string Type, BusOperationKind Kind), (TimingStats Time, int SlowestBusId)> busOperations = new();
+        private readonly Dictionary<(string Type, TransferDirection Kind), (TimingStats Time, int SlowestBusId)> busOperations = new();
         private readonly Dictionary<SearchOutcome, (TimingStats Lookup, TimingStats List, TimingStats Response, long ResultCount)> searches = new();
         private readonly Dictionary<Guid, (DiskPayloadSize Size, long EncodeTicks)> disks = new();
         private TimingStats driveConnections;
 
         internal bool Recording { get; private set; } = true;
         internal IReadOnlyDictionary<BusRunSource, TimingStats> BusBatches => busBatches;
-        internal IReadOnlyDictionary<(string Type, BusOperationKind Kind), (TimingStats Time, int SlowestBusId)> BusOperations => busOperations;
+        internal IReadOnlyDictionary<(string Type, TransferDirection Kind), (TimingStats Time, int SlowestBusId)> BusOperations => busOperations;
         internal IReadOnlyDictionary<SearchOutcome, (TimingStats Lookup, TimingStats List, TimingStats Response, long ResultCount)> Searches => searches;
         internal IReadOnlyDictionary<Guid, (DiskPayloadSize Size, long EncodeTicks)> Disks => disks;
         internal TimingStats DriveConnections => driveConnections;
@@ -89,7 +88,7 @@ namespace DigitalLogistics.Tracing
             busBatches[source] = stats;
         }
 
-        internal void RecordOperation(string type, BusOperationKind kind, int busId, long elapsedTicks)
+        internal void RecordOperation(string type, TransferDirection kind, int busId, long elapsedTicks)
         {
             if (!Recording) return;
             var key = (type, kind);

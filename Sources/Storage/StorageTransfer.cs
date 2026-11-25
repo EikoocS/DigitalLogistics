@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DigitalLogistics.Item;
 using DigitalLogistics.Storage.Items;
+using DigitalLogistics.Storage.Providers;
 
 namespace DigitalLogistics.Storage
 {
@@ -19,6 +20,15 @@ namespace DigitalLogistics.Storage
         private static bool CanMove(GameItem item) => item is GameItemElement element && !element.IsDestroyed()
             && !ItemPinHelper.IsPinned(item) && item.unitCount > 0 && (item.parentInventory == null || item.MayRemove())
             && item.MaxNumRemove() > 0 && !ItemMovementProtection.ContainsEnabledDevice(item);
+
+        internal static int TryMoveToInventory(GameItem item, GameInventory target, int amount)
+        {
+            if (item.parentInventory == target || !CanMove(item) || ItemAccess.IsBlocked(item)
+                || ItemAccess.IsBlocked(target.GetParentItem())) return 0;
+            amount = Math.Min(amount, item.MaxNumRemove());
+            using var output = new StorageOutput(new ItemInstanceLease(item));
+            return output.TryPlace(InventoryStorageProvider.FindInputSlot(target, item, amount), amount);
+        }
 
         public static StorageTransferResult TryPlace(CachedItem source, Func<GameItem, SlotMarker> findSlot, int amount)
         {

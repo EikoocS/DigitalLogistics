@@ -55,10 +55,6 @@ item.fluid_output_bus.flavor,适合需要持续消耗液体的机器，如水培
 item.fluid_input_output_bus.name,流体输入输出总线（{0}）
 item.fluid_input_output_bus.desc,可以在容器和存储网络之间交换流体的设备。\n将符合过滤器的流体送入容器，\n并将不符合的流体抽回网络。\n外接时连接所对的容器或设备槽位，\n内接时连接所在的容器或槽位。\n可以配置同时与多个目标交换流体。
 item.fluid_input_output_bus.flavor,适合对液体进行嬗变的机器，如净水器。
-## 物品 总线 其他
-item.trigger_bus.name,触发总线（{0}）
-item.trigger_bus.desc,可以自动化启动机器的设备，支持设置夜晚计划。\n兼容水瓶打印机，搅拌器，化学成型机等。
-item.trigger_bus.flavor,不要让那些老旧的手动机器挡在“睡”后收入的推进。
 ## 物品 漏斗
 item.item_hopper.name,物理漏斗
 item.item_hopper.disabled.name,物理漏斗（停用）
@@ -102,27 +98,11 @@ ui.industry_disk.upgrade_requirement,{0} → {1} · 需要 1 枚{2}或更高纯�
 ui.common.filter,过滤器：
 # UI 总线
 ui.bus.no_connections,无有效连接对象
-ui.bus.schedule,夜间计划：
-ui.bus.run_order,运行顺序：
-ui.bus.run_sub_order,运行子顺序：
 # UI 存储总线
 ui.storage_bus.filter,存储过滤：
 ui.storage_bus.priority,优先级：
-# UI IO 总线
-ui.io_bus.on_changed,连接对象内容变化时运行
-ui.io_bus.on_move,此总线被移动时触发运行
-ui.io_bus.inherit_filter,使用全局过滤器
-ui.io_bus.at_most,至多转移：
-# UI 物品 IO 总线
-ui.item_bus.limit_quantity,限制转移数量
 # UI 流体 IO 总线
-ui.fluid_bus.limit_volume,限制转移容量
 ui.fluid_bus.avoid_mixing,避免液体混合
-# UI 触发总线
-ui.trigger_bus.on_input_update,输入更新时触发
-ui.trigger_bus.action_option,触发配置：
-ui.trigger_bus.limit_count,限制触发次数
-ui.trigger_bus.at_most,至多触发：
 # UI 漏斗
 ui.hopper.input_slot,输入槽位：
 ui.hopper.output_slot,输出槽位：
@@ -135,6 +115,5 @@ config.terminal_auto_smart_filter,买家到柜台时自动开启智能筛选
 config.search_budget_ms,物品搜索时间预算（毫秒）
 config.terminal_budget_ms,终端列表每帧时间预算（毫秒）
 config.index_refresh_budget_ms,索引刷新每帧时间预算（毫秒）
-config.max_continuous_triggers,单次连续触发次数上限
 config.max_continuous_item_transfers,单次连续转移物品数量上限
 config.max_continuous_fluid_volume_ul,单次连续转移流体容量上限（ul）

@@ -20,15 +20,13 @@ namespace DigitalLogistics.Item
 
         private readonly HopperUI ui;
         private GameInventory parent;
-        private GameInventory watchedInput;
-        private InventoryStorageProvider itemSource;
-        private InventoryStorageProvider itemTarget;
+        private LogisticsScheduler.Binding polling;
         private FluidEndpoint fluidSource;
         private FluidEndpoint fluidTarget;
         private bool restoreSelection;
         private bool transferring;
 
-        private bool CanTransfer => HopperSession.CanRun && !transferring && parent != null
+        private bool CanTransfer => LogisticsScheduler.Available && !transferring && parent != null && polling != null
             && !Configuration.Disabled && Input.Available && Output.Available && !ItemAccess.IsBlocked(this)
             && (Input.Target != Output.Target || Input.Inventory != Output.Inventory);
 
@@ -49,7 +47,12 @@ namespace DigitalLogistics.Item
             onToggleSlotItemFunc += (_, _, _) => Toggle();
             mayActivateSlotItemFunc = (_, _, _) => true;
             canActivateSlotItemFunc = (_, _, _) => CanTransfer;
-            onActivateSlotItemFunc = (_, _, _) => TryTransfer();
+            onActivateSlotItemFunc = (_, _, _) =>
+            {
+                RefreshLinks();
+                TryTransfer(IsFluid ? DigitalLogistics.Instance.Settings.MaxContinuousFluidVolumeUL.Value
+                    : DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value);
+            };
             onConfigureSlotItemFunc = (_, _, _) =>
             {
                 RefreshLinks();
@@ -168,103 +171,83 @@ namespace DigitalLogistics.Item
 
         private void Rebind()
         {
-            HopperSession.Cancel(this);
             ClearLinks();
-            if (Configuration.Disabled || Input.Index < 0 || Output.Index < 0) return;
+            if (Configuration.Disabled || Input.Index < 0 || Output.Index < 0
+                || Input.Target == Output.Target && Input.Inventory == Output.Inventory) return;
             if (IsFluid)
             {
                 fluidSource = new FluidEndpoint(Input.Target, Input.Inventory);
-                fluidSource.Changed += OnInputChanged;
                 fluidTarget = new FluidEndpoint(Output.Target, Output.Inventory);
             }
-            else
-            {
-                watchedInput = Input.Inventory;
-                itemSource = new InventoryStorageProvider(watchedInput);
-                itemTarget = new InventoryStorageProvider(Output.Inventory);
-                watchedInput.onSlotAddItemEndFunc += OnInputItemChanged;
-                watchedInput.onSlotRemoveItemEndFunc += OnInputItemChanged;
-                watchedInput.onSlotChangeAmountItemFunc += OnInputItemChanged;
-            }
+            polling = LogisticsScheduler.Register(this, TransferDirection.Local, IsFluid, () => Enabled,
+                () => CanTransfer, TryTransfer);
         }
 
         private void ClearLinks()
         {
-            if (watchedInput != null)
-            {
-                watchedInput.onSlotAddItemEndFunc -= OnInputItemChanged;
-                watchedInput.onSlotRemoveItemEndFunc -= OnInputItemChanged;
-                watchedInput.onSlotChangeAmountItemFunc -= OnInputItemChanged;
-                watchedInput = null;
-                itemSource.Dispose();
-                itemTarget.Dispose();
-                itemSource = itemTarget = null;
-            }
+            polling?.Dispose();
+            polling = null;
             if (fluidSource != null)
             {
-                fluidSource.Changed -= OnInputChanged;
                 fluidSource.Dispose();
                 fluidTarget.Dispose();
                 fluidSource = fluidTarget = null;
             }
         }
 
-        private void OnInputItemChanged(GameItem item, GameInventory _, SlotMarker __)
+        internal void SetFilter(string filter)
         {
-            if (item is not Hopper && !Bus.IsBus(item)) OnInputChanged();
+            Configuration.Filter = filter;
+            LogisticsScheduler.Refresh(this);
         }
 
-        private void OnInputChanged()
+        private int TryTransfer(int limit)
         {
-            if (CanTransfer) HopperSession.Schedule(this);
-        }
-
-        internal void TryTransfer()
-        {
-            RefreshLinks();
-            if (!CanTransfer) return;
-            HopperSession.Cancel(this);
+            if (!CanTransfer || limit <= 0) return 0;
             transferring = true;
-            try
-            {
-                if (IsFluid) TransferFluid();
-                else TransferItems();
-            }
+            try { return IsFluid ? TransferFluid(limit) : TransferItems(limit); }
             finally { transferring = false; }
         }
 
-        private void TransferItems()
+        private int TransferItems(int limit)
         {
-            int remaining = DigitalLogistics.Instance.Settings.MaxContinuousItemTransfers.Value;
+            int remaining = limit;
             var expression = Configuration.GetExpression();
-            var inventory = watchedInput;
-            var target = itemTarget;
-            var source = itemSource;
+            var inventory = Input.Inventory;
+            var target = Output.Inventory;
+            var connection = polling;
             foreach (var item in inventory.childItems.ToArray())
             {
-                if (remaining <= 0 || source.Disposed || target.Disposed) return;
+                if (remaining <= 0 || polling != connection) break;
                 if (item.parentInventory != inventory || item is Hopper || Bus.IsBus(item)
                     || ItemAccess.IsPinnedOrBlocked(item)) continue;
-                var stored = new StoredPhysicalItem(item, source);
-                if (expression.Evaluate(stored))
-                    remaining -= StorageTransfer.TryInput(stored, target, remaining).Amount;
+                if (!expression.Evaluate(new PhysicalItem(item))) continue;
+                while (remaining > 0 && polling == connection && item.parentInventory == inventory)
+                {
+                    int moved = StorageTransfer.TryMoveToInventory(item, target, remaining);
+                    if (moved == 0) break;
+                    remaining -= moved;
+                }
             }
+            return limit - remaining;
         }
 
-        private void TransferFluid()
+        private int TransferFluid(int limit)
         {
             fluidSource.Refresh();
             fluidTarget.Refresh();
-            int remaining = DigitalLogistics.Instance.Settings.MaxContinuousFluidVolumeUL.Value;
+            int remaining = limit;
             var expression = Configuration.GetExpression();
             var targets = fluidTarget.Providers.ToArray();
+            var connection = polling;
             foreach (var source in fluidSource.Providers.ToArray())
                 foreach (var target in targets)
                 {
-                    if (remaining <= 0) return;
+                    if (remaining <= 0 || polling != connection) return limit - remaining;
                     if (source.Available && expression.Evaluate(source.Content))
                         remaining -= FluidTransfer.Transfer(source, target, remaining, applyTargetFilter: false).RemovedUL;
                 }
+            return limit - remaining;
         }
     }
 }

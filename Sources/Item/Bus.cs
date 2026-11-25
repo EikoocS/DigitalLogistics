@@ -31,20 +31,16 @@ namespace DigitalLogistics.Item
             Item.mayToggleSlotItemFunc = (_, _, _) => true;
             Item.canToggleSlotItemFunc = (_, _, _) => true;
             Item.onToggleSlotItemFunc += (_, _, _) => Toggle();
-            Item.onSlotAddItemFunc += (_, inventory, _) =>
-            {
-                Connect(inventory);
-                if (!SaveManager.IsDecoding) OnMoved();
-            };
+            Item.onSlotAddItemFunc += (_, inventory, _) => Connect(inventory);
             Item.onSlotRemoveItemFunc += (_, _, _) => Disconnect();
             Item.onLoaded += _ =>
             {
                 UpdateAppearance();
                 if (Item.parentInventory != null) Connect(Item.parentInventory);
             };
-            Item.mayActivateSlotItemFunc = (_, _, _) => this is ITriggerableBus;
+            Item.mayActivateSlotItemFunc = (_, _, _) => this is ITransferBus;
             Item.canActivateSlotItemFunc = (_, _, _) => CanExecute;
-            Item.onActivateSlotItemFunc = (_, _, _) => BusController.Run(new[] { Item });
+            Item.onActivateSlotItemFunc = (_, _, _) => BusController.RunManually(this);
             Item.EnableTag(GeneralHelper.CONFIGURE_TAG);
             Item.onConfigureSlotItemFunc = (_, _, _) =>
             {
@@ -59,7 +55,7 @@ namespace DigitalLogistics.Item
         }
 
         internal static bool IsBus(GameItem item) => item?.identifier is StorageBus.ItemId
-            or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId or TriggerBus.ItemId
+            or IOBus.InputId or IOBus.OutputId or IOBus.InputOutputId
             or FluidStorageBus.ItemId or FluidIOBus.InputId or FluidIOBus.OutputId or FluidIOBus.InputOutputId;
 
         internal static bool IsEnabledBus(GameItem item) => IsBus(item) && GetMode(item) != BusMode.Disabled;
@@ -167,7 +163,6 @@ namespace DigitalLogistics.Item
 
         private void OnInventoryChanged(GameItem item, GameInventory inventory, SlotMarker slot) => Refresh();
         protected virtual bool CanTargetExternal(GameItem target) => target.contentWindow != null;
-        protected virtual void OnMoved() { }
         protected abstract void UpdateLinks(IEnumerable<GameItem> targets);
         protected abstract void ClearLinks();
     }

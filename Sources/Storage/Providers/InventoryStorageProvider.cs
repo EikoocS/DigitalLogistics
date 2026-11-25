@@ -64,13 +64,13 @@ namespace DigitalLogistics.Storage.Providers
             inputItems = new Dictionary<int, CachedItem>();
             try
             {
-                int moved = output.TryPlace(FindInputSlot(output.Item, amount), amount);
+                int moved = output.TryPlace(FindInputSlot(inventory, output.Item, amount), amount);
                 return new StorageInputResult(moved, inputItems.Values.ToArray());
             }
             finally { inputItems = null; }
         }
 
-        private SlotMarker FindInputSlot(GameItem item, int amount)
+        internal static SlotMarker FindInputSlot(GameInventory inventory, GameItem item, int amount)
         {
             if (!inventory.childItems.Any(ItemPinHelper.IsPinned))
                 MachineFeedDispenser.FlushPendingAutoBlend(inventory);

@@ -29,15 +29,11 @@ namespace DigitalLogistics.UI.Buses
         private MachineryPanel panel;
         private PixelWindow window;
         private GameObject emptyState;
-        private int planRevision;
         private readonly List<Row> rows = new();
-        private readonly List<Action> globalRefreshers = new();
-        private bool IsIO => IOBus.IsIO(bus) || FluidIOBus.IsIO(bus);
         private int EmptyRowHeight => bus.identifier switch
         {
             StorageBus.ItemId or FluidStorageBus.ItemId => StorageBusRow.DefaultHeight,
-            TriggerBus.ItemId => TriggerBusRow.DefaultHeight,
-            _ => IOBusRow<IOBusScheduleEntry>.DefaultHeight
+            _ => IOBusRow.DefaultHeight
         };
 
         internal static PixelWindow Create(GameItem bus)
@@ -61,17 +57,7 @@ namespace DigitalLogistics.UI.Buses
             ui.scroll.content.anchorMax = Vector2.one;
             ui.scroll.content.pivot = new Vector2(0, 1);
             ui.emptyState = ui.CreateEmptyState();
-            PixelElement content = host;
-            if (ui.IsIO)
-            {
-                var onChanged = ui.CreateToggle("ui.io_bus.on_changed",
-                    () => IOBusManager.IsOnChanged(bus), value => BusConfigurationStore.GetGlobal(bus).OnChanged = value);
-                var onMove = ui.CreateToggle("ui.io_bus.on_move",
-                    () => IOBusManager.IsOnMove(bus), value => BusConfigurationStore.GetGlobal(bus).OnMove = value);
-                content = MachineryStack.Vertical(onChanged, onMove, host)
-                    .SetAlign(MachineryStack.Align.Start).SetMainAlign(MachineryStack.Align.Start);
-            }
-            ui.intake = new MachineryIntake(content);
+            ui.intake = new MachineryIntake(host);
             ui.panel = new MachineryPanel((string)null, ui.intake);
             ui.window = MachineHelper.CreateMachineryWindow(true, ui.panel);
             ui.Rebuild();
@@ -81,8 +67,6 @@ namespace DigitalLogistics.UI.Buses
 
         private void Update()
         {
-            if (planRevision != BusPlanStore.Revision) Rebuild(force: true);
-            foreach (var refresh in globalRefreshers) refresh();
             foreach (var row in rows) row.Controls.Refresh();
         }
 
@@ -104,22 +88,13 @@ namespace DigitalLogistics.UI.Buses
             return root;
         }
 
-        private MachineryRadioButton CreateToggle(string key, Func<bool> get, Action<bool> set)
-        {
-            var toggle = new MachineryRadioButton(DigitalLogistics.Localize(key), get(), set);
-            globalRefreshers.Add(() => toggle.SetOn(get()));
-            return toggle;
-        }
-
         internal static void RefreshConnections(GameItem bus) =>
             bus.contentWindow.handler.GetComponentInChildren<BusUI>(true).Rebuild();
 
-        private void Rebuild(bool force = false)
+        private void Rebuild()
         {
-            force |= planRevision != BusPlanStore.Revision;
-            planRevision = BusPlanStore.Revision;
             var connections = BusController.GetConfigurations(bus).ToArray();
-            if (!force && rows.Select(row => row.Editor.Connection).SequenceEqual(connections)) return;
+            if (rows.Select(row => row.Editor.Connection).SequenceEqual(connections)) return;
             foreach (var row in rows) row.Controls.Destroy();
             rows.Clear();
             int y = Padding;
@@ -129,33 +104,30 @@ namespace DigitalLogistics.UI.Buses
                 {
                     StorageBusManager.Connection storage => new StorageBusRow(storage),
                     FluidStorageBusManager.Connection storage => new StorageBusRow(storage),
-                    FluidIOBusManager.Connection fluid => new IOBusRow<FluidBusScheduleEntry>(fluid, fluid.Configuration,
+                    FluidIOBusManager.Connection fluid => new IOBusRow(fluid, fluid.Configuration,
                         () => fluid.DefaultName, fluid.DefaultFilter,
                         FluidIOBus.CanOutput(fluid.Bus) ? fluid.Configuration : null),
-                    TriggerBusManager.Connection trigger => new TriggerBusRow(trigger),
-                    IOBusManager.Connection item => new IOBusRow<IOBusScheduleEntry>(item, item.Configuration,
+                    IOBusManager.Connection item => new IOBusRow(item, item.Configuration,
                         () => item.DefaultName, item.DefaultFilter),
                     _ => throw new InvalidOperationException()
                 };
-                var rowControls = new BusRowControls(scroll.content, host.handler, y, editor.Height,
-                    () => Rebuild(force: true));
+                var rowControls = new BusRowControls(scroll.content, host.handler, y, editor.Height);
                 editor.Build(rowControls);
                 rows.Add(new Row { Editor = editor, Controls = rowControls });
                 y += editor.Height + RowGap;
             }
-            ResizeWindow(resetScroll: !force);
+            ResizeWindow();
         }
 
-        private int ContentHeight(int count, bool includeSchedule = true) =>
-            Padding * 2 + (count == 0 ? EmptyRowHeight : rows.Take(count).Sum(row => includeSchedule
-                ? row.Editor.Height : row.Editor.BaseHeight))
+        private int ContentHeight(int count) =>
+            Padding * 2 + (count == 0 ? EmptyRowHeight : rows.Take(count).Sum(row => row.Editor.Height))
                 + Mathf.Max(0, count - 1) * RowGap;
 
-        private void ResizeWindow(bool resetScroll = true)
+        private void ResizeWindow()
         {
             emptyState.SetActive(rows.Count == 0);
             int contentHeight = ContentHeight(rows.Count);
-            int baseHeight = ContentHeight(Mathf.Min(rows.Count, VisibleRows), includeSchedule: false);
+            int baseHeight = ContentHeight(Mathf.Min(rows.Count, VisibleRows));
             int height = Mathf.Min(contentHeight, Mathf.Max(baseHeight, 360));
             bool overflow = contentHeight > height;
             host.ResizePixels(Width, height / 2);
@@ -177,8 +149,7 @@ namespace DigitalLogistics.UI.Buses
             }
             scroll.content.sizeDelta = new Vector2(0, contentHeight);
             scroll.StopMovement();
-            scroll.content.anchoredPosition = resetScroll ? Vector2.zero
-                : new Vector2(0, Mathf.Clamp(scroll.content.anchoredPosition.y, 0, Mathf.Max(0, contentHeight - height)));
+            scroll.content.anchoredPosition = Vector2.zero;
             intake.ResizePixels(0, 0);
             panel.ResizePixels(0, 0);
             window.Validate();
